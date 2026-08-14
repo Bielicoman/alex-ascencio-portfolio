@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useScroll, useTransform } from 'framer-motion';
+import { PlayIcon, FilmIcon, EditIcon, CameraIcon, LiveIcon, UserIcon, MailIcon, GridIcon } from './components/Icons';
 
 // ═══════════════════════════════════════
 // DATA
@@ -8,6 +9,7 @@ const PROJECTS = [
   // ── Dates verified directly from YouTube publish dates ──
   // Sort is automatic — just add new videos anywhere with the correct date field
   // IDs are stable unique identifiers (do not change them)
+  { id: 24, date: "2026-08-01", title: "Em Nome de Jesus (Releitura) | Quarteto Elo",   cat: "Clipes",       q: "4K", img: "https://img.youtube.com/vi/i80kukSzjgQ/maxresdefault.jpg", url: "https://www.youtube.com/embed/i80kukSzjgQ", desc: "Releitura emocionante e cinematográfica com o Quarteto Elo, destacando harmonias vocais refinadas e direção de fotografia imersiva." },
   { id: 23, date: "2026-05-02", title: "Entrego a Ti | Gabriella Stehling",           cat: "Clipes",       q: "4K", img: "https://img.youtube.com/vi/1YKP5mdZxoM/maxresdefault.jpg", url: "https://www.youtube.com/embed/1YKP5mdZxoM", desc: "Interpretação visual íntima e minimalista, explorando a iluminação suave e enquadramentos sensíveis que ressaltam a entrega emocional da performance." },
   { id: 1,  date: "2026-04-10", title: "Meu Respirar | Gabriella Stehling",          cat: "Clipes",       q: "4K", img: "https://img.youtube.com/vi/WeBx8Ewkm4I/maxresdefault.jpg", url: "https://www.youtube.com/embed/WeBx8Ewkm4I", desc: "Produção cinematográfica com foco em texturas de luz e color grading dramático, elevando a adoração a um novo patamar visual." },
   { id: 2,  date: "2026-04-03", title: "Jeová Jireh | Gabriella Stehling",           cat: "Clipes",       q: "4K", img: "https://img.youtube.com/vi/rQlMRuub6vo/maxresdefault.jpg", url: "https://www.youtube.com/embed/rQlMRuub6vo", desc: "Narrativa visual focada em minimalismo e elegância, destacando o protagonismo vocal com fotografia limpa e cortes sutis." },
@@ -33,7 +35,7 @@ const PROJECTS = [
 
 const CATS = ['all', 'Documentário', 'Clipes', 'Cinema', 'Bastidores'];
 const CAT_LABELS = { all: 'Todos', Documentário: 'Documentários', Clipes: 'Clipes', Cinema: 'Cinema', Bastidores: 'Bastidores' };
-const CLIENTS = ["COMMUNION", "DILSON CASTRO", "KATI CARVALHO", "GABRIELLA STEHLING", "Prisma Brasil", "Kiger", "California Dreams", "WILLIAM KRUSTY", "CPB"];
+const CLIENTS = ["QUARTETO ELO", "COMMUNION", "DILSON CASTRO", "KATI CARVALHO", "GABRIELLA STEHLING", "Prisma Brasil", "Kiger", "California Dreams", "WILLIAM KRUSTY", "CPB"];
 
 const SOCIALS = [
   { href: "https://wa.me/5515997569880", label: "WhatsApp", color: "#25D366", d: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" },
@@ -126,7 +128,11 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#000', color: '#fafafa' }}>
+    <div style={{ minHeight: '100vh', background: '#000000', color: '#ffffff' }}>
+
+      {/* ── SCAN OVERLAY ── */}
+      <div className="scan-overlay" aria-hidden="true" />
+      <div className="scan-line" aria-hidden="true" />
 
       {/* ── GLASS CURSOR ── */}
       {!mob && !video && (
@@ -144,23 +150,40 @@ export default function App() {
           {/* Left: Logo + primary links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
             <motion.div
-              whileHover={{ opacity: 0.85 }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              whileHover={{ opacity: 0.8 }}
+              onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               onMouseEnter={ptr} onMouseLeave={def}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', flexShrink: 0 }}
             >
-              <span style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: 22, fontWeight: 700, fontStyle: 'italic',
-                letterSpacing: '-0.01em', color: '#fff'
-              }}>Alex <span style={{ color: 'var(--accent)' }}>Ascencio</span></span>
+              <img src="/logo.png" alt="Logo Alex Ascencio" style={{ width: 34, height: 34, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, gap: 1 }}>
+                <span style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13, fontWeight: 900,
+                  textTransform: 'uppercase', letterSpacing: '0.22em', color: '#fff'
+                }}>Alex Ascencio</span>
+                <span style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 8, fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--accent)'
+                }}>Filmmaker · Editor</span>
+              </div>
             </motion.div>
 
             {/* Desktop nav links */}
             <ul className="nav-links hide-mobile">
               {NAV.map(n => (
                 <li key={n.id}>
-                  <a href={`#${n.id}`} onClick={e => { e.preventDefault(); go(n.id); }} onMouseEnter={ptr} onMouseLeave={def}>{n.l}</a>
+                  <a 
+                    href={`#${n.id}`} 
+                    onClick={e => { 
+                      e.preventDefault(); 
+                      go(n.id); 
+                    }} 
+                    onMouseEnter={ptr} onMouseLeave={def}
+                  >
+                    {n.l}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -198,8 +221,20 @@ export default function App() {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
             style={{ position: 'fixed', top: 56, left: 0, right: 0, zIndex: 99, padding: 16, background: 'rgba(10,10,10,0.7)', backdropFilter: 'var(--blur)', borderBottom: '1px solid var(--glass-border)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
             {NAV.map(n => (
-              <button key={n.id} onClick={() => go(n.id)}
-                style={{ display: 'block', width: '100%', padding: '16px 8px', textAlign: 'left', fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(255,255,255,0.06)', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
+              <button 
+                key={n.id} 
+                onClick={() => {
+                  setMenuOpen(false);
+                  go(n.id);
+                }}
+                style={{ 
+                  display: 'block', width: '100%', padding: '16px 8px', textAlign: 'left', 
+                  fontSize: 16, fontWeight: 600, 
+                  color: 'rgba(255,255,255,0.8)', 
+                  background: 'none', border: 'none', borderBottom: '0.5px solid rgba(255,255,255,0.06)', 
+                  cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em' 
+                }}
+              >
                 {n.l}
               </button>
             ))}
@@ -210,8 +245,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ━━━━ HERO — Netflix Style ━━━━ */}
+      {/* ── MAIN CONTENT ── */}
       <section style={{ position: 'relative', height: '100vh', width: '100%', overflow: 'hidden' }}>
         {/* Rotating background image */}
         <AnimatePresence mode="wait">
@@ -255,10 +289,9 @@ export default function App() {
             }}
           >
             <span style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
+              fontFamily: "'Inter', sans-serif",
               fontSize: mob ? '10vw' : '13vw',
               fontWeight: 900,
-              fontStyle: 'italic',
               color: 'transparent',
               WebkitTextStroke: '1px rgba(255,255,255,0.07)',
               letterSpacing: '-0.02em',
@@ -287,12 +320,16 @@ export default function App() {
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 style={{ display: 'flex', flexDirection: 'column', gap: 0, maxWidth: mob ? '100%' : 640, alignItems: mob ? 'center' : 'flex-start' }}
               >
-                {/* Netflix-style big title */}
-                <h1 className="hero-display-title" style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: mob ? '22px' : 'clamp(3.8rem,5.5vw,5.5rem)',
-                  fontWeight: 900, letterSpacing: '-0.025em', lineHeight: 1.05,
-                  color: '#fff', marginBottom: 16, textAlign: mob ? 'center' : 'left'
+                {/* Glitch hero title */}
+                <h1
+                  className="hero-display-title glitch"
+                  data-text={heroItems[heroIdx]?.title.split('|')[0].split('—')[0].trim()}
+                  style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: mob ? '28px' : 'clamp(3rem,5vw,5rem)',
+                  fontWeight: 900, letterSpacing: '-0.01em', lineHeight: 1.05,
+                  color: '#fff', marginBottom: 16, textAlign: mob ? 'center' : 'left',
+                  textTransform: 'uppercase', fontStyle: 'normal'
                 }}>
                   {heroItems[heroIdx]?.title.split('|')[0].split('—')[0].trim()}
                 </h1>
@@ -332,10 +369,8 @@ export default function App() {
                       letterSpacing: '-0.01em',
                     }}
                   >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width={mob ? 18 : 24} height={mob ? 18 : 24}>
-                      <path d="M8 5.14v13.72a1 1 0 001.5.86l11.04-6.86a1 1 0 000-1.72L9.5 4.28a1 1 0 00-1.5.86z" />
-                    </svg>
-                    Assistir
+                          <PlayIcon size={mob ? 18 : 24} color="#000" />
+                          Assistir
                   </button>
 
                   <button
@@ -390,11 +425,12 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: mob ? 32 : 48 }}>
               <div>
                 <h2 style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: mob ? '28px' : 'clamp(3.5rem,5.5vw,5.5rem)',
-                  fontWeight: 900, fontStyle: 'italic',
-                  letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.05,
-                }}>Trabalhos <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>Selecionados.</em></h2>
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: mob ? '28px' : 'clamp(3rem,5vw,5rem)',
+                  fontWeight: 900,
+                  letterSpacing: '-0.01em', color: '#fff', lineHeight: 1.0,
+                  textTransform: 'uppercase'
+                }}>Trabalhos <span style={{ color: 'var(--accent)' }}>Selecionados.</span></h2>
               </div>
               <div className="pills-container" style={{ width: '100%' }}>
                 <div className="pills-row no-sb" style={{ 
@@ -418,22 +454,26 @@ export default function App() {
           <motion.div layout className={`grid ${mob ? 'grid-2' : 'grid-3'}`}>
             <AnimatePresence mode="popLayout">
               {filtered.map((p, i) => (
-                <motion.div key={p.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.4, delay: i % 3 * 0.04 }}>
+                <motion.div key={p.id} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.35, delay: i % 3 * 0.03 }}>
                   <div className="card" onClick={() => setVideo(p)} onMouseEnter={ptr} onMouseLeave={def}>
+                    {/* Frame corners */}
+                    <span className="frame-corner frame-tl" />
+                    <span className="frame-corner frame-tr" />
+                    <span className="frame-corner frame-bl" />
+                    <span className="frame-corner frame-br" />
                     <div className="card-img-wrap">
                       <img src={p.img} loading="lazy" decoding="async" alt={p.title} />
                       <div className="card-overlay" />
                       <div className="card-play">
-                        <svg viewBox="0 0 24 24" fill="#fff" width={18} height={18}><path d="M8 5.14v13.72a1 1 0 001.5.86l11.04-6.86a1 1 0 000-1.72L9.5 4.28a1 1 0 00-1.5.86z" /></svg>
+                        <PlayIcon size={20} color="#fff" />
                       </div>
                     </div>
                     <div className="card-info">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>{p.cat}</span>
-                        <span style={{ color: 'var(--fg-dim)' }}>•</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>{p.cat}</span>
                         <span className="q-badge">{p.q}</span>
                       </div>
-                      <div style={{ fontSize: mob ? 14 : 16, fontWeight: 700, color: 'var(--fg)', lineHeight: 1.3 }}>{p.title}</div>
+                      <div style={{ fontSize: mob ? 12 : 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', lineHeight: 1.35, letterSpacing: '0.01em' }}>{p.title}</div>
                     </div>
                   </div>
                 </motion.div>
@@ -478,7 +518,7 @@ export default function App() {
 
             <div className="about-info">
               <Reveal delay={0.2}>
-                <h2 className="about-name">Alex <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>Ascencio.</em></h2>
+                <h2 className="about-name">Alex <span style={{ color: 'var(--accent)' }}>Ascencio</span></h2>
                 <p className="about-bio">
                   Filmmaker e editor de vídeo com mais de <strong style={{color:'var(--accent)'}}>6 anos de atuação</strong> em produções audiovisuais de alto padrão. Especialista em traduzir grandes histórias em narrativas visuais cinematográficas.
                 </p>
@@ -575,14 +615,15 @@ export default function App() {
       <section id="contact" className="section" style={{ paddingBottom: mob ? 120 : undefined }}>
         <div style={{ maxWidth: 'var(--max-w)', margin: '0 auto', width: '100%' }}>
           <Reveal>
-            <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 12 }}>Contato</p>
+            <p className="section-tag" style={{ marginBottom: 20 }}>Contato</p>
             <h2 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: mob ? 'clamp(2.5rem,8.5vw,4.5rem)' : 'clamp(3.5rem,5.5vw,5.5rem)',
-              fontWeight: 900, fontStyle: 'italic',
-              letterSpacing: '-0.02em', color: 'var(--fg)',
-              marginBottom: mob ? 32 : 56, lineHeight: 1.1,
-            }}>Vamos {mob && <br />}<em style={{ color: 'var(--accent)', fontStyle: 'italic' }}> Trabalhar Juntos?</em></h2>
+              fontFamily: "'Inter', sans-serif",
+              fontSize: mob ? 'clamp(2rem,8vw,3.5rem)' : 'clamp(2.8rem,4.5vw,4.5rem)',
+              fontWeight: 900,
+              letterSpacing: '-0.01em', color: 'var(--fg)',
+              marginBottom: mob ? 32 : 56, lineHeight: 1.0,
+              textTransform: 'uppercase'
+            }}>Vamos {mob && <br />}<span style={{ color: 'var(--accent)' }}>Trabalhar Juntos.</span></h2>
           </Reveal>
 
           <div className="contact-grid">
@@ -631,7 +672,34 @@ export default function App() {
         </div>
       </section>
 
-      {/* ━━━━ FOOTER — Cinematic & Centered ━━━━ */}
+      {/* ━━━━ CINEMATIC QUOTE ━━━━ */}
+      <div style={{ padding: '80px 0', background: 'var(--bg)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* Decorative line */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '60vw', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(196,18,47,0.15), transparent)', pointerEvents: 'none' }} />
+        <Reveal>
+          <div style={{ maxWidth: 'var(--max-w)', margin: '0 auto', padding: '0 var(--pad)' }}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: 24 }}>Visuals That Tell Stories</p>
+            <h2
+              className="glitch"
+              data-text="CRIAR · CONTAR · IMPACTAR"
+              style={{ 
+                fontFamily: "'Inter', sans-serif", 
+                fontSize: mob ? 28 : 'clamp(2.5rem,5vw,5rem)', 
+                fontWeight: 900, 
+                letterSpacing: mob ? '0.05em' : '0.1em', 
+                color: '#fff', 
+                lineHeight: 1.0,
+                marginBottom: 28,
+                textTransform: 'uppercase'
+              }}
+            >
+              CRIAR · CONTAR · <span style={{ color: 'var(--accent)' }}>IMPACTAR</span>
+            </h2>
+            <div style={{ width: 32, height: 1, background: 'var(--accent)', margin: '0 auto' }} />
+          </div>
+        </Reveal>
+      </div>
+
       <footer className="footer" style={{ 
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '120px 0 80px', borderTop: '1px solid rgba(255,255,255,0.03)', gap: 40,
@@ -639,8 +707,8 @@ export default function App() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <span style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 28, fontWeight: 900, fontStyle: 'italic', color: '#fff',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 28, fontWeight: 900, color: '#fff',
             letterSpacing: '-0.02em', display: 'block', marginBottom: 8
           }}>Alex <span style={{ color: 'var(--accent)' }}>Ascencio.</span></span>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.4em' }}>Video Editor & Filmmaker</span>
@@ -648,10 +716,16 @@ export default function App() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: mob ? 24 : 48, flexWrap: 'wrap' }}>
           {NAV.map(n => (
-            <a key={n.id} href={`#${n.id}`} onClick={e => { e.preventDefault(); go(n.id); }}
+            <a 
+              key={n.id} 
+              href={`#${n.id}`} 
+              onClick={e => { 
+                e.preventDefault(); 
+                go(n.id); 
+              }}
               className="footer-link"
               onMouseEnter={ptr} onMouseLeave={def}
-              style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'all 0.3s' }}
+              style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 0.2s' }}
             >{n.l}</a>
           ))}
         </div>
