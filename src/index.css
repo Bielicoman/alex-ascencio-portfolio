@@ -2119,6 +2119,11 @@ footer > span {
     font-size: 18vw;
   }
   .hero-person {
+    width: 56%;
+    height: 720px;
+    top: -96px;
+    z-index: 4;
+    mask-image: linear-gradient(0deg, transparent, #000 14%, #000 100%);
     clip-path: polygon(
       35% 0,
       66% 0,
@@ -2130,7 +2135,17 @@ footer > span {
       28% 33%
     );
   }
+  .hero-person > img {
+    object-position: center 24%;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .hero h1 { z-index: 1; }
+  .hero-right, .hero-intro { z-index: 6; }
+  .floating-project { animation: cardFloat 8s ease-in-out infinite; }
+  .creative-stamp { animation: stampPulse 6s ease-in-out infinite; }
 }
+@keyframes cardFloat { 0%,100% { translate: 0 0; rotate: 7deg; } 50% { translate: 0 -12px; rotate: 5deg; } }
+@keyframes stampPulse { 0%,100% { opacity: .78; translate: 0 0; } 50% { opacity: 1; translate: 0 -5px; } }
 @media (max-width: 700px) {
   .hero-intro {
     width: 100%;
