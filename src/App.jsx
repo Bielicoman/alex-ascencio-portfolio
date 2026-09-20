@@ -72,11 +72,14 @@ const categories = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
 const thumb = (p) => `/media/${p.id}.webp`;
 const shortTitle = (p) => p.title.split(/\||—/)[0].trim();
 const clients = [
-  { name: "Kiger", logo: "kiger" },
-  { name: "Prisma Brasil", logo: "prisma" },
-  { name: "Dilson Castro", logo: "dilson" },
-  { name: "Via Global", logo: "via-global" },
-  { name: "Entre Aspas", logo: "entre-aspas" },
+  { name: "Kiger", logo: "kiger", ext: "webp" },
+  { name: "MAB", logo: "mab", ext: "png" },
+  { name: "UNASP", logo: "unasp", ext: "png" },
+  { name: "Novo Tempo", logo: "novotempo", ext: "png" },
+  { name: "Prisma Brasil", logo: "prisma", ext: "webp" },
+  { name: "Dilson Castro", logo: "dilson", ext: "webp" },
+  { name: "Via Global", logo: "via-global", ext: "webp" },
+  { name: "Entre Aspas", logo: "entre-aspas", ext: "webp" },
 ];
 const artists = [
   "Quarteto Elo",
@@ -611,16 +614,18 @@ export default function App() {
             aria-label="Clientes e colaborações"
           >
             <p className="eyebrow">BOAS HISTÓRIAS SE CONSTROEM JUNTOS</p>
-            <div className="client-logos">
-              {clients.map((c) => (
-                <div key={c.name}>
-                  <img
-                    src={`/media/clients/${c.logo}.webp`}
-                    alt={c.name}
-                    loading="lazy"
-                  />
-                </div>
-              ))}
+            <div className="client-logos" aria-label="Clientes e parceiros">
+              <div className="client-track">
+                {[...clients, ...clients].map((c, i) => (
+                  <div key={`${c.name}-${i}`} aria-hidden={i >= clients.length}>
+                    <img
+                      src={`/media/clients/${c.logo}.${c.ext}`}
+                      alt={c.name}
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="artist-names">
               {artists.map((n) => (

@@ -565,16 +565,28 @@ h2 {
   font-size: 8px;
 }
 .client-logos {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  gap: 35px;
-  max-width: 1000px;
+  overflow: hidden;
+  max-width: 1120px;
   margin: 30px auto;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
 }
-.client-logos > div {
+.client-track {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  width: max-content;
+  animation: clientMarquee 34s linear infinite;
+}
+.client-track > div {
   width: 130px;
   height: 50px;
+  flex: 0 0 130px;
   display: grid;
   place-items: center;
 }
@@ -597,6 +609,14 @@ h2 {
   color: #9a98a5;
   font-size: 9px;
   line-height: 1.8;
+}
+@keyframes clientMarquee {
+  from {
+    translate: 0;
+  }
+  to {
+    translate: calc(-50% - 13px);
+  }
 }
 .cinema {
   height: 350vh;
@@ -1752,12 +1772,15 @@ footer > span {
     font-size: 6px;
   }
   .client-logos {
-    flex-wrap: wrap;
-    gap: 22px;
     margin: 25px 0;
   }
-  .client-logos > div {
-    width: calc(33% - 16px);
+  .client-track {
+    gap: 15px;
+    animation-duration: 28s;
+  }
+  .client-track > div {
+    width: 91px;
+    flex-basis: 91px;
     height: 37px;
   }
   .client-logos img {
@@ -2137,15 +2160,50 @@ footer > span {
   }
   .hero-person > img {
     object-position: center 24%;
-    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 8%,
+      #000 92%,
+      transparent
+    );
   }
-  .hero h1 { z-index: 1; }
-  .hero-right, .hero-intro { z-index: 6; }
-  .floating-project { animation: cardFloat 8s ease-in-out infinite; }
-  .creative-stamp { animation: stampPulse 6s ease-in-out infinite; }
+  .hero h1 {
+    z-index: 1;
+  }
+  .hero-right,
+  .hero-intro {
+    z-index: 6;
+  }
+  .floating-project {
+    animation: cardFloat 8s ease-in-out infinite;
+  }
+  .creative-stamp {
+    animation: stampPulse 6s ease-in-out infinite;
+  }
 }
-@keyframes cardFloat { 0%,100% { translate: 0 0; rotate: 7deg; } 50% { translate: 0 -12px; rotate: 5deg; } }
-@keyframes stampPulse { 0%,100% { opacity: .78; translate: 0 0; } 50% { opacity: 1; translate: 0 -5px; } }
+@keyframes cardFloat {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 7deg;
+  }
+  50% {
+    translate: 0 -12px;
+    rotate: 5deg;
+  }
+}
+@keyframes stampPulse {
+  0%,
+  100% {
+    opacity: 0.78;
+    translate: 0 0;
+  }
+  50% {
+    opacity: 1;
+    translate: 0 -5px;
+  }
+}
 @media (max-width: 700px) {
   .hero-intro {
     width: 100%;
