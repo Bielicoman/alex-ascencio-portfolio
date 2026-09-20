@@ -1,71 +1,1085 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
-import { PROJECTS } from './projects';
-const categories = ['Todos', ...new Set(PROJECTS.map(p => p.cat))];
-const featured = [24, 14, 16, 7].map(id => PROJECTS.find(p => p.id === id));
-const thumb = p => `/media/${p.id}.webp`;
-const Arrow = () => <span aria-hidden="true">↗</span>;
-function Player({project, close}) {
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+  useMotionValueEvent,
+  MotionConfig,
+} from "framer-motion";
+import {
+  ArrowUpRight,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Play,
+  Pause,
+  X,
+  Menu,
+  Film,
+  Clapperboard,
+  Layers3,
+  Sparkles,
+  Aperture,
+  MessageCircle,
+  Search,
+  LayoutGrid,
+  List,
+  MoveUpRight,
+  Download,
+  SlidersHorizontal,
+  Rotate3D,
+  MousePointer2,
+  VolumeX,
+} from "lucide-react";
+import { PROJECTS } from "./projects";
+import LensScene, { Starfield } from "./components/Scene";
+const Instagram = ({ size = 24, ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    {...props}
+  >
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.5" cy="6.5" r=".7" fill="currentColor" />
+  </svg>
+);
+const Linkedin = ({ size = 24, ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    {...props}
+  >
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <path d="M7 10v7m4 0v-7m0 3c0-4 6-4 6 0v4" />
+    <circle cx="7" cy="7" r=".6" fill="currentColor" />
+  </svg>
+);
+
+const selected = [24, 14, 16, 7, 21].map((id) =>
+  PROJECTS.find((p) => p.id === id),
+);
+const categories = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
+const thumb = (p) => `/media/${p.id}.webp`;
+const shortTitle = (p) => p.title.split(/\||—/)[0].trim();
+const clients = [
+  { name: "Kiger", logo: "kiger" },
+  { name: "Prisma Brasil", logo: "prisma" },
+  { name: "Dilson Castro", logo: "dilson" },
+  { name: "Via Global", logo: "via-global" },
+  { name: "Entre Aspas", logo: "entre-aspas" },
+];
+const artists = [
+  "Quarteto Elo",
+  "Communion",
+  "Gabriella Stehling",
+  "Kati Carvalho",
+  "Califórnia Dreams",
+  "Willian Krusty",
+  "CPB",
+  "Pedro Valença",
+  "Prisminha",
+  "Dunamis Studio",
+  "Patrícia de Paiva",
+];
+function Brand() {
+  return (
+    <a href="#top" className="brand" aria-label="Alex Ascencio — início">
+      <img src="/media/mark.png" alt="" />
+      <span>
+        alex ascencio<span className="brand-period">.</span>
+        <small>VIDEO EDITOR & AI CREATIVE</small>
+      </span>
+    </a>
+  );
+}
+function Reveal({ children, className = "" }) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.08 }}
+      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+function Tilt({ children, className = "" }) {
+  const ref = useRef(null);
+  const reduced = useReducedMotion();
+  function move(e) {
+    if (reduced || e.pointerType === "touch") return;
+    const r = ref.current.getBoundingClientRect();
+    ref.current.style.setProperty(
+      "--rx",
+      `${(-(e.clientY - r.top - r.height / 2) / r.height) * 8}deg`,
+    );
+    ref.current.style.setProperty(
+      "--ry",
+      `${((e.clientX - r.left - r.width / 2) / r.width) * 8}deg`,
+    );
+    ref.current.style.setProperty(
+      "--mx",
+      `${((e.clientX - r.left) / r.width) * 100}%`,
+    );
+    ref.current.style.setProperty(
+      "--my",
+      `${((e.clientY - r.top) / r.height) * 100}%`,
+    );
+  }
+  return (
+    <div
+      ref={ref}
+      className={`tilt ${className}`}
+      onPointerMove={move}
+      onPointerLeave={() => {
+        ref.current.style.setProperty("--rx", "0deg");
+        ref.current.style.setProperty("--ry", "0deg");
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+function Player({ project, close }) {
   const dialog = useRef(null);
   useEffect(() => {
     const previous = document.activeElement;
     dialog.current.showModal();
     const old = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = old; previous?.focus(); };
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = old;
+      previous?.focus();
+    };
   }, []);
-  return <dialog ref={dialog} className="player" aria-labelledby="player-title" onCancel={close} onClick={e => {if(e.target === e.currentTarget) close();}}>
-    <div className="player-top"><span className="eyebrow">SALA DE EXIBIÇÃO</span><button onClick={close} className="close" aria-label="Fechar vídeo">×</button></div>
-    <iframe title={project.title} src={`${project.url.replace('www.youtube.com','www.youtube-nocookie.com')}?autoplay=1&rel=0`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
-    <div className="player-info"><div><span className="eyebrow">{project.cat} / {project.date.slice(0,4)}</span><h2 id="player-title">{project.title}</h2><p>{project.desc}</p></div><a href={project.url.replace('/embed/','/watch?v=')} target="_blank" rel="noreferrer">Abrir no YouTube <Arrow/></a></div>
-  </dialog>;
+  return (
+    <dialog
+      ref={dialog}
+      className="player"
+      aria-labelledby="player-title"
+      onCancel={close}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <div className="player-top">
+        <span className="eyebrow">
+          <Film size={14} /> SALA DE EXIBIÇÃO
+        </span>
+        <button
+          onClick={close}
+          className="icon-button"
+          aria-label="Fechar vídeo"
+        >
+          <X />
+        </button>
+      </div>
+      <iframe
+        title={project.title}
+        src={`${project.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0`}
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
+      <div className="player-info">
+        <div>
+          <span className="eyebrow">
+            {project.cat} / {project.date.slice(0, 4)}
+          </span>
+          <h2 id="player-title">{project.title}</h2>
+          <p>{project.desc}</p>
+        </div>
+        <a
+          className="pill secondary"
+          href={project.url.replace("/embed/", "/watch?v=")}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Ver no YouTube <ArrowUpRight size={16} />
+        </a>
+      </div>
+      <p className="player-help">
+        Se a reprodução estiver indisponível aqui, assista diretamente no
+        YouTube.
+      </p>
+    </dialog>
+  );
 }
-function Filmstrip({open, reduced}) {
- const ref=useRef(null);
- const {scrollYProgress}=useScroll({target:ref,offset:['start start','end end']});
- const x=useTransform(scrollYProgress,[0,1],['0%','-67%']);
- return <section className={`sequence ${reduced ? 'sequence-static' : ''}`} ref={ref} aria-labelledby="sequence-title">
-  <div className="sequence-pin"><div className="section-head"><div><p className="eyebrow">UM OLHAR. DIFERENTES HISTÓRIAS.</p><h2 id="sequence-title">Entre um corte<br/>e uma <em>emoção.</em></h2></div><p className="sequence-instruction">Continue o scroll<br/><span aria-hidden="true">↓</span> Explore a sequência</p></div>
-  <motion.div className="filmstrip" style={reduced ? {} : {x}}>{featured.map((p,i)=><button className="film" key={p.id} onClick={()=>open(p)} aria-label={`Assistir ${p.title}`}><div className="film-image"><img src={thumb(p)} alt="" loading="lazy"/><span className="play-ring">▶</span><span className="frame-index">{String(i+1).padStart(2,'0')} / 04</span></div><div className="film-caption"><h3>{p.title.split(/\||—/)[0]}</h3><span>{p.cat} <Arrow/></span></div></button>)}</motion.div>
-  <div className="sequence-track" aria-hidden="true"><motion.div style={{scaleX:reduced?1:scrollYProgress}}/></div></div>
- </section>;
+function Cinema({ open, reduced }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end end"],
+  });
+  const [active, setActive] = useState(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (!reduced && innerWidth > 700)
+      setActive(Math.min(selected.length - 1, Math.floor(v * selected.length)));
+  });
+  const current = selected[active];
+  return (
+    <section
+      id="cinema"
+      className={`cinema ${reduced ? "cinema-static" : ""}`}
+      ref={ref}
+    >
+      <div className="cinema-pin">
+        <div className="section-heading center">
+          <span className="eyebrow">
+            <Clapperboard size={14} /> FILMES EM DESTAQUE
+          </span>
+          <h2>
+            Cada história,
+            <br />
+            um novo <span className="soft-type">universo.</span>
+          </h2>
+          <p>Entre na cena. Sinta o ritmo. Conheça meu olhar.</p>
+        </div>
+        <div
+          className="cinema-stage"
+          role="region"
+          aria-label="Carrossel de filmes em destaque"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") {
+              e.preventDefault();
+              setActive((i) => Math.min(i + 1, selected.length - 1));
+            }
+            if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              setActive((i) => Math.max(i - 1, 0));
+            }
+          }}
+        >
+          {selected.map((p, i) => {
+            const d = i - active;
+            return (
+              <motion.button
+                className={`cinema-card ${d === 0 ? "is-current" : ""}`}
+                key={p.id}
+                animate={{
+                  x: `${d * 79}%`,
+                  rotateY: reduced ? 0 : d === 0 ? 0 : d > 0 ? -33 : 33,
+                  scale: d === 0 ? 1 : 0.84,
+                  opacity: Math.abs(d) > 1 ? 0 : d === 0 ? 1 : 0.42,
+                  z: d === 0 ? 0 : -110,
+                }}
+                transition={{
+                  duration: reduced ? 0 : 0.8,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={{ zIndex: 10 - Math.abs(d) }}
+                tabIndex={d === 0 ? 0 : -1}
+                aria-hidden={d !== 0}
+                aria-label={`Assistir ${p.title}`}
+                onClick={() => (d === 0 ? open(p) : setActive(i))}
+              >
+                <img src={thumb(p)} alt="" loading="lazy" />
+                <div className="cinema-card-shade" />
+                <span className="tag">
+                  <Film size={12} />
+                  {p.cat}
+                </span>
+                <span className="play-orb">
+                  <Play size={22} fill="currentColor" />
+                </span>
+                <div className="cinema-caption">
+                  <span className="eyebrow">
+                    {p.date.slice(0, 4)} / {p.q}
+                  </span>
+                  <h3>{shortTitle(p)}</h3>
+                  <ArrowUpRight size={26} />
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+        <div className="cinema-controls">
+          <button
+            className="icon-button"
+            aria-label="Filme anterior"
+            disabled={active === 0}
+            onClick={() => setActive((i) => i - 1)}
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="cinema-dots">
+            {selected.map((p, i) => (
+              <button
+                key={p.id}
+                className={i === active ? "active" : ""}
+                aria-label={`Selecionar ${shortTitle(p)}`}
+                aria-pressed={i === active}
+                onClick={() => setActive(i)}
+              />
+            ))}
+          </div>
+          <button
+            className="icon-button"
+            aria-label="Próximo filme"
+            disabled={active === selected.length - 1}
+            onClick={() => setActive((i) => i + 1)}
+          >
+            <ArrowRight size={18} />
+          </button>
+        </div>
+        <div className="cinema-foot">
+          <span aria-live="polite">
+            {String(active + 1).padStart(2, "0")} /{" "}
+            {String(selected.length).padStart(2, "0")} — {current.cat}
+          </span>
+          <a href="#work">
+            Explorar todos os trabalhos <ArrowDown size={13} />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
 }
-export default function App(){
- const [project,setProject]=useState(null),[cat,setCat]=useState('Todos'),[search,setSearch]=useState(''),[menu,setMenu]=useState(false);
- const reduced=useReducedMotion();
- const {scrollYProgress}=useScroll();
- const hero=useRef(null);
- const {scrollYProgress:heroProgress}=useScroll({target:hero,offset:['start start','end start']});
- const heroY=useTransform(heroProgress,[0,1],[0,130]);
- const results=useMemo(()=>PROJECTS.filter(p=>(cat==='Todos'||p.cat===cat)&&`${p.title} ${p.cat}`.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(search.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase())),[cat,search]);
- useEffect(()=>{const esc=e=>{if(e.key==='Escape')setMenu(false);};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc);},[]);
- function submit(e){e.preventDefault(); const data=new FormData(e.currentTarget);const text=`Olá, Alex! Sou ${data.get('name')}.\nProjeto: ${data.get('type')}\n\n${data.get('message')}`;window.open(`https://wa.me/5515997569880?text=${encodeURIComponent(text)}`,'_blank','noopener,noreferrer');}
- return <>
-  <a className="skip-link" href="#work">Pular para os trabalhos</a>
-  <motion.div className="reading-progress" style={{scaleX:scrollYProgress}} aria-hidden="true"/>
-  <header className="header"><a href="#top" className="brand" aria-label="Alex Ascencio — início"><img src="/media/mark.png" alt=""/><span>ALEX<br/>ASCENCIO<span className="brand-dot">.</span></span></a><button className="menu-toggle" aria-expanded={menu} aria-controls="navigation" onClick={()=>setMenu(!menu)}>{menu?'Fechar':'Menu'} <span aria-hidden="true">{menu?'−':'+'}</span></button><nav id="navigation" className={menu?'is-open':''} aria-label="Principal">{[['work','Trabalhos'],['expertise','Edição + IA'],['about','Sobre']].map(([id,text])=><a href={`#${id}`} key={id} onClick={()=>setMenu(false)}>{text}</a>)}<a href="#contact" className="nav-contact" onClick={()=>setMenu(false)}>Vamos conversar <Arrow/></a></nav></header>
-  <main>
-  <section id="top" className="hero" ref={hero}>
-   <div className="hero-meta"><span className="eyebrow"><i/> EDITOR DE VÍDEO & PROFISSIONAL DE IA</span><span className="eyebrow">SÃO PAULO, BRASIL · PORTFÓLIO</span></div>
-   <div className="hero-stage"><motion.div className="hero-type" style={reduced?{}:{y:heroY}}><h1>CRIAR.<br/><span className="outline">CONTAR.</span><br/><em>IMPACTAR.</em></h1></motion.div><div className="hero-visual"><img src="/media/portrait.webp" alt="Alex Ascencio em retrato com fundo vermelho" fetchPriority="high"/><div className="portrait-shade"/><span className="viewfinder top-left"/><span className="viewfinder bottom-right"/><div className="portrait-caption"><span>ALEX ASCENCIO</span><span>O olhar por trás do frame.</span></div><a className="hero-orbit" href="#work" aria-label="Explorar todos os trabalhos"><span>EXPLORE<br/>OS TRABALHOS</span><span aria-hidden="true">↘</span></a></div></div>
-   <div className="hero-bottom"><p>O ritmo certo. A imagem que fica.<br/>Edição, cinema e inteligência artificial<br/>a serviço de uma boa história.</p><button className="featured-link" onClick={()=>setProject(PROJECTS[0])}><img src={thumb(PROJECTS[0])} alt=""/><span><small>ÚLTIMO LANÇAMENTO</small>Em Nome de Jesus <span aria-hidden="true">↗</span></span><span className="small-play" aria-hidden="true">▶</span></button><a href="#sequence-title" className="scroll-cue">SCROLL PARA EXPLORAR <span aria-hidden="true">↓</span></a></div>
-  </section>
-  <div className="collaborations"><span>HISTÓRIAS COM</span><div>PRISMA BRASIL <b>·</b> QUARTETO ELO <b>·</b> COMMUNION <b>·</b> CALIFÓRNIA DREAMS</div></div>
-  <Filmstrip open={setProject} reduced={reduced}/>
-  <section id="work" className="archive section-pad"><div className="section-head"><div><p className="eyebrow">O PORTFÓLIO COMPLETO</p><h2>Histórias que<br/>ganharam <em>vida.</em></h2></div><p>Do primeiro corte ao último frame.<br/>{PROJECTS.length} trabalhos, diferentes formas de sentir.</p></div>
-   <div className="archive-tools"><div className="filters" role="group" aria-label="Filtrar trabalhos">{categories.map(c=><button key={c} aria-pressed={cat===c} onClick={()=>setCat(c)}>{c}<sup>{c==='Todos'?PROJECTS.length:PROJECTS.filter(p=>p.cat===c).length}</sup></button>)}</div><label className="search"><span aria-hidden="true">⌕</span><input type="search" aria-label="Buscar trabalho ou artista" placeholder="Buscar trabalho ou artista" value={search} onChange={e=>setSearch(e.target.value)}/></label></div>
-   <p className="results-count" role="status">{results.length} {results.length===1?'trabalho':'trabalhos'} {cat!=='Todos'?`/ ${cat}`:''}</p>
-   <div className="project-grid">{results.map(p=><article key={p.id} className="project-card"><button onClick={()=>setProject(p)} aria-label={`Assistir ${p.title}`}><div className="project-image"><img src={thumb(p)} alt="" loading="lazy" width="800" height="450"/><span className="project-tag">{p.cat}</span><span className="project-play" aria-hidden="true">▶</span></div><div className="project-info"><h3>{p.title}</h3><span aria-hidden="true">↗</span></div><p>{p.date.slice(0,4)} <span>FILME / {p.q}</span></p></button></article>)}</div>
-   {results.length===0&&<div className="empty"><h3>Nenhum trabalho com essa busca.</h3><p>Tente o nome de outro artista ou explore o catálogo completo.</p><button className="text-link" onClick={()=>{setSearch('');setCat('Todos');}}>Limpar filtros <Arrow/></button></div>}
-  </section>
-  <section id="expertise" className="expertise section-pad"><div className="expertise-intro"><p className="eyebrow">SENSIBILIDADE HUMANA. NOVAS POSSIBILIDADES.</p><h2>O próximo frame<br/>ainda não <em>existe.</em></h2><p>É aí que eu entro. Conecto linguagem audiovisual e inteligência artificial para transformar ideias em imagens com intenção.</p><a href="#contact" className="text-link">Vamos criar algo novo <Arrow/></a></div><div className="services">{[
-   ['Edição & narrativa','Ritmo, montagem e construção de histórias. Videoclipes, documentários, cinema e conteúdo para marcas.','PREMIERE PRO / DAVINCI RESOLVE'],
-   ['Inteligência artificial','Criação de imagens e cenas, exploração visual e fluxos de produção que ampliam as possibilidades de cada projeto.','IA GENERATIVA / WORKFLOWS CRIATIVOS'],
-   ['Motion & finalização','Movimento, composição e cor trabalhando juntos para dar unidade e personalidade ao filme.','AFTER EFFECTS / COLOR GRADING']
-   ].map(([title,desc,tools])=><details key={title} open><summary>{title}<span aria-hidden="true">+</span></summary><p>{desc}</p><span className="eyebrow">{tools}</span></details>)}</div></section>
-  <section id="about" className="about section-pad"><div className="about-image"><img src="/media/behind-scenes.webp" alt="Bastidores de produção audiovisual em uma floresta" loading="lazy"/><span className="image-note">ON SET / POR TRÁS DAS CENAS</span></div><div className="about-copy"><p className="eyebrow">MUITO PRAZER, ALEX.</p><h2>Tecnologia nas mãos.<br/><em>Histórias na cabeça.</em></h2><p>Sou Alex Ascencio, editor de vídeo, filmmaker e profissional de IA. Meu trabalho é encontrar o que faz uma história funcionar — no ritmo, no silêncio, na imagem e na emoção.</p><p>De videoclipes e documentários a curtas e shows, levo esse olhar para cada projeto. A inteligência artificial amplia meu processo criativo; a intenção de cada escolha continua sendo humana.</p><div className="about-links"><a href="https://instagram.com/alexascencioai" target="_blank" rel="noreferrer">Instagram <Arrow/></a><a href="https://www.linkedin.com/in/ascencioalexgabriel/" target="_blank" rel="noreferrer">LinkedIn <Arrow/></a><a href="/Alex_Ascencio_Curriculo.pdf" download>Currículo ↓</a></div></div></section>
-  <section id="contact" className="contact section-pad"><p className="eyebrow">A PRÓXIMA HISTÓRIA PODE SER A SUA.</p><div className="contact-grid"><div><h2>VAMOS<br/>FAZER<br/><em>ACONTECER.</em></h2><a className="contact-direct" href="https://wa.me/5515997569880" target="_blank" rel="noreferrer">Conversar direto no WhatsApp <Arrow/></a></div><form onSubmit={submit}><p>Me conte o que você está imaginando.<br/>Vamos encontrar a melhor forma de criar.</p><label>Seu nome<input name="name" autoComplete="name" required placeholder="Como posso te chamar?" maxLength={120}/></label><label>O que vamos criar?<select name="type"><option>Edição de vídeo</option><option>Projeto com IA</option><option>Videoclipe</option><option>Documentário ou cinema</option><option>Motion e finalização</option><option>Outro projeto</option></select></label><label>Sua ideia<textarea name="message" required rows={3} placeholder="Conte um pouco sobre o projeto e o prazo." maxLength={2500}/></label><button type="submit">Levar a ideia para o WhatsApp <Arrow/></button><small>Abre uma conversa com sua mensagem pronta para enviar.</small></form></div></section>
-  </main><footer><a href="#top" className="brand"><img src="/media/mark.png" alt=""/><span>ALEX ASCENCIO.</span></a><span>© {new Date().getFullYear()} · CRIAR. CONTAR. IMPACTAR.</span><a href="#top">VOLTAR AO TOPO ↑</a></footer>
-  {project&&<Player project={project} close={()=>setProject(null)}/>}
- </>;
+function MotionVideo({ paused }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const v = ref.current;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !paused) v.play().catch(() => {});
+      else v.pause();
+    });
+    io.observe(v);
+    return () => io.disconnect();
+  }, [paused]);
+  return (
+    <video
+      ref={ref}
+      src="/media/aperture-motion.mp4"
+      poster="/media/aperture-poster.webp"
+      muted
+      playsInline
+      loop
+      preload="none"
+      aria-label="Motion autoral criado com IA: lente cromada em movimento"
+    />
+  );
+}
+export default function App() {
+  const systemReduced = useReducedMotion();
+  const [manualPause, setManualPause] = useState(false),
+    [menu, setMenu] = useState(false),
+    [project, setProject] = useState(null),
+    [category, setCategory] = useState("Todos"),
+    [query, setQuery] = useState(""),
+    [view, setView] = useState("grid"),
+    [hue, setHue] = useState(350),
+    [aperture, setAperture] = useState(55);
+  const paused = !!systemReduced || manualPause;
+  const hero = useRef(null);
+  const { scrollYProgress } = useScroll();
+  const { scrollYProgress: hp } = useScroll({
+    target: hero,
+    offset: ["start start", "end start"],
+  });
+  const portraitY = useTransform(hp, [0, 1], [0, 95]),
+    titleY = useTransform(hp, [0, 1], [0, -90]);
+  const normalize = (s) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const results = useMemo(
+    () =>
+      PROJECTS.filter(
+        (p) =>
+          (category === "Todos" || p.cat === category) &&
+          normalize(`${p.title} ${p.cat}`).includes(normalize(query)),
+      ),
+    [category, query],
+  );
+  useEffect(() => {
+    const esc = (e) => {
+      if (e.key === "Escape") setMenu(false);
+    };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, []);
+  function submit(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    window.open(
+      `https://wa.me/5515997569880?text=${encodeURIComponent(`Olá, Alex! Sou ${f.get("name")}.\nProjeto: ${f.get("type")}\n\n${f.get("message")}`)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+  return (
+    <MotionConfig reducedMotion={paused ? "always" : "user"}>
+      <div className={paused ? "site is-paused" : "site"}>
+        <a className="skip-link" href="#work">
+          Pular para os trabalhos
+        </a>
+        <motion.div
+          className="reading-progress"
+          style={{ scaleX: scrollYProgress }}
+          aria-hidden="true"
+        />
+        <header className="header glass">
+          <Brand />
+          <nav
+            className={menu ? "is-open" : ""}
+            id="navigation"
+            aria-label="Principal"
+          >
+            {[
+              ["cinema", "Filmes"],
+              ["work", "Trabalhos"],
+              ["lab", "Universo criativo"],
+              ["about", "Sobre"],
+            ].map(([id, text]) => (
+              <a href={`#${id}`} key={id} onClick={() => setMenu(false)}>
+                {text}
+              </a>
+            ))}
+          </nav>
+          <div className="header-actions">
+            <a className="pill header-cta" href="#contact">
+              Vamos criar <ArrowUpRight size={15} />
+            </a>
+            <button
+              className="icon-button motion-toggle"
+              aria-label={
+                manualPause ? "Retomar animações" : "Pausar animações"
+              }
+              aria-pressed={manualPause}
+              onClick={() => setManualPause(!manualPause)}
+            >
+              {manualPause ? <Play size={14} /> : <Pause size={14} />}
+            </button>
+            <button
+              className="icon-button menu-toggle"
+              aria-label={menu ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={menu}
+              aria-controls="navigation"
+              onClick={() => setMenu(!menu)}
+            >
+              {menu ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </header>
+        <main>
+          <section id="top" className="hero" ref={hero}>
+            <Starfield paused={paused} />
+            <div className="hero-halo" aria-hidden="true" />
+            <div className="hero-topline">
+              <span className="tiny-label">
+                ALEX ASCENCIO / ESTÚDIO CRIATIVO
+              </span>
+              <span className="tiny-label">
+                EDIÇÃO · MOTION · INTELIGÊNCIA ARTIFICIAL
+              </span>
+            </div>
+            <motion.h1 style={paused ? {} : { y: titleY }}>
+              PORTFOLIO
+              <span className="title-star" aria-hidden="true">
+                ✳
+              </span>
+            </motion.h1>
+            <div className="hero-composition">
+              <div className="hero-intro">
+                <span className="hero-greeting">Olá, eu sou Alex.</span>
+                <p>
+                  Transformo ideias
+                  <br />
+                  em imagens que
+                  <br />
+                  <span>fazem sentir.</span>
+                </p>
+                <a className="pill primary" href="#cinema">
+                  Explore meu universo <ArrowDown size={16} />
+                </a>
+                <div className="hero-socials">
+                  <a
+                    href="https://instagram.com/alexascencioai"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Instagram de Alex"
+                  >
+                    <Instagram size={17} />
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/ascencioalexgabriel/"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="LinkedIn de Alex"
+                  >
+                    <Linkedin size={17} />
+                  </a>
+                  <a
+                    href="https://wa.me/5515997569880"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="WhatsApp de Alex"
+                  >
+                    <MessageCircle size={17} />
+                  </a>
+                </div>
+              </div>
+              <motion.div
+                className="hero-person"
+                style={paused ? {} : { y: portraitY }}
+              >
+                <img
+                  src="/media/portrait-v2.webp"
+                  alt="Alex Ascencio em retrato editorial com camisa preta"
+                  fetchPriority="high"
+                />
+                <div className="person-fade" />
+              </motion.div>
+              <div className="hero-right">
+                <div className="creative-stamp">
+                  <Aperture size={32} />
+                  <span>
+                    UM OLHAR HUMANO.
+                    <br />
+                    INFINITAS POSSIBILIDADES.
+                  </span>
+                </div>
+                <Tilt className="floating-project glass">
+                  <button
+                    onClick={() => setProject(PROJECTS[0])}
+                    aria-label="Assistir Em Nome de Jesus, Quarteto Elo"
+                  >
+                    <div className="mini-window">
+                      <span />
+                      <span />
+                      <span />
+                      <small>ÚLTIMO LANÇAMENTO</small>
+                    </div>
+                    <div className="floating-thumb">
+                      <img src={thumb(PROJECTS[0])} alt="" />
+                      <span>
+                        <Play size={14} fill="currentColor" />
+                      </span>
+                    </div>
+                    <div className="floating-caption">
+                      Em Nome de Jesus <ArrowUpRight size={14} />
+                    </div>
+                  </button>
+                </Tilt>
+              </div>
+              <div className="floating-skill glass">
+                <span className="skill-icon">
+                  <Layers3 size={22} />
+                </span>
+                <div>
+                  Histórias em movimento
+                  <small>VIDEO EDITING & MOTION DESIGN</small>
+                </div>
+                <Sparkles size={14} />
+              </div>
+              <div className="signature glass">
+                <img src="/media/mark.png" alt="Marca Alex Ascencio" />
+                <span>
+                  CRIAR. CONTAR.
+                  <br />
+                  <b>IMPACTAR.</b>
+                </span>
+              </div>
+            </div>
+            <div className="hero-footer">
+              <span>
+                <span className="status-dot" /> BASEADO NO BRASIL. CRIANDO SEM
+                FRONTEIRAS.
+              </span>
+              <a href="#cinema">
+                <span className="mouse-shape" /> SCROLL PARA DESCOBRIR{" "}
+                <ArrowDown size={13} />
+              </a>
+              <span>PORTFÓLIO / 2026</span>
+            </div>
+          </section>
+          <section
+            className="client-strip"
+            aria-label="Clientes e colaborações"
+          >
+            <p className="eyebrow">BOAS HISTÓRIAS SE CONSTROEM JUNTOS</p>
+            <div className="client-logos">
+              {clients.map((c) => (
+                <div key={c.name}>
+                  <img
+                    src={`/media/clients/${c.logo}.webp`}
+                    alt={c.name}
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="artist-names">
+              {artists.map((n) => (
+                <span key={n}>{n}</span>
+              ))}
+            </div>
+          </section>
+          <Cinema open={setProject} reduced={paused} />
+          <section id="work" className="archive section-pad">
+            <Reveal className="section-heading split">
+              <div>
+                <span className="eyebrow">
+                  <Film size={14} /> FEITO PARA SER VISTO. E SENTIDO.
+                </span>
+                <h2>
+                  O trabalho fala.
+                  <br />
+                  <span className="soft-type">Dê o play.</span>
+                </h2>
+              </div>
+              <p>
+                Videoclipes, cinema, documentários e bastidores.
+                <br />
+                Todas as histórias, em um só lugar.
+              </p>
+            </Reveal>
+            <div className="archive-toolbar glass">
+              <div
+                className="filters"
+                role="group"
+                aria-label="Filtrar trabalhos"
+              >
+                {categories.map((c) => (
+                  <button
+                    key={c}
+                    aria-pressed={category === c}
+                    onClick={() => setCategory(c)}
+                  >
+                    {c}
+                    <sup>
+                      {c === "Todos"
+                        ? PROJECTS.length
+                        : PROJECTS.filter((p) => p.cat === c).length}
+                    </sup>
+                  </button>
+                ))}
+              </div>
+              <div className="view-controls">
+                <button
+                  className="icon-button"
+                  aria-label="Visualizar em grade"
+                  aria-pressed={view === "grid"}
+                  onClick={() => setView("grid")}
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Visualizar em lista"
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  <List size={17} />
+                </button>
+              </div>
+            </div>
+            <div className="archive-subbar">
+              <p role="status">
+                {results.length}{" "}
+                {results.length === 1 ? "trabalho" : "trabalhos"} encontrados
+              </p>
+              <label className="search">
+                <Search size={15} />
+                <input
+                  type="search"
+                  aria-label="Buscar trabalho ou artista"
+                  placeholder="Busque um filme ou artista"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+            </div>
+            <div
+              className={`project-grid ${view === "list" ? "list-view" : ""}`}
+            >
+              {results.map((p) => (
+                <Tilt className="project-card" key={p.id}>
+                  <button
+                    onClick={() => setProject(p)}
+                    aria-label={`Assistir ${p.title}`}
+                  >
+                    <div className="project-image">
+                      <img
+                        src={thumb(p)}
+                        alt=""
+                        loading="lazy"
+                        width="1000"
+                        height="563"
+                      />
+                      <div className="project-image-shade" />
+                      <span className="project-category">{p.cat}</span>
+                      <span className="project-play">
+                        <Play size={16} fill="currentColor" />
+                      </span>
+                    </div>
+                    <div className="project-info">
+                      <div>
+                        <small>
+                          {p.date.slice(0, 4)} <span>/ {p.q}</span>
+                        </small>
+                        <h3>{p.title}</h3>
+                      </div>
+                      <span className="project-arrow">
+                        <ArrowUpRight size={18} />
+                      </span>
+                    </div>
+                  </button>
+                </Tilt>
+              ))}
+            </div>
+            {results.length === 0 && (
+              <div className="empty">
+                <Search size={32} />
+                <h3>Nenhum filme por aqui.</h3>
+                <p>Tente outro nome ou volte ao catálogo completo.</p>
+                <button
+                  className="pill primary"
+                  onClick={() => {
+                    setQuery("");
+                    setCategory("Todos");
+                  }}
+                >
+                  Limpar filtros <X size={14} />
+                </button>
+              </div>
+            )}
+          </section>
+          <section id="lab" className="lab section-pad">
+            <Reveal className="section-heading center">
+              <span className="eyebrow">
+                <Sparkles size={14} /> ALÉM DO QUE JÁ EXISTE
+              </span>
+              <h2>
+                Imaginação humana.
+                <br />
+                <span className="soft-type">Possibilidades expandidas.</span>
+              </h2>
+              <p>Tecnologia é ferramenta. O olhar é o que transforma.</p>
+            </Reveal>
+            <div className="lab-grid">
+              <div className="lens-panel glass">
+                <div className="panel-top">
+                  <span className="tiny-label">
+                    <Aperture size={13} /> LAB / LUZ & MOVIMENTO
+                  </span>
+                  <span className="tag subtle">
+                    <Rotate3D size={12} /> INTERATIVO
+                  </span>
+                </div>
+                <Suspense
+                  fallback={
+                    <img
+                      className="lens-fallback"
+                      src="/media/aperture-poster.webp"
+                      alt="Lente cinematográfica"
+                    />
+                  }
+                >
+                  <LensScene paused={paused} hue={hue} aperture={aperture} />
+                </Suspense>
+                <div className="lens-hint">
+                  <MousePointer2 size={13} /> Arraste a lente. Mude a luz.
+                  Explore.
+                </div>
+                <div className="lens-controls">
+                  <label>
+                    Abertura
+                    <input
+                      type="range"
+                      min="10"
+                      max="90"
+                      value={aperture}
+                      onChange={(e) => setAperture(Number(e.target.value))}
+                    />
+                  </label>
+                  <div>
+                    <span>Luz</span>
+                    <div className="swatches">
+                      {[
+                        { h: 350, n: "Vermelha" },
+                        { h: 210, n: "Azul" },
+                        { h: 35, n: "Âmbar" },
+                      ].map((c) => (
+                        <button
+                          key={c.h}
+                          aria-label={`Luz ${c.n}`}
+                          aria-pressed={hue === c.h}
+                          style={{ "--swatch": `hsl(${c.h} 75% 60%)` }}
+                          onClick={() => setHue(c.h)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    className="icon-button"
+                    aria-label="Restaurar lente"
+                    onClick={() => {
+                      setHue(350);
+                      setAperture(55);
+                    }}
+                  >
+                    <Rotate3D size={17} />
+                  </button>
+                </div>
+              </div>
+              <div className="lab-copy">
+                <div className="service glass">
+                  <span className="service-icon">
+                    <Clapperboard />
+                  </span>
+                  <div>
+                    <h3>Edição com intenção.</h3>
+                    <p>
+                      Ritmo, narrativa e emoção. Cada corte existe para contar
+                      melhor uma história.
+                    </p>
+                    <small>PREMIERE PRO · DAVINCI RESOLVE</small>
+                  </div>
+                </div>
+                <div className="service glass">
+                  <span className="service-icon">
+                    <Layers3 />
+                  </span>
+                  <div>
+                    <h3>Ideias que se movem.</h3>
+                    <p>
+                      Motion design, composição e cor. Movimento que acrescenta
+                      significado à imagem.
+                    </p>
+                    <small>AFTER EFFECTS · COLOR GRADING</small>
+                  </div>
+                </div>
+                <div className="service glass">
+                  <span className="service-icon">
+                    <Sparkles />
+                  </span>
+                  <div>
+                    <h3>O impossível, em produção.</h3>
+                    <p>
+                      Imagens, cenas e fluxos criativos com IA. Novas
+                      ferramentas para ir além do óbvio.
+                    </p>
+                    <small>IA GENERATIVA · DIREÇÃO CRIATIVA</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Reveal className="motion-showcase">
+              <div className="motion-video">
+                <MotionVideo paused={paused} />
+                <span className="tag">
+                  <VolumeX size={12} /> MOTION EXPLORATION
+                </span>
+                <button
+                  className="icon-button video-pause"
+                  aria-label={
+                    manualPause ? "Reproduzir motion" : "Pausar motion"
+                  }
+                  onClick={() => setManualPause(!manualPause)}
+                >
+                  {manualPause ? <Play size={16} /> : <Pause size={16} />}
+                </button>
+              </div>
+              <div>
+                <span className="eyebrow">DO CONCEITO AO MOVIMENTO</span>
+                <h3>
+                  Um frame é uma ideia.
+                  <br />
+                  Em movimento, <span>é um universo.</span>
+                </h3>
+                <p>
+                  Exploração visual criada com inteligência artificial para este
+                  portfólio. Direção, luz e textura no mesmo processo criativo.
+                </p>
+                <a href="#contact" className="pill secondary">
+                  Vamos imaginar o próximo? <ArrowUpRight size={16} />
+                </a>
+              </div>
+            </Reveal>
+          </section>
+          <section id="about" className="about section-pad">
+            <Reveal className="about-layout">
+              <div className="about-image">
+                <img
+                  src="/media/studio-v2.webp"
+                  alt="Retrato criativo de Alex Ascencio em um estúdio de edição, produzido com IA"
+                  loading="lazy"
+                />
+                <div className="about-name glass">
+                  <img src="/media/mark.png" alt="" />
+                  <div>
+                    Alex Ascencio<small>O OLHAR POR TRÁS DAS HISTÓRIAS</small>
+                  </div>
+                  <ArrowUpRight size={22} />
+                </div>
+                <span className="ai-caption">RETRATO CRIATIVO COM IA</span>
+              </div>
+              <div className="about-copy">
+                <span className="eyebrow">
+                  PESSOA REAL. CURIOSIDADE INFINITA.
+                </span>
+                <h2>
+                  Mais do que
+                  <br />
+                  uma <span className="soft-type">timeline.</span>
+                </h2>
+                <p>
+                  Sou Alex. Editor de vídeo, filmmaker e profissional de
+                  inteligência artificial. Gosto de histórias que ficam na
+                  cabeça — e de descobrir novas maneiras de contá-las.
+                </p>
+                <p>
+                  Do set à finalização, transito entre videoclipes,
+                  documentários, cinema e motion. Combino técnica, sensibilidade
+                  e experimentação para dar personalidade a cada projeto.
+                </p>
+                <div className="about-tags">
+                  <span>
+                    <Film size={13} /> Cinema
+                  </span>
+                  <span>
+                    <Layers3 size={13} /> Motion
+                  </span>
+                  <span>
+                    <Sparkles size={13} /> IA
+                  </span>
+                </div>
+                <a
+                  className="pill secondary"
+                  href="/Alex_Ascencio_Curriculo.pdf"
+                  download
+                >
+                  Conheça minha trajetória <Download size={16} />
+                </a>
+              </div>
+            </Reveal>
+          </section>
+          <section id="contact" className="contact section-pad">
+            <div className="contact-halo" />
+            <Reveal className="contact-grid">
+              <div className="contact-copy">
+                <span className="eyebrow">
+                  <MessageCircle size={14} /> TODO GRANDE PROJETO COMEÇA COM UMA
+                  CONVERSA.
+                </span>
+                <h2>
+                  Sua ideia.
+                  <br />
+                  Meu olhar.
+                  <br />
+                  <span className="soft-type">Nosso próximo filme.</span>
+                </h2>
+                <p>
+                  Tem um projeto em mente?
+                  <br />
+                  Vamos dar forma, ritmo e vida a ele.
+                </p>
+                <div className="contact-socials">
+                  {[
+                    [MessageCircle, "WhatsApp", "https://wa.me/5515997569880"],
+                    [
+                      Instagram,
+                      "Instagram",
+                      "https://instagram.com/alexascencioai",
+                    ],
+                    [
+                      Linkedin,
+                      "LinkedIn",
+                      "https://www.linkedin.com/in/ascencioalexgabriel/",
+                    ],
+                  ].map(([Icon, name, url]) => (
+                    <a
+                      key={name}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="glass"
+                    >
+                      <Icon size={20} />
+                      <span>{name}</span>
+                      <ArrowUpRight size={14} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <form onSubmit={submit} className="contact-form glass">
+                <div className="form-title">
+                  <span className="form-icon">
+                    <MoveUpRight size={25} />
+                  </span>
+                  <div>
+                    Vamos criar algo bom.
+                    <small>ME CONTE UM POUCO DA SUA IDEIA</small>
+                  </div>
+                </div>
+                <label>
+                  Como posso te chamar?
+                  <input
+                    name="name"
+                    autoComplete="name"
+                    required
+                    maxLength={120}
+                    placeholder="Seu nome"
+                  />
+                </label>
+                <label>
+                  O que você tem em mente?
+                  <select name="type">
+                    <option>Edição de vídeo</option>
+                    <option>Motion design</option>
+                    <option>Projeto com IA</option>
+                    <option>Videoclipe</option>
+                    <option>Documentário ou cinema</option>
+                    <option>Outro projeto</option>
+                  </select>
+                </label>
+                <label>
+                  Me conta os detalhes
+                  <textarea
+                    name="message"
+                    required
+                    rows={3}
+                    maxLength={2500}
+                    placeholder="Sua ideia, referências e o prazo que você imagina..."
+                  />
+                </label>
+                <button className="pill primary" type="submit">
+                  Iniciar conversa <ArrowUpRight size={18} />
+                </button>
+                <small>
+                  Abre o WhatsApp com sua mensagem pronta para enviar.
+                </small>
+              </form>
+            </Reveal>
+          </section>
+        </main>
+        <footer>
+          <Brand />
+          <span>
+            © {new Date().getFullYear()} ALEX ASCENCIO
+            <br />
+            CRIAR. CONTAR. IMPACTAR.
+          </span>
+          <a className="back-top glass" href="#top" aria-label="Voltar ao topo">
+            <ArrowUpRight size={20} />
+          </a>
+        </footer>
+        {project && <Player project={project} close={() => setProject(null)} />}
+      </div>
+    </MotionConfig>
+  );
 }
