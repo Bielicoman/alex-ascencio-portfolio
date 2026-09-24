@@ -32,6 +32,7 @@ self.onmessage = async ({ data }) => {
       const r = lm?.detectForVideo(data.bitmap, data.t);
       if (task === "hand") {
         out.landmarks = r?.landmarks || [];
+        out.world = r?.worldLandmarks || []; // 21 pontos em metros, centrados na mão (orientação 3D real)
         out.handedness = (r?.handedness || []).map((h) => [{ categoryName: h[0]?.categoryName }]);
       } else if (task === "face") {
         const f = r?.faceLandmarks?.[0];

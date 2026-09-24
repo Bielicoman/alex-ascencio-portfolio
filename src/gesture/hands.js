@@ -202,9 +202,11 @@ export class HandTracker {
     const hands = [], seen = new Set();
     // identidade por posição (não pelo rótulo esquerda/direita, que às vezes troca entre quadros e
     // fazia a pinça "resetar" e soltar o objeto): cada detecção pega o estado mais próximo do quadro anterior
-    const dets = res.landmarks.map((raw) => {
+    const dets = res.landmarks.map((raw, i) => {
       const lm = raw.map((p) => ({ x: 1 - p.x, y: p.y, z: p.z }));
-      return { lm, ax: (lm[0].x + lm[9].x) / 2, ay: (lm[0].y + lm[9].y) / 2 };
+      // pontos 3D em metros convertidos para o espaço da cena (espelhado; y para cima; z para a câmera)
+      const world = res.world?.[i]?.map((p) => ({ x: -p.x, y: -p.y, z: -p.z })) || null;
+      return { lm, world, ax: (lm[0].x + lm[9].x) / 2, ay: (lm[0].y + lm[9].y) / 2 };
     });
     const pool = [...this.state.entries()].filter(([, st]) => t - st.t < 0.6);
     const pairs = [];
@@ -253,8 +255,10 @@ export class HandTracker {
       if (s.candN >= 4 || g === "pinch") s.gesture = g;
       const n = four;
       const pinchPt = { x: map((lm[4].x + lm[8].x) / 2, r.x0, r.x1), y: map((lm[4].y + lm[8].y) / 2, r.y0, r.y1) };
+      // empunhadura: centro dos nós dos dedos (onde passa o cabo de uma caneta/bastão segurado com a mão fechada)
+      const grip = { x: map((lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 4, r.x0, r.x1), y: map((lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 4, r.y0, r.y1) };
       s.last = {
-        key, lm, x, y, pinch: s.pinch, pinchD: pd, pinchPt,
+        key, lm, x, y, pinch: s.pinch, pinchD: pd, pinchPt, grip, world: det.world,
         vx: s.fx.dx, vy: s.fy.dx, t, // velocidade filtrada (tela/s) e instante da captura (s): previsão entre quadros
         scale: s.fs.f(palm, t), // tamanho da palma: cresce quando a mão se aproxima da câmera
         open: n === 4 && !s.pinch, fist: n === 0 && !s.pinch,

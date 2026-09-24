@@ -56,7 +56,7 @@ export class Input {
       if (!v) { v = { x: tx, y: ty, f: fingers.map((p) => ({ ...p })) }; this.view.set(id, v); }
       v.x += (tx - v.x) * k; v.y += (ty - v.y) * k;
       fingers.forEach((p, i) => { v.f[i].x += (p.x - v.f[i].x) * k; v.f[i].y += (p.y - v.f[i].y) * k; });
-      out.push({ id, x: v.x, y: v.y, px: hd.pinchPt ? hd.pinchPt.x * W : v.x, py: hd.pinchPt ? hd.pinchPt.y * H : v.y, ghost: hd.ghost, pinch: hd.pinch, fingers: v.f.map((p) => ({ ...p })), scale: hd.scale, angle: hd.angle, open: hd.open, fist: hd.fist, src: "cam", lm: hd.lm });
+      out.push({ id, x: v.x, y: v.y, px: hd.pinchPt ? hd.pinchPt.x * W : v.x, py: hd.pinchPt ? hd.pinchPt.y * H : v.y, ghost: hd.ghost, world: hd.world, gx: hd.grip ? hd.grip.x * W : v.x, gy: hd.grip ? hd.grip.y * H : v.y, pinch: hd.pinch, fingers: v.f.map((p) => ({ ...p })), scale: hd.scale, angle: hd.angle, open: hd.open, fist: hd.fist, src: "cam", lm: hd.lm });
     }
     for (const id of this.view.keys()) if (!seen.has(id)) this.view.delete(id);
     // caminho do ponteiro desde o último quadro (movimento rápido não "pula" alvos entre quadros)
