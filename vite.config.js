@@ -1,7 +1,21 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { cpSync } from 'node:fs';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { cpSync, existsSync } from "node:fs";
+
+// public/ guarda originais pesados de identidade visual; o build publica só o necessário.
+const PUBLISH = ["media", "brand", "favicon.svg", "favicon-32.png", "apple-touch-icon.png", "Alex_Ascencio_Curriculo.pdf", "robots.txt", "sitemap.xml"];
+
 export default defineConfig(({ command }) => ({
-  plugins: [react(), {name:'portfolio-public-assets',closeBundle(){if(command==='build'){cpSync('public/media','dist/media',{recursive:true});cpSync('public/Alex_Ascencio_Curriculo.pdf','dist/Alex_Ascencio_Curriculo.pdf');cpSync('public/robots.txt','dist/robots.txt');cpSync('public/sitemap.xml','dist/sitemap.xml');}}}],
-  publicDir: command === 'build' ? false : 'public',
+  plugins: [
+    react(),
+    {
+      name: "portfolio-public-assets",
+      closeBundle() {
+        if (command !== "build") return;
+        for (const p of PUBLISH) if (existsSync(`public/${p}`)) cpSync(`public/${p}`, `dist/${p}`, { recursive: true });
+      },
+    },
+  ],
+  publicDir: command === "build" ? false : "public",
+  build: { chunkSizeWarningLimit: 700, rollupOptions: { output: { manualChunks: { three: ["three"], motion: ["gsap", "lenis"], react: ["react", "react-dom"] } } } },
 }));
