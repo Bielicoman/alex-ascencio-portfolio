@@ -1,4 +1,4 @@
-# Alex Ascencio — Portfólio v04
+# Alex Ascencio — Portfólio v05
 
 Reconstrução completa do site. React 19 + Vite 7, three.js (partículas e lente em shader), GSAP ScrollTrigger + Lenis (scroll suave), fontes Geist / Geist Mono hospedadas localmente.
 
@@ -9,7 +9,12 @@ Reconstrução completa do site. React 19 + Vite 7, three.js (partículas e lent
     npm run preview   # serve dist/ em http://localhost:4173
 
 ## Estrutura
-- `src/App.jsx` — todas as seções (hero, manifesto, filmes, lab, método, arquivo, sobre, contato).
+- `src/App.jsx` — seções (hero, manifesto, filmes, lab, arquivo, sobre, contato, rodapé) e a abertura.
+- `src/components/Method.jsx` — seção Método: simulação do Premiere Pro (desktop) e do CapCut (≤ 760 px), dirigida pelo scroll.
+- `src/components/Floaters.js` — elementos da hero em gravidade zero (flutuação, tilt 3D, arrasto com inércia, retorno por mola).
+- `src/components/Cursor.jsx` — seta 3D + luz sem interpolação; entra no `<dialog>` do player via portal (top layer).
+- `src/components/MarkScene.js` — marca AA extrudada em three.js no contato (tema claro).
+- `src/components/Icons.jsx` — ícones animados (hover, loop e desenho do traço ao entrar na tela).
 - `src/projects.js` — trabalhos (mesmo arquivo da v01; miniaturas em `public/media/{id}.webp`).
 - `src/components/ParticleField.js` — campo de partículas que reage ao cursor e vira a marca AA no scroll.
 - `src/components/LensField.js` — vídeo da lente como fundo reativo (bulge, aberração cromática, spot).
@@ -22,7 +27,10 @@ Retratos gerados por IA (`portrait-v2`, `studio-v2`) e a cena 3D da lente do rod
 ## Contato
 WhatsApp +55 15 99756-9880, e-mail ascencioalexgabriel@gmail.com, Instagram @alexascencioai, LinkedIn /in/ascencioalexgabriel — constantes no topo de `src/App.jsx`.
 
-Movimento reduzido respeitado (sem pins, sem Lenis, poster estático no Lab).
+Movimento reduzido respeitado (sem pins, sem Lenis, sem abertura, poster estático no Lab).
+
+## Abertura
+Letterbox que abre a partir de uma fenda de luz. A hero recebe o estado inicial antes do primeiro paint e só anima uma vez. A cortina espera fontes + decode do recorte + 0,9 s mínimo. `gsap.ticker.lagSmoothing(500, 33)`: com `0`, uma travada no carregamento pulava a abertura inteira.
 
 ## Logos de clientes
 `public/media/logos/*.png` — silhuetas brancas sem fundo geradas a partir dos arquivos oficiais. Altura de exibição por área óptica equivalente: `h = 58 / sqrt(aspecto) × (0,45 / densidade)^0,35`, limitada a 54 px (valores em `CLIENTS`, `src/App.jsx`).
