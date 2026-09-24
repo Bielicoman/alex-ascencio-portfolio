@@ -60,3 +60,9 @@ Encode: 6 s, 960×540, 24 fps, sem áudio — `ffmpeg -ss <in> -t 6 -i master.mp
 O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm run preview`, abrir `/curriculo/` no Chromium e imprimir com
 `page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })`. Salvar como `public/media/cv/AAAA-MM-DD_alexascencio_curriculo_vNN.pdf`
 (nunca sobrescrever) e atualizar `PDF` em `src/curriculo/main.jsx`. Imagens do currículo em `public/media/cv/img/` (foto 520 px, miniaturas 400 px).
+
+## Controle por gestos e Playground
+- **Hero → "Controlar com as mãos"** (só desktop): liga a webcam e controla a página. Apontar move o cursor; pinça rápida = clique; pinça + arrasto no vazio = rolar (soltar em movimento arremessa); pinça num flutuante = pegar e jogar; duas pinças = zoom na seção. Esc desliga. Tutorial com checagem ao vivo de cada gesto.
+- **/playground/**: página independente com Partículas (marca AA em 26 mil pontos), Objetos 3D em gravidade zero, Piano, Bateria, Teremim e o jogo "Corte". Funciona com câmera, mouse ou toque.
+- Rastreamento: MediaPipe HandLandmarker (21 pontos, 2 mãos) + filtro One Euro, tudo no navegador. O WASM é copiado de `node_modules/@mediapipe/tasks-vision/wasm` para `dist/media/hand/wasm` no build; o modelo (7,8 MB) vem do CDN oficial do MediaPipe e só baixa quando a câmera é ligada.
+- Código: `src/gesture/` (rastreador + controle da home), `src/playground/` (página, áudio sintetizado e modos).

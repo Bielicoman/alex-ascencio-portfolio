@@ -1,0 +1,76 @@
+/* ───────── controle por gestos: retículas, HUD da câmera, tutorial ───────── */
+.gx { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; font-family: var(--sans, system-ui); color: #f3f3f5; }
+.gx.out .gx-hud, .gx.out .gx-tut, .gx.out .gx-ret { animation: gx-out .35s ease both; }
+@keyframes gx-out { to { opacity: 0; } }
+.gx .mono { font-family: var(--mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+
+/* retícula estilo HUD: anel com 4 marcas, encolhe e acende vermelho na pinça */
+.gx-ret { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity .25s; will-change: transform; }
+.gx-ret.on { opacity: 1; }
+.gx-ring { position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.9);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 22px rgba(255,59,59,.25), inset 0 0 12px rgba(255,255,255,.12);
+  transition: transform .22s cubic-bezier(.22,1,.36,1), border-color .2s, background .2s, box-shadow .2s; }
+.gx-ring::before, .gx-ring::after { content: ""; position: absolute; inset: -9px; border-radius: 50%;
+  background: conic-gradient(from -8deg, #fff 0 16deg, transparent 0 90deg, #fff 0 106deg, transparent 0 180deg, #fff 0 196deg, transparent 0 270deg, #fff 0 286deg, transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 86%, #000 88% 100%); mask: radial-gradient(closest-side, transparent 86%, #000 88% 100%); opacity: .7; animation: gx-spin 6s linear infinite; }
+.gx-ring::after { inset: -16px; opacity: .22; animation-duration: 11s; animation-direction: reverse; }
+.gx-ring b { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fff; transition: transform .2s, background .2s; }
+.gx-ret.pinch .gx-ring { transform: scale(.62); border-color: #ff3b3b; background: rgba(255,59,59,.22); box-shadow: 0 0 0 1px rgba(0,0,0,.3), 0 0 30px rgba(255,59,59,.8); }
+.gx-ret.pinch .gx-ring b { background: #ff3b3b; transform: scale(1.4); }
+.gx-ret[data-i="1"] .gx-ring { border-color: rgba(255,255,255,.6); }
+@keyframes gx-spin { to { transform: rotate(360deg); } }
+.gx-lab { position: absolute; left: 34px; top: -8px; white-space: nowrap; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.gx-lab:empty { display: none; }
+
+/* HUD: preview espelhado com esqueleto */
+.gx-hud { position: absolute; right: 20px; bottom: 20px; width: 260px; padding: 10px; border-radius: 20px; pointer-events: auto;
+  background: rgba(12,12,14,.86); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); animation: gx-rise .6s cubic-bezier(.22,1,.36,1) both; }
+.gx-cam { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #000; }
+.gx-cam canvas { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .5s; }
+.gx-cam.is-live canvas { opacity: 1; }
+.gx-load { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .4s; }
+.gx-cam.is-live .gx-load { opacity: 0; }
+.gx-load i { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); border-top-color: #ff3b3b; animation: gx-spin .8s linear infinite; }
+.gx.is-error .gx-load i { animation: none; border-color: #ff3b3b; }
+.gx-hud-b { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px; padding: 0 2px; }
+.gx-status { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1 1 80px; color: #c9c9d0; }
+.gx-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx.is-error .gx-status span { white-space: normal; text-transform: none; letter-spacing: 0; font-family: var(--sans, system-ui); font-size: 12px; line-height: 1.35; color: #fff; }
+.gx-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #85858f; }
+.gx[data-phase="live"] .gx-dot { background: #ff3b3b; box-shadow: 0 0 0 3px rgba(255,59,59,.2); animation: gx-blink 1.2s steps(2) infinite; }
+@keyframes gx-blink { 50% { opacity: .35; } }
+.gx-btns { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.gx-btns a, .gx-btns button { display: inline-grid; place-items: center; height: 28px; min-width: 28px; padding: 0 9px; border-radius: 99px; border: 1px solid rgba(255,255,255,.14);
+  font: 500 12px var(--sans, system-ui); color: #f3f3f5; background: rgba(255,255,255,.04); text-decoration: none; cursor: pointer; transition: background .25s, color .25s; }
+.gx-btns a:hover, .gx-btns button:hover { background: #fff; color: #0a0a0b; }
+.gx-btns .gx-x { padding: 0; }
+
+/* tutorial: cada passo confirma sozinho quando o gesto é reconhecido */
+.gx-tut { position: absolute; left: 20px; bottom: 20px; width: min(360px, calc(100vw - 320px)); padding: 16px; border-radius: 22px; pointer-events: auto;
+  background: rgba(12,12,14,.88); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); animation: gx-rise .6s cubic-bezier(.22,1,.36,1) both; }
+.gx-tut[hidden] { display: none; }
+@keyframes gx-rise { from { opacity: 0; transform: translateY(16px); } }
+.gx-tut-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #ff3b3b; }
+.gx-skip { font: 500 12px var(--sans, system-ui); color: #c9c9d0; background: none; border: 0; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.gx-skip:hover { color: #fff; background: rgba(255,255,255,.08); }
+.gx-tut ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gx-tut li { display: grid; grid-template-columns: 38px 1fr 18px; gap: 10px; align-items: center; padding: 8px; border-radius: 14px; border: 1px solid transparent; opacity: .5; transition: opacity .35s, background .35s, border-color .35s; }
+.gx-tut li.on { opacity: 1; background: rgba(255,59,59,.07); border-color: rgba(255,59,59,.35); }
+.gx-tut li.ok { opacity: .85; }
+.gx-g { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,.05); color: #fff; }
+.gx-tut li.on .gx-g { color: #ff3b3b; animation: gx-nudge 1.4s cubic-bezier(.22,1,.36,1) infinite; }
+@keyframes gx-nudge { 50% { transform: translateY(-2px) scale(1.06); } }
+.gx-tut b { display: block; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
+.gx-tut small { display: block; margin-top: 1px; font-size: 11.5px; line-height: 1.4; color: #a4a4ad; }
+.gx-ok { font-style: normal; font-size: 13px; color: #ff3b3b; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .45s cubic-bezier(.34,1.56,.64,1); }
+.gx-tut li.ok .gx-ok { opacity: 1; transform: none; }
+.gx-tut.is-done { border-color: rgba(255,59,59,.5); }
+.gx-tut-f { margin: 10px 2px 0; color: #85858f; }
+
+.gx-zoomed { will-change: scale; transition: none; }
+@media (max-width: 760px) {
+  .gx-hud { width: 180px; right: 12px; bottom: 12px; }
+  .gx-tut { left: 12px; right: 12px; bottom: auto; top: 12px; width: auto; }
+}

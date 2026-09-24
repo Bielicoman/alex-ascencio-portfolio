@@ -1147,3 +1147,9 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .speedforce { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 395; pointer-events: none; }
 .warp::after { background: radial-gradient(60vmax circle at var(--x, 50%) var(--y, 50%), rgba(255,150,60,.24), rgba(227,34,16,.18) 40%, transparent 70%) !important; }
 .warp-ring { background: radial-gradient(closest-side, transparent 88%, rgba(255,42,16,0) 89%, rgba(255,90,30,.5) 95%, rgba(255,230,190,.75) 97.5%, transparent 100%) !important; }
+
+/* botão de gestos na hero: só com mouse/trackpad (câmera + mãos no ar não faz sentido no celular) */
+@media (pointer: coarse), (max-width: 760px) { .magnetic:has(> .btn-gest) { display: none; } }
+.btn-gest[aria-pressed="true"] { border-color: rgba(255,59,59,.6); box-shadow: 0 0 0 3px rgba(255,59,59,.15); }
+.btn-gest:hover .ai-hand .p-wave { animation: hand-wave .9s var(--ease) 2; transform-origin: 40% 90%; }
+@keyframes hand-wave { 30% { transform: rotate(-14deg); } 70% { transform: rotate(10deg); } }

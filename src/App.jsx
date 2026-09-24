@@ -87,11 +87,11 @@ function Magnetic({ children, strength = 0.22 }) {
   }, [strength]);
   return <span ref={ref} className="magnetic">{children}</span>;
 }
-function Btn({ as = "a", variant = "primary", size = "", children, icon = <I.Arrow size={15} />, ...props }) {
+function Btn({ as = "a", variant = "primary", size = "", className = "", children, icon = <I.Arrow size={15} />, ...props }) {
   const Tag = as;
   return (
     <Magnetic>
-      <Tag className={`btn btn-${variant} ${size}`} {...props}>
+      <Tag className={`btn btn-${variant} ${size} ${className}`} {...props}>
         <span className="btn-fill" aria-hidden="true" />
         <span className="btn-label"><span>{children}</span><span aria-hidden="true">{children}</span></span>
         <span className="btn-icon"><span>{icon}</span><span aria-hidden="true">{icon}</span></span>
@@ -328,7 +328,7 @@ function NowPlaying({ open }) {
     </div>
   );
 }
-function Hero({ open, onDemo, demo }) {
+function Hero({ open, onDemo, demo, onGest, gest }) {
   const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
     const fl = new Floaters(floatRef.current);
@@ -389,6 +389,7 @@ function Hero({ open, onDemo, demo }) {
           <div className="hero-ctas">
             <Btn href="#filmes" size="lg" icon={<I.Play size={14} />}>Ver filmes</Btn>
             <Btn href="#contato" size="lg" variant="glass">Falar comigo</Btn>
+            <Btn as="button" type="button" size="lg" variant="glass" className="btn-gest" onClick={onGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
         <div className="hero-scroll" aria-hidden="true">
@@ -1041,6 +1042,16 @@ export default function App() {
     sfx.unlock(); sfx.riser(1.1);
     stopDemo.current = runDemo({ onEnd: () => { stopDemo.current = null; setDemo(false); } });
   };
+  // controle por gestos: MediaPipe só carrega no clique (chunk separado)
+  const [gest, setGest] = useState(false);
+  const stopGest = useRef(null);
+  const toggleGest = async () => {
+    if (stopGest.current) { stopGest.current(); return; }
+    setGest(true); sfx.unlock();
+    stopGest.current = () => {};
+    const { default: start } = await import("./gesture/GestureControl");
+    stopGest.current = start({ onEnd: () => { stopGest.current = null; setGest(false); } });
+  };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
 
@@ -1313,7 +1324,7 @@ export default function App() {
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} onDemo={toggleDemo} demo={demo} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />
