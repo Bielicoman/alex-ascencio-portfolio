@@ -21,8 +21,10 @@ async function models(key) {
   return PREF.slice(0, 4);
 }
 
-const SYSTEM = `Você é a EDITH (pronuncia-se "Édite"), assistente do site de portfólio do Alex Ascencio, editor de vídeo e filmmaker.
-Fale sempre em português do Brasil, como uma moça jovem, educada e natural numa conversa por voz.
+const now = () => new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const SYSTEM = () => `Agora é ${now()} (horário de Brasília).
+Você é a EDITH (pronuncia-se "Edíte"), assistente do site de portfólio do Alex Ascencio, editor de vídeo e filmmaker.
+Fale sempre em português do Brasil, como uma moça jovem, educada e natural numa conversa por voz. Evite palavras em inglês: use o equivalente em português (vídeo, jogo, portfólio, edição).
 Respostas curtas: uma ou duas frases, só o essencial. Sem listas, sem emoji, sem markdown.
 Nunca termine com ofertas genéricas como "se precisar de mim", "estou à disposição" ou "posso ajudar em algo mais".
 Se a pessoa quiser conversar sobre a vida dela ou qualquer assunto, converse de verdade, com interesse e empatia, pelo tempo que ela quiser, sem puxar o assunto de volta para o Alex.
@@ -43,7 +45,27 @@ Ações permitidas:
 - {"type":"budget"} (começar orçamento por voz)
 - {"type":"message"} (a pessoa quer mandar um recado ou e-mail para o Alex)
 - {"type":"close_video"} (fechar o vídeo aberto)
-Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem. Em conversa comum, "actions": [].`;
+Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem. Em conversa comum, "actions": [].
+Pesquisa na internet: se a resposta depender de informação atual ou que você não sabe com certeza (notícias, clima, jogos, cotações, preços, eventos, pessoas, lugares, qualquer fato fora do site), não chute: responda {"say": "", "search": "<consulta curta em português para a web>", "actions": []}.`;
+
+// busca na web: sistemas Compound da Groq (pesquisa embutida); resposta curta, sem markdown nem links
+async function webSearch(key, question, query) {
+  for (const model of ["groq/compound-mini", "groq/compound"]) {
+    try {
+      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, temperature: 0.3, max_tokens: 400, messages: [
+          { role: "system", content: `Agora é ${now()} (horário de Brasília). Pesquise na web e responda em português do Brasil, em no máximo duas frases curtas, só o essencial, como fala natural. Sem markdown, sem links, sem citar fontes.` },
+          { role: "user", content: `${question}\n(consulta sugerida: ${query})` },
+        ] }),
+      });
+      if (!r.ok) { console.error("[edth] search", model, r.status, (await r.text()).slice(0, 200)); continue; }
+      const t = ((await r.json()).choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").replace(/\[(\d+|[^\]]*)\]\([^)]*\)|\[\d+\]|[*_#`]/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+      if (t) return { say: t, model };
+    } catch (e) { console.error("[edth] search", model, e.message); }
+  }
+  return null;
+}
 
 const parse = (txt) => {
   if (!txt) return {};
@@ -55,8 +77,14 @@ const parse = (txt) => {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST" });
   const key = process.env.GROQ_API_KEY;
+  // diagnóstico fixo (não aceita pergunta livre): GET /api/edth?probe=1
+  if (req.method === "GET" && req.query?.probe) {
+    if (!key) return res.status(501).json({ error: "sem GROQ_API_KEY" });
+    const t0 = Date.now(), w = await webSearch(key, "Quanto está o dólar hoje em reais?", "cotação dólar hoje");
+    return res.status(200).json({ ok: !!w, model: w?.model, say: w?.say, ms: Date.now() - t0, now: now() });
+  }
+  if (req.method !== "POST") return res.status(405).json({ error: "POST" });
   if (!key) return res.status(501).json({ error: "sem GROQ_API_KEY" });
   let body = req.body;
   if (typeof body === "string") try { body = JSON.parse(body); } catch { body = {}; }
@@ -89,7 +117,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
   const history = (Array.isArray(body?.history) ? body.history : []).slice(-20)
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
     .map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 600) }));
-  const messages = [{ role: "system", content: SYSTEM }, ...history, { role: "user", content: message }];
+  const messages = [{ role: "system", content: SYSTEM() }, ...history, { role: "user", content: message }];
   for (const model of await models(key)) {
     for (const json of [true, false]) { // se o modo JSON falhar nesse modelo, tenta sem ele e extrai o JSON do texto
       try {
@@ -102,8 +130,12 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
         if (!r.ok) { console.error("[edth]", model, json ? "json" : "text", r.status, (await r.text()).slice(0, 300)); continue; }
         const j = await r.json();
         const out = parse(j.choices?.[0]?.message?.content);
-        if (!out.say) continue;
         res.setHeader("Cache-Control", "no-store");
+        if (out.search) {
+          const w = await webSearch(key, message, String(out.search).slice(0, 200));
+          return res.status(200).json({ say: (w?.say || "Não consegui pesquisar agora. Tenta de novo daqui a pouco?").slice(0, 400), actions: [], model: w?.model || model, searched: !!w });
+        }
+        if (!out.say) continue;
         return res.status(200).json({ say: String(out.say).slice(0, 400), actions: Array.isArray(out.actions) ? out.actions.slice(0, 2) : [], model });
       } catch (e) { console.error("[edth]", model, e.message); }
     }

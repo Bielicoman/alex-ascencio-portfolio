@@ -73,10 +73,10 @@ O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm 
 - Cada modelo roda no seu Web Worker (em paralelo); mãos começam na GPU e caem para CPU se a média passar de 40 ms.
 - Código: `src/gesture/` (rastreador, worker, voz, controle da home), `src/playground/` (página, áudio sintetizado e modos).
 
-## EDITH · assistente por voz (fala-se "Édite")
+## EDITH · assistente por voz (fala-se "Edíte")
 - Barra compacta no canto inferior direito: orbe = microfone, campo de texto, conversa completa sob demanda (▲) e fechar. Última resposta aparece numa bolha curta que some sozinha.
 - Microfone contínuo: liga ao abrir e só desliga quando o usuário pede ("desliga o microfone") ou fecha. Com vídeo aberto, só reage depois de ouvir "Edith" ("Edith, fecha o vídeo", "Edith, próximo").
-- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes, jogos, som. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas.
+- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes, jogos, som. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas. Perguntas abertas ("que dia é hoje", "quem ganhou o jogo") nunca viram comando: vão para a IA, que sabe a data/hora de Brasília e pesquisa na web quando precisa (Groq Compound; diagnóstico `GET /api/edth?probe=1`).
 - Voz: `api/tts.js` → ElevenLabs (`ELEVENLABS_API_KEY`) › Google (`GOOGLE_TTS_API_KEY`) › voz neural do Edge (Thalita pt-BR, grátis, não oficial; `EDGE_TTS_VOICE`) › voz do navegador. Diagnóstico: `GET /api/tts?probe=1`.
 - Recados: `api/contact.js` envia com Resend (`RESEND_API_KEY`, `CONTACT_TO`); sem chave, o navegador envia pelo FormSubmit para o e-mail do Alex (o primeiro envio pede ativação por e-mail).
 - Dados do Alex (currículo e EDITH): `src/profile.js`.

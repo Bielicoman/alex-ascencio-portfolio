@@ -5,7 +5,7 @@ import { SOCIAL, PDF } from "../profile";
 import { sfx } from "../components/Sound";
 import "./edth.css";
 
-// EDITH (fala-se "Édite"): assistente do site por voz e texto, numa barra compacta no canto.
+// EDITH (fala-se "Edíte"): assistente do site por voz e texto, numa barra compacta no canto.
 // Microfone contínuo até o usuário pedir para desligar. Com vídeo aberto ou barra recolhida, só reage
 // quando ouve "Edith" (palavra de ativação). Responde com voz neural jovem (/api/tts) ou a do navegador,
 // age no site (vídeos, seções, tour, orçamento, recado por e-mail, jogos) e conversa livre via /api/edth (Groq).
@@ -146,7 +146,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
   let audio = null, speakId = 0;
   const ttsCache = new Map();
   let ttsFails = 0;
-  const spoken = (t) => t.replace(/\bEDITH\b|\bEdith\b/g, "Édite").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba ").replace(/\n+/g, ". ");
+  const spoken = (t) => t.replace(/\bEDITH\b|\bEdith\b/g, "Edíte").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba ").replace(/\n+/g, ". ");
   const neural = async (text) => {
     if (serverTTS === false) return null;
     if (ttsCache.has(text)) return ttsCache.get(text);

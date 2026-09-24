@@ -2,6 +2,7 @@
 //   ELEVENLABS_API_KEY (+ ELEVENLABS_VOICE_ID)  → pago, mais realista
 //   GOOGLE_TTS_API_KEY (+ GOOGLE_TTS_VOICE)      → Google Cloud Chirp 3 HD pt-BR (Leda: timbre jovem)
 //   sem chave → voz neural do Microsoft Edge (Thalita, pt-BR, jovem), gratuita e sem cadastro.
+//     <lang xml:lang='pt-BR'> trava o sotaque: a voz multilíngue não troca para inglês no meio da frase.
 //     Não é API oficial: se a Microsoft mudar o protocolo, cai para a voz do navegador. EDGE_TTS_VOICE troca a voz.
 // GET /api/tts?probe=1 testa a síntese e devolve só o diagnóstico (provedor, bytes, erro).
 import crypto from "node:crypto";
@@ -41,7 +42,7 @@ function edge(text, voice) {
     ws.on("open", () => {
       const ts = new Date().toString();
       ws.send(`X-Timestamp:${ts}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n`);
-      ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${ts}Z\r\nPath:ssml\r\n\r\n<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${voice}'><prosody pitch='+4Hz' rate='+6%' volume='+0%'>${xml(text)}</prosody></voice></speak>`);
+      ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${ts}Z\r\nPath:ssml\r\n\r\n<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${voice}'>${voice.includes("Multilingual") ? "<lang xml:lang='pt-BR'>" : ""}<prosody pitch='+4Hz' rate='+6%' volume='+0%'>${xml(text)}</prosody>${voice.includes("Multilingual") ? "</lang>" : ""}</voice></speak>`);
     });
     ws.on("message", (data, isBinary) => {
       if (isBinary) {
@@ -84,7 +85,7 @@ async function synth(text) {
 
 export default async function handler(req, res) {
   if (req.method === "GET" && req.query?.probe) {
-    const t0 = Date.now(), out = await synth("Oi, eu sou a Édite.").catch((e) => ({ errs: [e.message] }));
+    const t0 = Date.now(), out = await synth("Oi, eu sou a Edíte.").catch((e) => ({ errs: [e.message] }));
     return res.status(200).json({ ok: !!out.buf, via: out.via, bytes: out.buf?.length || 0, ms: Date.now() - t0, errs: out.errs });
   }
   if (req.method !== "POST") return res.status(405).end();
