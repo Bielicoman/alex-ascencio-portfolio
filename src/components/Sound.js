@@ -218,10 +218,65 @@ class Sound {
     o.connect(l).connect(e); this.out(e, { rev: 0.6 }); o.start(t); o.stop(t + dur + 0.5);
     setTimeout(() => this.shimmer(0.02), dur * 1000);
   }
-  teleport(x) { // sucção → boom + brilho + estilhaço digital no salto → sopro de chegada
+  // curva de saturação (tanh) para gerar harmônicos audíveis em caixas pequenas
+  drive(k = 3) {
+    const n = 1024, c = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
+    const w = this.ctx.createWaveShaper(); w.curve = c; w.oversample = "4x"; return w;
+  }
+  duck(depth = 0.15, hold = 1.2) { // abaixa os leitos contínuos durante o impacto
+    const t = this.ctx.currentTime;
+    for (const b of [this.air.g, this.pad.g, this.whirr.g]) { b.gain.cancelScheduledValues(t); b.gain.setTargetAtTime(b.gain.value * depth, t, 0.02); }
+    setTimeout(() => this.scrollAir(0), hold * 1000);
+  }
+  teleport(x) {
     if (!this.ok()) return;
-    this.whoosh(0.36, true, 0.16, x);
-    setTimeout(() => { this.boom(0.22); this.shimmer(0.022); this.glitch(0.045, 4); this.whoosh(0.6, false, 0.07); }, 360);
+    const ctx = this.ctx, t0 = ctx.currentTime, hit = t0 + 0.36;
+    // 1. sucção: ruído subindo + riser tonal + prato ao contrário
+    this.whoosh(0.36, true, 0.2, x);
+    const r = this.osc("sawtooth", 180, t0); r.frequency.exponentialRampToValueAtTime(1400, hit);
+    const rl = ctx.createBiquadFilter(); rl.type = "bandpass"; rl.Q.value = 3; rl.frequency.setValueAtTime(300, t0); rl.frequency.exponentialRampToValueAtTime(3000, hit);
+    const rg = ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.06, hit - 0.01); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.02);
+    r.connect(rl).connect(rg); this.out(rg, { rev: 0.4, pan: this.panX(x) }); r.start(t0); r.stop(hit + 0.05);
+    const cy = this.src(this.noise, t0, 0.4), ch = ctx.createBiquadFilter(); ch.type = "highpass"; ch.frequency.value = 5000;
+    const cg = ctx.createGain(); cg.gain.setValueAtTime(0.0001, t0); cg.gain.exponentialRampToValueAtTime(0.09, hit - 0.005); cg.gain.linearRampToValueAtTime(0.0001, hit + 0.01);
+    cy.connect(ch).connect(cg); this.out(cg, { rev: 0.3 });
+    setTimeout(() => this.duck(0.12, 1.4), 330);
+    this.impact(hit);
+    // 3. cauda
+    setTimeout(() => { this.shimmer(0.03); this.glitch(0.06, 5); this.whoosh(0.8, false, 0.09); }, 360);
+  }
+  // impacto de trailer: estalo + soco saturado + sub + braam (serras desafinadas com filtro fechando)
+  impact(hit = this.ctx.currentTime, g = 1) {
+    const ctx = this.ctx;
+    const crack = this.src(this.noise, hit, 0.06), cb = ctx.createBiquadFilter(); cb.type = "bandpass"; cb.frequency.value = 3200; cb.Q.value = 0.7;
+    const ce = this.env(0.35 * g, 0.001, 0.05, hit); crack.connect(cb).connect(ce); this.out(ce, { rev: 0.35 });
+    const punch = this.osc("triangle", 115, hit); punch.frequency.exponentialRampToValueAtTime(42, hit + 0.35);
+    const pd = this.drive(4), pl = ctx.createBiquadFilter(); pl.type = "lowpass"; pl.frequency.value = 1800;
+    const pe = this.env(0.42 * g, 0.002, 0.55, hit); punch.connect(pd).connect(pl).connect(pe); this.out(pe, { rev: 0.3 }); punch.start(hit); punch.stop(hit + 0.7);
+    const sub = this.osc("sine", 72, hit); sub.frequency.exponentialRampToValueAtTime(28, hit + 1.6);
+    const se = this.env(0.4 * g, 0.004, 1.9, hit); sub.connect(se); this.out(se, { rev: 0.15 }); sub.start(hit); sub.stop(hit + 2.1);
+    const braam = ctx.createBiquadFilter(); braam.type = "lowpass"; braam.Q.value = 2.5;
+    braam.frequency.setValueAtTime(2600, hit); braam.frequency.exponentialRampToValueAtTime(160, hit + 1.8);
+    const bd = this.drive(2.2), be = this.env(0.16 * g, 0.012, 2.2, hit);
+    [55, 82.41, 110, 164.81].forEach((f, i) => [-14, 9].forEach((det) => { const o = this.osc("sawtooth", f, hit); o.detune.value = det + i * 3; o.connect(braam); o.start(hit); o.stop(hit + 2.4); }));
+    braam.connect(bd).connect(be); this.out(be, { rev: 0.85 });
+  }
+  // abertura: fenda de luz (sopro + riser) → impacto quando o letterbox abre → um tick por letra
+  intro(openAt = 0.9, letters = 9) {
+    if (!this.ok()) return;
+    const t0 = this.ctx.currentTime, hit = t0 + openAt;
+    this.whoosh(openAt, true, 0.14);
+    const r = this.osc("sine", 220, t0); r.frequency.exponentialRampToValueAtTime(880, hit);
+    const rg = this.ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.035, hit - 0.02); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.03);
+    r.connect(rg); this.out(rg, { rev: 0.6 }); r.start(t0); r.stop(hit + 0.05);
+    this.impact(hit, 0.85);
+    setTimeout(() => this.shimmer(0.028), openAt * 1000 + 150);
+    for (let i = 0; i < letters; i++) {
+      const d = Math.abs(i - (letters - 1) / 2), at = hit + 0.35 + d * 0.055;
+      const o = this.osc("sine", PENT[(4 + i) % PENT.length] * 2, at), e = this.env(0.014, 0.002, 0.12, at);
+      o.connect(e); this.out(e, { rev: 0.5, pan: (i / (letters - 1)) * 1.2 - 0.6 }); o.start(at); o.stop(at + 0.15);
+    }
   }
   reveal() { // título de seção entrando: sopro muito leve
     if (!this.ok() || !this.rate("reveal", 700)) return;
