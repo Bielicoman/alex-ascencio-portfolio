@@ -54,3 +54,9 @@ Medido no Chromium sem GPU (8 s de scroll + mouse): 2,8–4,1 → 4,8 fps em rel
 `preview` em `src/projects.js` é o caminho sem extensão de um loop curto em `public/media/previews/` (.webm VP9 para Chrome/Firefox, .mp4 H.264 para Safari), tocado no hover (grade, Filmes, card da hero) e no tour.
 Sem `preview`, o tour cai no embed do YouTube (lento: carrega o player inteiro).
 Encode: 6 s, 960×540, 24 fps, sem áudio — `ffmpeg -ss <in> -t 6 -i master.mp4 -an -vf "scale=960:540:flags=lanczos,fps=24" -c:v libx264 -profile:v high -preset slow -crf 27 -pix_fmt yuv420p -movflags +faststart AAAA-MM-DD_projeto_preview_v01.mp4` (~300 KB). WebM: `-c:v libvpx-vp9 -b:v 0 -crf 38 -row-mt 1` (~250 KB).
+
+## Currículo digital
+`/curriculo/` (`curriculo/index.html` + `src/curriculo/`): página na identidade do site, abre instantânea (sem depender de visualizador de PDF).
+O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm run preview`, abrir `/curriculo/` no Chromium e imprimir com
+`page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })`. Salvar como `public/media/cv/AAAA-MM-DD_alexascencio_curriculo_vNN.pdf`
+(nunca sobrescrever) e atualizar `PDF` em `src/curriculo/main.jsx`. Imagens do currículo em `public/media/cv/img/` (foto 520 px, miniaturas 400 px).

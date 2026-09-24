@@ -17,5 +17,12 @@ export default defineConfig(({ command }) => ({
     },
   ],
   publicDir: command === "build" ? false : "public",
-  build: { chunkSizeWarningLimit: 700, rollupOptions: { output: { manualChunks: { three: ["three"], motion: ["gsap", "lenis"], react: ["react", "react-dom"] } } } },
+  build: {
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      // páginas: site, currículo digital e playground de gestos
+      input: { main: "index.html", curriculo: "curriculo/index.html" },
+      output: { manualChunks: { three: ["three"], motion: ["gsap", "lenis"], react: ["react", "react-dom"] } },
+    },
+  },
 }));

@@ -849,9 +849,9 @@ function About() {
                   </span>
                 ))}
               </div>
-              <a className="ab-cv" href="/Alex_Ascencio_Curriculo.pdf" target="_blank" rel="noreferrer" aria-label="Currículo digital de Alex Ascencio (PDF, abre no navegador)">
+              <a className="ab-cv" href="/curriculo/" aria-label="Currículo digital de Alex Ascencio">
                 <span className="cv-doc"><I.Doc size={26} /></span>
-                <span className="cv-t"><b>CURRÍCULO DIGITAL</b><small className="mono">PDF · abre no navegador</small></span>
+                <span className="cv-t"><b>CURRÍCULO DIGITAL</b><small className="mono">Página instantânea · PDF para baixar</small></span>
                 <span className="cv-go"><I.Arrow size={18} /></span>
                 <span className="cv-sheen" aria-hidden="true" />
               </a>
@@ -1005,7 +1005,7 @@ function Footer() {
           <RollLink href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">{PHONE}</RollLink>
           <RollLink href={IG} target="_blank" rel="noreferrer">Instagram</RollLink>
           <RollLink href={LI} target="_blank" rel="noreferrer">LinkedIn</RollLink>
-          <RollLink href="/Alex_Ascencio_Curriculo.pdf" target="_blank" rel="noreferrer">Currículo digital</RollLink>
+          <RollLink href="/curriculo/">Currículo digital</RollLink>
         </div>
         <div className="footer-info">
           <span className="mono">Atendimento</span>
