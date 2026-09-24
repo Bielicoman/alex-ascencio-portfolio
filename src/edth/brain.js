@@ -55,6 +55,38 @@ export function parseWhen(text) {
 }
 const fmt = (d) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
 
+// ── briefing: transforma a fala solta em tópicos (a IA refina depois, se disponível) ──
+const PLATS = [["netflix", "Netflix"], ["youtube", "YouTube"], ["instagram", "Instagram"], ["reels", "Instagram Reels"], ["tiktok", "TikTok"], ["tv", "TV"], ["televisao", "TV"], ["cinema", "Cinema"], ["festival", "Festivais"], ["spotify", "Spotify"], ["globoplay", "Globoplay"], ["prime", "Prime Video"], ["telao", "Telão / evento"], ["igreja", "Igreja"], ["site", "Site"]];
+const UNITS = { segundo: "segundos", segundos: "segundos", s: "segundos", minuto: "minutos", minutos: "minutos", min: "minutos", hora: "horas", horas: "horas", h: "horas", episodio: "episódios", episodios: "episódios" };
+export function organizeBrief(raw) {
+  const text = String(raw).replace(/\s+/g, " ").trim();
+  const t = norm(text), lines = [];
+  // ideia: frase sem muletas de fala
+  let idea = text.replace(/^(entao|então|bom|olha|tipo|é|e)\b[,\s]*/i, "").replace(/^(a )?minha ideia (e|é)( de)? /i, "").replace(/^(eu )?(quero|queria|gostaria de|preciso( de)?) /i, "").replace(/\b(né|tipo assim|sabe)\b,?/gi, "").trim();
+  idea = idea.charAt(0).toUpperCase() + idea.slice(1);
+  const dur = t.match(/ (\d+(?:[.,]\d+)?|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta) (segundos?|minutos?|min|horas?|h|episodios?) /);
+  const style = text.match(/\b(?:estilo|no estilo( de)?|tipo|inspirad[oa] (?:em|no|na)|refer[eê]ncia(?: de| é)?)\s+([A-ZÀ-Ú0-9][\w\s&.-]*?)(?=\s+(?:com|de|para|pra|em|,|\.|e\s)|$)/);
+  const plats = [...new Set(PLATS.filter(([k]) => t.includes(" " + k + " ")).map(([, v]) => v))];
+  const fmt = [t.includes(" vertical ") || t.includes(" 9 16 ") || t.includes(" 9:16 ") ? "Vertical 9:16" : null, t.includes(" horizontal ") || t.includes(" 16 9 ") || t.includes(" 16:9 ") ? "Horizontal 16:9" : null, t.includes(" quadrado ") ? "Quadrado 1:1" : null, t.includes(" 4k ") ? "4K" : null].filter(Boolean);
+  const ai = any(t, ["ia", "inteligencia artificial", "ia generativa"]);
+  // tira da ideia o que já virou tópico (duração, estilo, plataforma, formato)
+  idea = idea
+    .replace(/\b(?:de |com )?(?:\d+(?:[.,]\d+)?|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta) (?:segundos?|minutos?|min|horas?|epis[oó]dios?)\b/gi, "")
+    .replace(/,?\s*\b(?:no estilo(?: de)?|estilo|tipo|inspirad[oa] (?:em|no|na))\s+[A-ZÀ-Ú0-9][\w&.-]*(?:\s+[A-ZÀ-Ú][\w&.-]*)*/g, "")
+    .replace(new RegExp(`\\b(?:para|pra|pro|no|na|em)\\s+(?:a |o |os |as )?(?:${PLATS.map(([k]) => k).join("|")})(?:\\s*(?:,|e)\\s*(?:${PLATS.map(([k]) => k).join("|")}))*\\b`, "gi"), "")
+    .replace(/\b(?:vertical|horizontal|quadrado|em 4k|4k)(?:\s+e\s+(?:vertical|horizontal))?\b/gi, "")
+    .replace(/^(?:fazer|criar|produzir|gravar)\s+(?:um|uma)\s+/i, "").replace(/^(?:um|uma|é um|é uma)\s+/i, "")
+    .replace(/\bcom ia\b/gi, "com IA").replace(/\s+,/g, ",").replace(/\s{2,}/g, " ").replace(/[\s,]+$/, "").trim();
+  idea = idea.charAt(0).toUpperCase() + idea.slice(1);
+  lines.push(`Ideia: ${idea.replace(/[.]$/, "")}`);
+  if (style?.[2]) lines.push(`Estilo / referência: ${style[2].trim()}`);
+  if (dur) lines.push(`Duração: ${dur[1].replace(/^(um|uma)$/, "1")} ${UNITS[dur[2]] || dur[2]}`);
+  if (fmt.length) lines.push(`Formato: ${fmt.join(" + ")}`);
+  if (plats.length) lines.push(`Plataforma / entrega: ${plats.join(", ")}`);
+  if (ai) lines.push("Uso de IA generativa: sim");
+  return lines.join("\n");
+}
+
 // ── respostas de conhecimento ──
 const count = (cat) => PROJECTS.filter((p) => p.cat === cat).length;
 const catsLine = () => [...new Set(PROJECTS.map((p) => p.cat))].map((c) => `${count(c)} ${c.toLowerCase()}`).join(", ");
@@ -85,6 +117,7 @@ const Q = {
 
 export function createBrain() {
   let flow = null; // { step, data }
+  let pickN = 0; // rodízio de "um vídeo qualquer"
   const say = (s, actions = [], extra = {}) => ({ say: s, actions, ...extra });
 
   function budget(t, raw) {
@@ -117,9 +150,10 @@ export function createBrain() {
         return say(`Pronto. Vou abrir o ${via === "email" ? "e-mail" : "WhatsApp"} com tudo preenchido. Se não abrir sozinho, é só tocar no botão de envio.`, [{ type: "send", via }]);
       }
       if (flow.step === "more" && any(t, ["nao", "so isso", "e isso", "nada", "pronto"])) { flow.step = "more"; return say("Então é só dizer: enviar pelo WhatsApp, ou enviar por e-mail.", [], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail"] }); }
-      d.msg = (d.msg ? d.msg + " " : "") + raw.trim();
+      d.raw = (d.raw ? d.raw + " " : "") + raw.trim();
+      d.msg = organizeBrief(d.raw);
       flow.step = "more";
-      return say(Q.more, [{ type: "form", patch: { msg: d.msg } }], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail", "Cancelar"] });
+      return say(`Organizei o briefing no formulário. ${Q.more}`, [{ type: "form", patch: { msg: d.msg } }, { type: "refine", raw: d.raw, kind: d.kind, when: d.when ? fmt(d.when) : "sem prazo" }], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail", "Cancelar"] });
     }
   }
 
@@ -164,6 +198,14 @@ export function createBrain() {
     const cat = Object.entries(CATS).find(([k]) => t.includes(" " + k + " "));
     const proj = findProject(raw);
     if (proj && (wantsVideo || toks(raw).length <= 4)) return say(`Abrindo ${coreTitle(proj)}${artist(proj) ? ", " + artist(proj) : ""}, de ${year(proj)}.`, [{ type: "play", id: proj.id }]);
+    // pedido genérico ("abre um vídeo dele", "um vídeo do YouTube", "outro"): alterna entre os destaques
+    const generic = any(t, ["video", "videos", "clipe", "trabalho", "trabalhos", "filme", "algo", "alguma coisa", "youtube", "exemplo"]);
+    if ((wantsVideo && generic && !cat) || (pickN > 0 && any(t, ["outro", "outro video", "mais um", "proximo video", "proximo", "outra"]))) {
+      const yt = t.includes(" youtube ");
+      const pool = (yt ? PROJECTS.filter((p) => p.url) : [...highlights(), ...PROJECTS.filter((p) => p.q === "4K" && !highlights().includes(p))]);
+      const p = pool[pickN++ % pool.length];
+      return say(`Vou abrir ${coreTitle(p)}${artist(p) ? ", " + artist(p) : ""}, de ${year(p)}${yt ? ", que está no YouTube" : ""}. Se quiser outro, é só dizer: outro.`, [{ type: "play", id: p.id }], { chips: ["Outro", "Vídeo mais recente", "Quais trabalhos ele fez?"] });
+    }
     if (cat && (wantsVideo || any(t, ["quais", "tem", "lista", "filtrar", "so"]))) {
       const list = PROJECTS.filter((p) => p.cat === cat[1]);
       const plural = { Clipes: "clipes", "Documentário": "documentários", Cinema: "filmes de cinema", "Reality Show": "reality show", "Turnê": "registros de turnê", Bastidores: "making ofs", Institucional: "institucionais" }[cat[1]] || cat[1].toLowerCase();

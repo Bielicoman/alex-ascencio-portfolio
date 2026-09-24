@@ -365,14 +365,20 @@ Object.assign(Sound.prototype, {
     const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 30;
     g.connect(hp).connect(this.master);
     const rv = ctx.createGain(); rv.gain.value = 0.18; g.connect(rv).connect(this.revIn);
-    this.mus = { g, on: false, want: false, step: 0, next: 0, timer: null, level: 0.25, hold: 1 }; // ~ −29 dB RMS: fundo
+    this.mus = { g, on: false, want: false, step: 0, next: 0, timer: null, level: 0.25, hold: this.holds?.size ? 0 : 1 }; // ~ −29 dB RMS: fundo
     return this.mus;
   },
   // "want": zona da trilha (scroll); "hold": 0 enquanto um vídeo está aberto
   // aviso "toque para ouvir": a trilha quer tocar, mas o navegador ainda não liberou o áudio (rolar não conta como gesto)
   hint() { const show = this.enabled && !!this.musicWant && !(this.ctx && this.ctx.state === "running"); window.dispatchEvent(new CustomEvent("sfx:hint", { detail: show })); },
   music(want) { this.musicWant = want; this.hint(); if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
-  musicHold(h) { if (!this.ctx) return; const m = this.musicBus(); m.hold = h ? 0 : 1; this.musicApply(); },
+  // trava por dono: o player e a EDTH seguram a música de forma independente (a EDTH soltar não religa a trilha com o vídeo aberto)
+  musicHold(h, who = "player") {
+    this.holds = this.holds || new Set();
+    h ? this.holds.add(who) : this.holds.delete(who);
+    if (!this.ctx) return;
+    const m = this.musicBus(); m.hold = this.holds.size ? 0 : 1; this.musicApply();
+  },
   musicApply() {
     const m = this.mus, t = this.ctx.currentTime, on = this.enabled && m.want && m.hold;
     if (on) {
