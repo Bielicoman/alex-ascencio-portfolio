@@ -68,7 +68,7 @@ export default class LensField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
     this.renderer.setSize(w, h, false);
     this.u.uRes.value.set(w, h);
   }

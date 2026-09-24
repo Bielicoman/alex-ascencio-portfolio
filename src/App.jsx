@@ -4,21 +4,30 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { PROJECTS } from "./projects";
 import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
+import { tc, reducedMotion } from "./util";
 import ParticleField from "./components/ParticleField";
 import LensField from "./components/LensField";
+import Floaters from "./components/Floaters";
+import Cursor from "./components/Cursor";
+import Method from "./components/Method";
+import runDemo from "./components/Demo";
+import { sfx } from "./components/Sound";
 import * as I from "./components/Icons";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const WHATS = "5515997569880";
+const PHONE = "+55 15 99756-9880";
 const EMAIL = "ascencioalexgabriel@gmail.com";
 const IG = "https://instagram.com/alexascencioai";
 const LI = "https://www.linkedin.com/in/ascencioalexgabriel/";
+const ORG = { UNoB: "União Noroeste Brasileira" };
 const thumb = (p) => `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
-const artistOf = (p) => (p.title.split(/\||—/)[1] || p.cat).trim();
+const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
 const FEATURED = [25, 24, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
 const CATS = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
+const N4K = PROJECTS.filter((p) => p.q === "4K").length;
 // altura em px calculada por área óptica equivalente (ver README)
 const CLIENTS = [
   ["Kiger", "kiger", 27.3], ["MAB", "mab", 50], ["UNASP", "unasp", 24.1], ["Novo Tempo", "novotempo", 45],
@@ -26,65 +35,83 @@ const CLIENTS = [
 ];
 const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Communion", "Kati Carvalho", "Califórnia Dreams", "Willian Krusty", "Pedro Valença", "Prisminha", "Dunamis Studio", "Patrícia de Paiva", "CPB"];
 const NAV = [["#filmes", "Filmes"], ["#lab", "Lab"], ["#metodo", "Método"], ["#arquivo", "Seleção"], ["#sobre", "Sobre"]];
-const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-const fps = 24;
-const tc = (sec) => {
-  const f = Math.floor(sec * fps);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(Math.floor(f / (fps * 3600)))}:${p(Math.floor(f / (fps * 60)) % 60)}:${p(Math.floor(f / fps) % 60)}:${p(f % fps)}`;
+const SERVICES = [
+  [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
+  [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
+  [I.Wave, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · Pro Tools"],
+  [I.Aperture, "IA generativa", "Planos gerados que passam como produção real — ou ficam fora do corte.", "ComfyUI · Higgsfield"],
+];
+const [MARK_R, MARK_L] = MARK_PATH.split(/(?<=Z)\s*/);
+const useBrasilia = () => {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const f = () => setTime(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date()));
+    f(); const id = setInterval(f, 20000); return () => clearInterval(id);
+  }, []);
+  return time;
 };
 
 /* ───────── base ───────── */
 function Mark({ className = "" }) {
+  return <svg className={className} viewBox="0 0 262 151" aria-hidden="true"><path d={MARK_PATH} fill="currentColor" /></svg>;
+}
+// Logotipo: marca AA (altura h) + fio + "Alex Ascencio" a 50% da altura da marca
+function Lockup({ h = 22, className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 262 151" aria-hidden="true">
-      <path d={MARK_PATH} fill="currentColor" />
-    </svg>
+    <span className={`lockup ${className}`} style={{ "--h": `${h}px` }} role="img" aria-label="Alex Ascencio">
+      <svg className="lk-mark" viewBox="0 0 262 151" aria-hidden="true"><path className="lk-l" d={MARK_L} /><path className="lk-r" d={MARK_R} /></svg>
+      <i className="lk-rule" aria-hidden="true" />
+      <svg className="lk-word" viewBox={`0 0 ${WM_W} ${WM_H}`} aria-hidden="true"><path d={WM_PATH} /></svg>
+    </span>
   );
 }
-// Logotipo: marca AA + fio + "Alex Ascencio" (A's derivados da marca)
-function Lockup({ height = 28, className = "", mark = "var(--red-hi)" }) {
-  const mh = WM_H, mw = (mh * 262) / 151, gap = 400, W = mw + gap * 2 + WM_W;
-  return (
-    <svg className={`lockup ${className}`} viewBox={`0 0 ${W.toFixed(0)} ${mh}`} style={{ height }} role="img" aria-label="Alex Ascencio">
-      <g transform={`scale(${(mh / 151).toFixed(4)})`}><path d={MARK_PATH} fill={mark} /></g>
-      <rect x={mw + gap - 18} y={mh * 0.08} width="36" height={mh * 0.92} fill="currentColor" opacity=".3" />
-      <path d={WM_PATH} fill="currentColor" transform={`translate(${mw + gap * 2} 0)`} />
-    </svg>
-  );
-}
-function Wordmark({ height = 28, className = "" }) {
-  return <svg className={`wordmark ${className}`} viewBox={`0 0 ${WM_W} ${WM_H}`} style={{ height }} role="img" aria-label="Alex Ascencio"><path d={WM_PATH} fill="currentColor" /></svg>;
-}
-function Magnetic({ children, strength = 0.3 }) {
+function Magnetic({ children, strength = 0.22 }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el || matchMedia("(pointer: coarse)").matches) return;
-    const xTo = gsap.quickTo(el, "x", { duration: 0.7, ease: "elastic.out(1, 0.45)" });
-    const yTo = gsap.quickTo(el, "y", { duration: 0.7, ease: "elastic.out(1, 0.45)" });
+    const inner = el.firstElementChild?.querySelector(".btn-label");
+    const xTo = gsap.quickTo(el, "x", { duration: 0.6, ease: "power3" }), yTo = gsap.quickTo(el, "y", { duration: 0.6, ease: "power3" });
+    const ix = inner && gsap.quickTo(inner, "x", { duration: 0.6, ease: "power3" }), iy = inner && gsap.quickTo(inner, "y", { duration: 0.6, ease: "power3" });
     const move = (e) => {
-      const r = el.getBoundingClientRect();
-      xTo((e.clientX - r.left - r.width / 2) * strength);
-      yTo((e.clientY - r.top - r.height / 2) * strength);
+      const r = el.getBoundingClientRect(), dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
+      xTo(dx * strength); yTo(dy * strength);
+      if (ix) { ix(dx * strength * 0.35); iy(dy * strength * 0.35); }
     };
-    const leave = () => { xTo(0); yTo(0); };
+    const leave = () => { xTo(0); yTo(0); if (ix) { ix(0); iy(0); } };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerleave", leave);
     return () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerleave", leave); };
   }, [strength]);
   return <span ref={ref} className="magnetic">{children}</span>;
 }
-function Btn({ as = "a", variant = "primary", children, icon = <I.Arrow size={15} />, ...props }) {
+function Btn({ as = "a", variant = "primary", size = "", children, icon = <I.Arrow size={15} />, ...props }) {
   const Tag = as;
   return (
     <Magnetic>
-      <Tag className={`btn btn-${variant}`} {...props}>
+      <Tag className={`btn btn-${variant} ${size}`} {...props}>
+        <span className="btn-fill" aria-hidden="true" />
         <span className="btn-label"><span>{children}</span><span aria-hidden="true">{children}</span></span>
         <span className="btn-icon"><span>{icon}</span><span aria-hidden="true">{icon}</span></span>
       </Tag>
     </Magnetic>
   );
+}
+// botão de play: núcleo de vidro + anel que se desenha no hover
+function PlayBtn({ playing = false, className = "" }) {
+  return (
+    <span className={`pbtn ${className}`} aria-hidden="true">
+      <svg className="pbtn-ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28.5" pathLength="1" /></svg>
+      <span className="pbtn-core">{playing ? <I.Pause size={16} /> : <I.Play size={17} />}</span>
+    </span>
+  );
+}
+const yt = (p) => `${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+function Roll({ children }) {
+  return <span className="roll"><span>{children}</span><span aria-hidden="true">{children}</span></span>;
+}
+function RollLink({ children, ...p }) {
+  return <a className="rlink" {...p}><Roll>{children}</Roll><I.Arrow size={13} className="rlink-a" /></a>;
 }
 function Eyebrow({ children, n }) {
   return <span className="eyebrow">{n && <b>{n}</b>}{children}</span>;
@@ -92,108 +119,39 @@ function Eyebrow({ children, n }) {
 function Title({ children, className = "" }) {
   return <h2 className={`display js-title ${className}`}><span className="title-inner">{children}</span></h2>;
 }
+const Line = ({ children }) => <span className="line"><span>{children}</span></span>;
 
-/* ───────── cursor: seta 3D arredondada ───────── */
-function Cursor() {
-  const wrap = useRef(null), tilt = useRef(null), glow = useRef(null), label = useRef(null);
-  useEffect(() => {
-    if (matchMedia("(pointer: coarse)").matches) return;
-    const root = document.documentElement;
-    root.classList.add("has-cursor");
-    const rx = gsap.quickTo(tilt.current, "rotateX", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
-    const ry = gsap.quickTo(tilt.current, "rotateY", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
-    const rz = gsap.quickTo(tilt.current, "rotateZ", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
-    const gx = gsap.quickTo(glow.current, "x", { duration: 0.55, ease: "power3" }), gy = gsap.quickTo(glow.current, "y", { duration: 0.55, ease: "power3" });
-    let lx = 0, ly = 0, lt = performance.now(), idle;
-    const clamp = (v, m) => Math.max(-m, Math.min(m, v));
-    const move = (e) => {
-      const x = e.clientX, y = e.clientY, t = performance.now(), dt = Math.max(8, t - lt);
-      const vx = ((x - lx) / dt) * 16, vy = ((y - ly) / dt) * 16;
-      wrap.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-      gx(x); gy(y);
-      ry(clamp(vx * 2.2, 40)); rx(clamp(-vy * 2.2, 40)); rz(clamp(vx * 0.9, 16));
-      tilt.current.style.setProperty("--sx", `${50 + clamp(vx * 3, 45)}%`);
-      tilt.current.style.setProperty("--sy", `${50 + clamp(vy * 3, 45)}%`);
-      lx = x; ly = y; lt = t;
-      clearTimeout(idle); idle = setTimeout(() => { rx(0); ry(0); rz(0); }, 90);
-      root.classList.add("cursor-live");
-    };
-    const over = (e) => {
-      const t = e.target;
-      const media = t.closest("[data-cursor]");
-      const text = t.closest("input:not([type=range]), textarea, select");
-      const link = t.closest("a, button, label, [role=button]");
-      root.classList.toggle("cursor-text", !!text);
-      root.classList.toggle("cursor-link", !!link && !media && !text);
-      root.classList.toggle("cursor-media", !!media);
-      if (media) label.current.textContent = media.getAttribute("data-cursor");
-    };
-    const down = () => root.classList.add("cursor-down");
-    const up = () => root.classList.remove("cursor-down");
-    const leave = () => root.classList.remove("cursor-live");
-    window.addEventListener("pointermove", move, { passive: true });
-    window.addEventListener("pointerover", over, { passive: true });
-    window.addEventListener("pointerdown", down);
-    window.addEventListener("pointerup", up);
-    document.addEventListener("pointerleave", leave);
-    return () => {
-      clearTimeout(idle);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerover", over);
-      window.removeEventListener("pointerdown", down);
-      window.removeEventListener("pointerup", up);
-      document.removeEventListener("pointerleave", leave);
-      root.classList.remove("has-cursor", "cursor-live", "cursor-link", "cursor-media", "cursor-text", "cursor-down");
-    };
-  }, []);
+/* ───────── preloader ───────── */
+function Preloader() {
   return (
-    <>
-      <div className="cur-glow" ref={glow} aria-hidden="true" />
-      <div className="cur" ref={wrap} aria-hidden="true">
-        <div className="cur-tilt" ref={tilt}>
-          <svg className="cur-arrow" viewBox="0 0 28 28" width="28" height="28">
-            <defs>
-              <linearGradient id="cur-fill" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="var(--c1)" /><stop offset=".55" stopColor="var(--c2)" /><stop offset="1" stopColor="var(--c3)" />
-              </linearGradient>
-              <linearGradient id="cur-edge" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#fff" stopOpacity=".95" /><stop offset=".5" stopColor="#fff" stopOpacity=".15" /><stop offset="1" stopColor="#ff3b3b" stopOpacity=".9" />
-              </linearGradient>
-            </defs>
-            <path className="cur-shape" d="M5.1 3.2c-1.1-.5-2.3.6-1.8 1.7l8.5 20.1c.5 1.2 2.2 1.1 2.6-.1l2.4-7c.2-.4.5-.8 1-1l7-2.4c1.2-.4 1.3-2.1.1-2.6L5.1 3.2z" fill="url(#cur-fill)" stroke="url(#cur-edge)" strokeWidth="1.1" strokeLinejoin="round" />
-            <path className="cur-spec" d="M6.2 5.6 12.4 20" stroke="#fff" strokeOpacity=".75" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-          </svg>
-          <span className="cur-shine" />
+    <div className="preloader" aria-hidden="true">
+      <div className="pre-top" /><div className="pre-bot" />
+      <i className="pre-slit" />
+      <div className="pre-center">
+        <div className="pre-lockup"><Lockup h={44} /></div>
+        <div className="pre-meta">
+          <span className="pre-tc">00:00:00:00</span>
+          <span className="pre-bar"><i /></span>
+          <span className="pre-lab">SEQ_Portfolio_v05 · 24 fps</span>
         </div>
-        <div className="cur-label"><I.Play size={10} /><b ref={label}>Assistir</b></div>
+        <div className="pre-gate">
+          <button className="pre-enter" data-gate="on"><span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>Entrar</button>
+          <button className="pre-mute" data-gate="off">Entrar sem som</button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
-/* ───────── preloader ───────── */
-function Preloader({ onDone: done }) {
-  const ref = useRef(null), num = useRef(null), bar = useRef(null);
-  const cb = useRef(done);
-  useEffect(() => {
-    const onDone = () => cb.current();
-    if (reducedMotion()) { onDone(); ref.current.style.display = "none"; return; }
-    const o = { t: 0 };
-    const tl = gsap.timeline({ onComplete: onDone });
-    tl.to(o, { t: 1.5, duration: 1.4, ease: "power2.inOut", onUpdate: () => { num.current.textContent = tc(o.t); bar.current.style.transform = `scaleX(${o.t / 1.5})`; } })
-      .to(".pre-inner", { y: -30, opacity: 0, duration: 0.5, ease: "power2.in" }, "+=0.05")
-      .to(ref.current, { clipPath: "inset(0 0 100% 0 round 0 0 40px 40px)", duration: 1, ease: "expo.inOut" }, "-=0.15")
-      .set(ref.current, { display: "none" });
-    return () => tl.kill();
-  }, []);
+/* ───────── som ───────── */
+function SoundToggle() {
+  const [on, setOn] = useState(sfx.enabled);
+  useEffect(() => sfx.onChange(setOn), []);
   return (
-    <div className="preloader" ref={ref} aria-hidden="true">
-      <div className="pre-inner">
-        <Lockup height={46} className="pre-lockup" />
-        <span className="pre-tc" ref={num}>00:00:00:00</span>
-        <span className="pre-bar"><i ref={bar} /></span>
-      </div>
-    </div>
+    <button className={`snd${on ? " on" : ""}`} onClick={() => sfx.set(!on)} aria-pressed={on} aria-label={on ? "Desligar o som" : "Ligar o som"}>
+      <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
+      <span className="snd-l mono">Som</span>
+    </button>
   );
 }
 
@@ -201,7 +159,7 @@ function Preloader({ onDone: done }) {
 function Nav() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(null);
-  const pillRef = useRef(null), linksRef = useRef(null);
+  const pillRef = useRef(null), hovRef = useRef(null), linksRef = useRef(null);
   useEffect(() => { document.documentElement.classList.toggle("menu-open", open); }, [open]);
   useEffect(() => {
     const sts = NAV.map(([h]) => ScrollTrigger.create({ trigger: h, start: "top 55%", end: "bottom 55%", onToggle: (s) => s.isActive && setActive(h), onLeaveBack: () => h === "#filmes" && setActive(null) }));
@@ -212,22 +170,34 @@ function Nav() {
     const a = active && wrap?.querySelector(`a[href="${active}"]`);
     if (!pill || !wrap) return;
     if (!a) { gsap.to(pill, { opacity: 0, duration: 0.3 }); return; }
-    const r = a.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-    gsap.to(pill, { x: r.left - w.left, width: r.width, opacity: 1, duration: 0.6, ease: "expo.out" });
+    gsap.to(pill, { x: a.offsetLeft, width: a.offsetWidth, opacity: 1, duration: 0.6, ease: "expo.out" });
   }, [active]);
+  const hover = (e) => {
+    if (matchMedia("(max-width: 860px)").matches) return;
+    const a = e.currentTarget;
+    gsap.to(hovRef.current, { x: a.offsetLeft, width: a.offsetWidth, opacity: 1, duration: 0.5, ease: "expo.out" });
+  };
+  const unhover = () => gsap.to(hovRef.current, { opacity: 0, duration: 0.4 });
   return (
     <header className="nav">
-      <a href="#top" className="nav-brand" aria-label="Alex Ascencio, início">
-        <Lockup height={22} />
-      </a>
-      <nav ref={linksRef} className={`nav-links ${open ? "is-open" : ""}`} aria-label="Principal">
+      <a href="#top" className="nav-brand" aria-label="Alex Ascencio, início"><Lockup h={22} /></a>
+      <nav ref={linksRef} className={`nav-links ${open ? "is-open" : ""}`} aria-label="Principal" onPointerLeave={unhover}>
+        <span className="nav-hover" ref={hovRef} aria-hidden="true" />
         <span className="nav-pill" ref={pillRef} aria-hidden="true" />
         {NAV.map(([h, t], i) => (
-          <a key={h} href={h} onClick={() => setOpen(false)} style={{ "--i": i }} aria-current={active === h ? "true" : undefined}>{t}</a>
+          <a key={h} href={h} onClick={() => setOpen(false)} onPointerEnter={hover} style={{ "--i": i }} aria-current={active === h ? "true" : undefined}>
+            <sup className="nav-n">0{i + 1}</sup><Roll>{t}</Roll>
+          </a>
         ))}
+        <div className="nav-menu-foot">
+          <a href={`mailto:${EMAIL}`}><I.Mail size={16} /> {EMAIL}</a>
+          <a href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer"><I.Whatsapp size={16} /> {PHONE}</a>
+          <a href={IG} target="_blank" rel="noreferrer"><I.Instagram size={16} /> @alexascencioai</a>
+        </div>
       </nav>
       <div className="nav-right">
-        <Btn href="#contato" variant="primary">Vamos conversar</Btn>
+        <SoundToggle />
+        <Btn href="#contato" variant="primary" size="sm">Vamos conversar</Btn>
         <button className="nav-menu" aria-label={open ? "Fechar menu" : "Abrir menu"} aria-expanded={open} onClick={() => setOpen(!open)}>
           <span /><span />
         </button>
@@ -237,33 +207,41 @@ function Nav() {
 }
 
 /* ───────── player ───────── */
-function Player({ project, onClose }) {
+function Player({ project, onClose, onHost, onNav }) {
   const ref = useRef(null);
   useEffect(() => {
     const d = ref.current;
     const prev = document.activeElement;
     d.showModal();
+    onHost(d);
+    sfx.whoosh(0.45, true, 0.09); setTimeout(() => sfx.boom(0.12), 280);
     window.__lenis?.stop();
-    return () => { window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
-  }, []);
+    return () => { sfx.whoosh(0.35, false, 0.06); onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
+  }, [onHost]);
   const watch = project.url?.replace("/embed/", "/watch?v=");
   return (
     <dialog ref={ref} className="player" onCancel={onClose} onClick={(e) => e.target === e.currentTarget && onClose()} aria-labelledby="pl-title">
       <div className="player-card">
         <div className="player-bar">
           <span className="mono">{project.cat} · {project.date.slice(0, 4)} · {project.q}</span>
-          <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
+          <div className="player-nav">
+            <button className="icon-btn" onClick={() => onNav(-1)} aria-label="Vídeo anterior"><I.Prev size={18} /></button>
+            <span className="mono">{String(PROJECTS.indexOf(project) + 1).padStart(2, "0")} / {PROJECTS.length}</span>
+            <button className="icon-btn" onClick={() => onNav(1)} aria-label="Próximo vídeo"><I.Next size={18} /></button>
+            <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
+          </div>
         </div>
         <div className="player-frame">
           {project.video ? (
-            <video src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
+            <video key={project.id} src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
           ) : (
-          <iframe
-            title={project.title}
-            src={`${project.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1`}
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
+            <iframe
+              key={project.id}
+              title={project.title}
+              src={yt(project)}
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
           )}
         </div>
         <div className="player-info">
@@ -279,11 +257,85 @@ function Player({ project, onClose }) {
 }
 
 /* ───────── hero ───────── */
-function Hero({ open }) {
-  const latest = PROJECTS[0];
-  const personRef = useRef(null), wordRef = useRef(null);
+function Chip({ cls, icon: Icon, red, title, sub, depth, amp, speed }) {
+  return (
+    <div className={`floater ${cls}`} data-float data-depth={depth} data-amp={amp} data-speed={speed}>
+      <div className="fl-in">
+        <div className="chip">
+          <span className={`chip-icon ${red ? "red" : ""}`}><Icon size={20} loop /></span>
+          <span className="chip-text">{title}<small>{sub}</small></span>
+          <span className="fl-glare" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+  );
+}
+// mini-player do card da hero: toca ali mesmo (vídeo do site ou YouTube), anterior/próximo e tela cheia
+function NowPlaying({ open }) {
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const vid = useRef(null), prev = useRef(null);
+  const cur = PROJECTS[idx];
+  const coarse = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+  const go = (d) => { setPlaying(false); setIdx((i) => (i + d + PROJECTS.length) % PROJECTS.length); };
+  const toggle = () => {
+    if (coarse()) { open(cur); return; } // no celular o card é pequeno demais: abre o player
+    if (playing && cur.video && vid.current) { vid.current.paused ? vid.current.play() : vid.current.pause(); return; }
+    setPlaying(!playing);
+  };
+  const [paused, setPaused] = useState(false);
+  const preview = (on) => {
+    const v = prev.current;
+    if (!v || playing || coarse()) return;
+    if (on) { v.play().catch(() => {}); v.parentElement.classList.add("is-preview"); } else { v.pause(); v.parentElement.classList.remove("is-preview"); }
+  };
   useEffect(() => {
-    if (matchMedia("(pointer: coarse)").matches || reducedMotion()) return;
+    const f = (e) => { if (e.detail.on) setIdx(0); requestAnimationFrame(() => preview(e.detail.on)); };
+    window.addEventListener("demo:np", f);
+    return () => window.removeEventListener("demo:np", f);
+  });
+  const label = idx === 0 ? "Último lançamento" : "Lançamentos";
+  const n = `${String(idx + 1).padStart(2, "0")} / ${PROJECTS.length}`;
+  return (
+    <div className={`np${playing ? " is-playing" : ""}`}>
+      <div className="np-media" onPointerEnter={() => preview(true)} onPointerLeave={() => preview(false)}>
+        <img key={cur.id} src={thumb(cur)} alt="" draggable="false" />
+        {!playing && (cur.preview || cur.video) && (
+          <video ref={prev} key={`p${cur.id}`} muted loop playsInline preload="none" aria-hidden="true">
+            {cur.preview ? <><source src={`${cur.preview}.webm`} type="video/webm" /><source src={`${cur.preview}.mp4`} type="video/mp4" /></> : <source src={cur.video} type="video/mp4" />}
+          </video>
+        )}
+        {playing && (cur.video
+          ? <video ref={vid} key={`v${cur.id}`} src={cur.video} autoPlay playsInline onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onEnded={() => go(1)} />
+          : <iframe key={`y${cur.id}`} title={cur.title} src={yt(cur)} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />)}
+        {!playing && <button className="np-hit" onClick={toggle} data-cursor="Assistir" aria-label={`Assistir ${cur.title} aqui`} />}
+        <span className="np-live mono"><span className="rec" /> {label}</span>
+        <span className="np-q mono">{cur.q}</span>
+        <button className="np-arrow l" onClick={() => go(-1)} aria-label="Vídeo anterior"><I.Prev size={16} /></button>
+        <button className="np-arrow r" onClick={() => go(1)} aria-label="Próximo vídeo"><I.Next size={16} /></button>
+      </div>
+      <div className="np-body">
+        <span className="np-text" key={cur.id}>
+          <small className="mono">{cur.cat} · {cur.date.slice(0, 4)}<span className="np-idx"> · {n}</span></small>
+          <b>{short(cur)}</b>
+          <span>{artistOf(cur)}</span>
+        </span>
+        <span className="np-ctrl">
+          <button className="np-exp" onClick={() => { setPlaying(false); open(cur); }} aria-label="Abrir em tela cheia"><I.Expand size={15} /></button>
+          <button className="np-main" onClick={toggle} aria-label={playing && !paused ? "Pausar" : "Assistir aqui"}><PlayBtn playing={playing && !paused && !!cur.video} /></button>
+        </span>
+      </div>
+      <span className="fl-glare" aria-hidden="true" />
+    </div>
+  );
+}
+function Hero({ open, onDemo, demo }) {
+  const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
+  useEffect(() => {
+    const fl = new Floaters(floatRef.current);
+    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? fl.start() : fl.stop()));
+    io.observe(floatRef.current.closest(".hero"));
+    if (matchMedia("(pointer: coarse)").matches || reducedMotion()) return () => { io.disconnect(); fl.dispose(); };
     const px = gsap.quickTo(personRef.current, "x", { duration: 1.4, ease: "power3" });
     const wx = gsap.quickTo(wordRef.current, "x", { duration: 1.6, ease: "power3" });
     const wy = gsap.quickTo(wordRef.current, "y", { duration: 1.6, ease: "power3" });
@@ -292,7 +344,7 @@ function Hero({ open }) {
       px(nx * 14); wx(nx * -28); wy(ny * -10);
     };
     window.addEventListener("pointermove", move, { passive: true });
-    return () => window.removeEventListener("pointermove", move);
+    return () => { io.disconnect(); fl.dispose(); window.removeEventListener("pointermove", move); };
   }, []);
   return (
     <section id="top" className="hero">
@@ -305,43 +357,47 @@ function Hero({ open }) {
           </span>
         </h1>
         <div className="hero-person" ref={personRef}>
-          <img src="/media/alex-cutout.webp" alt="Alex Ascencio, de moletom preto e camiseta branca" width="1086" height="1420" fetchPriority="high" />
+          <div className="hero-person-scroll"><div className="hero-person-in">
+            <img src="/media/alex-cutout.webp" alt="Alex Ascencio, de moletom preto e camiseta branca" width="1086" height="1420" fetchPriority="high" />
+          </div></div>
         </div>
       </div>
 
-      <div className="hero-chip chip-a hero-fade">
-        <span className="chip-icon"><I.Scissors size={16} /></span>
-        <div>Editor & filmmaker<small>Clipes · Cinema · Documentário</small></div>
-      </div>
-      <div className="hero-chip chip-b hero-fade">
-        <span className="chip-icon red"><I.Spark size={16} /></span>
-        <div>IA com critério<small>Só entra se passar como filmado</small></div>
+      <div className="hero-floats" ref={floatRef}>
+        <Chip cls="fl-a" icon={I.Scissors} title="Editor & filmmaker" sub="Clipes · Cinema · Documentário" depth={1.3} amp={11} speed={0.55} />
+        <Chip cls="fl-c" icon={I.Wave} title="Cor & som medidos" sub="Look por cena · LUFS por clipe" depth={0.8} amp={9} speed={0.45} />
+        <Chip cls="fl-b" icon={I.Spark} red title="IA com critério" sub="Só entra se passar como filmado" depth={1.1} amp={12} speed={0.5} />
+        <Chip cls="fl-d" icon={I.Film} title={`${N4K} entregas em 4K`} sub="Da captação ao master" depth={0.7} amp={8} speed={0.62} />
+        <div className="floater fl-tour" data-float data-depth="0.5" data-amp="7" data-speed="0.6">
+          <div className="fl-in">
+            <button className="tour" onClick={onDemo} aria-pressed={demo} aria-label="Assistir o site: tour guiado automático">
+              <PlayBtn playing={demo} />
+              <span className="tour-t">{demo ? "Tour em andamento" : "Assistir o site"}<small>{demo ? "Mexa o mouse para assumir" : "Tour guiado · 1 min"}</small></span>
+              <span className="fl-glare" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div className="floater fl-np" data-float data-depth="0.9" data-amp="9" data-speed="0.42">
+          <div className="fl-in"><NowPlaying open={open} /></div>
+        </div>
       </div>
 
       <div className="hero-bottom">
-        <div className="hero-intro hero-fade">
-          <p>Edição, cor e motion com acabamento de cinema. <span>A imagem estabelece o lugar; a história entra no tempo certo.</span></p>
+        <div className="hero-intro">
+          <p className="hero-kicker mono"><Line><i className="live" /> Agenda aberta · Edição, cor, motion e IA</Line></p>
+          <p className="hero-lead"><Line>Edição, cor e motion</Line><Line>com acabamento <em>de cinema.</em></Line></p>
+          <p className="hero-sub"><Line>A imagem estabelece o lugar; a história entra no tempo certo.</Line></p>
           <div className="hero-ctas">
-            <Btn href="#filmes" icon={<I.Play size={13} />}>Ver filmes</Btn>
-            <Btn href="#contato" variant="glass">Falar comigo</Btn>
+            <Btn href="#filmes" size="lg" icon={<I.Play size={14} />}>Ver filmes</Btn>
+            <Btn href="#contato" size="lg" variant="glass">Falar comigo</Btn>
           </div>
         </div>
-        <button className="now-playing hero-fade" onClick={() => open(latest)} data-cursor="Assistir">
-          <span className="np-thumb"><img src={thumb(latest)} alt="" /></span>
-          <span className="np-text">
-            <small><span className="rec" /> Último lançamento</small>
-            <b>{short(latest)}</b>
-            <span>{artistOf(latest)} · {latest.q}</span>
-          </span>
-          <span className="np-play"><I.Play size={12} /></span>
-        </button>
+        <div className="hero-scroll" aria-hidden="true">
+          <span className="mono js-tc">00:00:00:00</span>
+          <span className="scroll-line"><i /></span>
+          <span className="mono hero-scroll-l">Role</span>
+        </div>
       </div>
-
-      <div className="hero-scroll hero-fade" aria-hidden="true">
-        <span className="mono js-tc">00:00:00:00</span>
-        <span className="scroll-line"><i /></span>
-      </div>
-      <div className="hero-fadeout" aria-hidden="true" />
     </section>
   );
 }
@@ -349,9 +405,8 @@ function Hero({ open }) {
 /* ───────── manifesto ───────── */
 function Manifesto() {
   const words = "Eu corto pela cena, não pela fala. A imagem estabelece o lugar. A fala entra quando você já sabe onde está.".split(" ");
-  const n4k = PROJECTS.filter((p) => p.q === "4K").length;
   const years = PROJECTS.map((p) => +p.date.slice(0, 4));
-  const stats = [[PROJECTS.length, "Projetos selecionados"], [n4k, "Entregas em 4K"], [CATS.length - 1, "Formatos"], [`${Math.min(...years)}–${String(Math.max(...years)).slice(2)}`, "Em produção contínua"]];
+  const stats = [[PROJECTS.length, "Projetos selecionados"], [N4K, "Entregas em 4K"], [CATS.length - 1, "Formatos"], [`${Math.min(...years)}–${String(Math.max(...years)).slice(2)}`, "Em produção contínua"]];
   return (
     <section id="manifesto" className="manifesto">
       <div className="manifesto-pin">
@@ -371,6 +426,7 @@ function Manifesto() {
 
 /* ───────── filmes ───────── */
 function Featured({ open }) {
+  const [hov, setHov] = useState(null);
   return (
     <section id="filmes" className="featured">
       <div className="featured-pin">
@@ -385,12 +441,12 @@ function Featured({ open }) {
           {FEATURED.map((p, i) => (
             <article className="fcard" key={p.id}>
               <button onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
-                <div className="fcard-media"><img src={thumb(p)} alt="" loading="lazy" /></div>
+                <div className="fcard-media" onPointerEnter={() => canHover() && setHov(p.id)} onPointerLeave={() => setHov(null)}><img src={thumb(p)} alt="" loading="lazy" /><HoverPreview src={p.preview} on={hov === p.id} /></div>
                 <div className="fcard-shade" />
                 <div className="fcard-top"><span className="mono">{String(i + 1).padStart(2, "0")}</span><span className="mono">{p.cat} · {p.date.slice(0, 4)} · {p.q}</span></div>
                 <div className="fcard-meta">
-                  <h3>{short(p)}</h3>
-                  <p>{artistOf(p)}</p>
+                  <div><h3>{short(p)}</h3><p>{artistOf(p)}</p></div>
+                  <PlayBtn className="fcard-play" />
                 </div>
               </button>
             </article>
@@ -417,12 +473,6 @@ function Lab() {
     io.observe(canvas.current);
     return () => { io.disconnect(); field.dispose(); };
   }, []);
-  const services = [
-    [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
-    [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
-    [I.Wave, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · Pro Tools"],
-    [I.Aperture, "IA generativa", "Planos gerados que passam como produção real — ou ficam fora do corte.", "ComfyUI · Higgsfield"],
-  ];
   return (
     <section id="lab" className="lab">
       <div className="lab-frame">
@@ -439,95 +489,14 @@ function Lab() {
             <p className="reveal">Passe o cursor sobre a imagem: ela responde como uma objetiva.</p>
           </div>
           <div className="services">
-            {services.map(([Icon, t, d, tools], i) => (
+            {SERVICES.map(([Icon, t, d, tools], i) => (
               <article className="service reveal" key={t} style={{ "--d": i }}>
-                <div className="service-top"><span className="service-icon"><Icon size={20} /></span><span className="mono">0{i + 1}</span></div>
+                <div className="service-top"><span className="service-icon"><Icon size={22} /></span><span className="mono">0{i + 1}</span></div>
                 <h3>{t}</h3>
                 <p>{d}</p>
                 <small className="mono">{tools}</small>
               </article>
             ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────── método ───────── */
-const V1 = [[0, 1, 24], [1, 2, 14], [2, 3, 7], [3, 4, 16], [4, 10, 1], [10, 17, 21], [17, 23, 12], [23, 30, 18], [30, 37, 13], [37, 44, 23], [44, 50, 2], [50, 56, 9]];
-const V2 = [[8, 12], [25, 29], [33, 37.5], [46, 50]];
-const V3 = [[18, 21], [40, 42.5]];
-const FX = [2, 23, 44];
-const RULES = [
-  [0, 4, "Abertura em staccato", "3 a 4 planos de ~1 s, com flash de 2 a 3 frames no meio, antes de assentar em planos de 4 a 7 s."],
-  [4, 8, "A imagem vem primeiro", "O plano estabelece o lugar. A fala só entra em A1 aos 6 s, quando o espectador já sabe onde está."],
-  [8, 18, "Cobertura curta em V2", "Planos de 2 a 6 s sobre os planos longos. O que foi gravado fora do roteiro vira cobertura."],
-  [18, 23, "Insert em V3", "Detalhe com speed ramp a ~130% para marcar o tempo da música."],
-  [23, 30, "Transição de bloco", "Glitch/datamosh com RGB split, 2 a 3 frames, e whoosh casado no áudio."],
-  [30, 56, "Respiro de cinema", "Pausas acima de 0,6 s. Nunca um corte colado no texto. Áudio medido em LUFS por clipe."],
-  [56, 60.1, "Assinatura", "Marca parada por 3 a 4 s. O filme termina quando a imagem assenta."],
-];
-function Method() {
-  const [rule, setRule] = useState(0);
-  const [shot, setShot] = useState(V1[0][2]);
-  useEffect(() => {
-    const reduced = reducedMotion();
-    const st = ScrollTrigger.create({
-      trigger: "#metodo", start: "top top", end: () => `+=${innerHeight * (reduced ? 1 : 2.4)}`, scrub: true, pin: reduced ? false : ".method-pin",
-      onUpdate: (s) => {
-        const t = s.progress * 60;
-        document.querySelector(".ph")?.style.setProperty("left", `${(t / 60) * 100}%`);
-        const el = document.querySelector(".js-mtc"); if (el) el.textContent = tc(t);
-        setRule(Math.max(0, RULES.findIndex(([a, b]) => t >= a && t < b)));
-        const c = V1.find(([a, b]) => t >= a && t < b) || V1[V1.length - 1];
-        setShot(t >= 56 ? "end" : c[2]);
-        document.querySelector(".monitor")?.classList.toggle("is-glitch", FX.some((f) => Math.abs(t - f) < 0.25));
-      },
-    });
-    return () => st.kill();
-  }, []);
-  const pct = (a) => `${(a / 60) * 100}%`;
-  const [, , title, text] = RULES[rule];
-  return (
-    <section id="metodo" className="method">
-      <div className="method-pin">
-        <div className="method-head">
-          <Eyebrow n="04">Método</Eyebrow>
-          <Title>Como eu penso <em>uma timeline.</em></Title>
-        </div>
-        <div className="nle">
-          <div className="nle-top">
-            <div className="monitor">
-              {shot === "end" ? (
-                <div className="monitor-end"><Lockup height={38} /></div>
-              ) : (
-                <img key={shot} src={`/media/${shot}.webp`} alt="" />
-              )}
-              <span className="monitor-tc mono js-mtc">00:00:00:00</span>
-              <span className="monitor-label mono">Program · SEQ_Portfolio</span>
-            </div>
-            <div className="rule" aria-live="polite">
-              <div className="rule-steps" aria-hidden="true">{RULES.map((_, i) => <i key={i} className={i <= rule ? "on" : ""} />)}</div>
-              <span className="mono rule-count">Regra {String(rule + 1).padStart(2, "0")} / {String(RULES.length).padStart(2, "0")}</span>
-              <h3 key={title}>{title}</h3>
-              <p key={text}>{text}</p>
-            </div>
-          </div>
-          <div className="tracks" aria-hidden="true">
-            <div className="ruler">{Array.from({ length: 13 }, (_, i) => <span key={i} style={{ left: pct(i * 5) }}>{String(i * 5).padStart(2, "0")}</span>)}</div>
-            <div className="track"><b>FX</b><div className="lane">{FX.map((f) => <i key={f} className="clip fx" style={{ left: pct(f - 0.2), width: pct(0.4) }} />)}</div></div>
-            <div className="track"><b>V3</b><div className="lane">{V3.map(([a, b]) => <i key={a} className="clip v3" style={{ left: pct(a), width: pct(b - a) }}><em>insert 130%</em></i>)}</div></div>
-            <div className="track"><b>V2</b><div className="lane">{V2.map(([a, b]) => <i key={a} className="clip v2" style={{ left: pct(a), width: pct(b - a) }}><em>cobertura</em></i>)}</div></div>
-            <div className="track"><b>V1</b><div className="lane">
-              {V1.map(([a, b, id]) => <i key={a} className="clip v1" style={{ left: pct(a), width: pct(b - a), backgroundImage: `url(/media/${id}.webp)` }} />)}
-              <i className="clip sig" style={{ left: pct(56), width: pct(4) }}><em>assinatura</em></i>
-            </div></div>
-            <div className="track"><b>A1</b><div className="lane">
-              {[[6, 16], [19, 29], [31.5, 43], [45, 55]].map(([a, b]) => <i key={a} className="clip a1" style={{ left: pct(a), width: pct(b - a) }}><em>fala</em></i>)}
-            </div></div>
-            <div className="track"><b>A2</b><div className="lane"><i className="clip a2" style={{ left: 0, width: "100%" }}><em>trilha</em></i></div></div>
-            <div className="playhead"><div className="ph"><span /></div></div>
           </div>
         </div>
       </div>
@@ -560,25 +529,60 @@ function Clients() {
 }
 
 /* ───────── arquivo ───────── */
+// loop curto hospedado: monta no primeiro hover, entra com fade só depois do 1º quadro (sem piscar preto)
+function HoverPreview({ src, on }) {
+  const ref = useRef(null), [mounted, setMounted] = useState(false), [ready, setReady] = useState(false);
+  useEffect(() => { if (on) setMounted(true); }, [on]);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (on) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+  }, [on, mounted]);
+  if (!src || !mounted) return null;
+  return (
+    <video ref={ref} className={`hprev${on && ready ? " on" : ""}`} muted loop playsInline preload="auto" onPlaying={() => setReady(true)} aria-hidden="true">
+      <source src={`${src}.webm`} type="video/webm" /><source src={`${src}.mp4`} type="video/mp4" />
+    </video>
+  );
+}
+const canHover = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
+function CardPreview({ p }) {
+  if (p.preview) return null; // com loop hospedado, o HoverPreview já cuida
+  return (
+    <span className="card-prev" aria-hidden="true">
+      {p.video
+        ? <video src={p.video} muted autoPlay playsInline loop />
+        : <iframe title="" tabIndex={-1} src={`${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&start=15`} allow="autoplay; encrypted-media" />}
+    </span>
+  );
+}
 function Archive({ open }) {
   const [cat, setCat] = useState("Todos");
+  const [prev, setPrev] = useState(null);
+  const [hovId, setHovId] = useState(null);
+  useEffect(() => {
+    const f = (e) => setPrev(e.detail.id);
+    window.addEventListener("demo:card", f);
+    return () => window.removeEventListener("demo:card", f);
+  }, []);
   const [q, setQ] = useState("");
   const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  const list = useMemo(() => PROJECTS.filter((p) => (cat === "Todos" || p.cat === cat) && norm(`${p.title} ${p.cat}`).includes(norm(q))), [cat, q]);
+  const list = useMemo(() => PROJECTS.filter((p) => (cat === "Todos" || p.cat === cat) && norm(`${p.title} ${p.cat} ${artistOf(p)}`).includes(norm(q))), [cat, q]);
   const tilt = (e) => {
     if (e.pointerType === "touch") return;
     const el = e.currentTarget, r = el.getBoundingClientRect();
-    el.style.setProperty("--rx", `${((e.clientY - r.top) / r.height - 0.5) * -6}deg`);
-    el.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 8}deg`);
-    el.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
-    el.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    el.style.setProperty("--rx", `${(y - 0.5) * -7}deg`);
+    el.style.setProperty("--ry", `${(x - 0.5) * 9}deg`);
+    el.style.setProperty("--mx", `${x * 100}%`);
+    el.style.setProperty("--my", `${y * 100}%`);
   };
   const reset = (e) => { e.currentTarget.style.setProperty("--rx", "0deg"); e.currentTarget.style.setProperty("--ry", "0deg"); };
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     ScrollTrigger.refresh();
-    if (!reducedMotion()) gsap.fromTo(".grid .card", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "expo.out", stagger: 0.035 });
+    if (!reducedMotion()) gsap.fromTo(".grid .card", { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.03, clearProps: "transform,opacity,visibility" });
   }, [cat, q]);
   return (
     <section id="arquivo" className="archive section">
@@ -604,13 +608,18 @@ function Archive({ open }) {
       </div>
       <div className="grid">
         {list.map((p) => (
-          <button key={p.id} className="card" onClick={() => open(p)} onPointerMove={tilt} onPointerLeave={reset} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
-            <span className="card-media"><img src={thumb(p)} alt="" loading="lazy" width="640" height="360" /><span className="card-q mono">{p.q}</span></span>
-            <span className="card-glare" />
+          <button key={p.id} data-id={p.id} className="card" onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
+            <span className="card-media" onPointerMove={tilt} onPointerEnter={() => canHover() && setHovId(p.id)} onPointerLeave={(e) => { reset(e); setHovId(null); }}>
+              <img src={thumb(p)} alt="" loading="lazy" width="640" height="360" />
+              <HoverPreview src={p.preview} on={hovId === p.id || prev === p.id} />
+              {prev === p.id && <CardPreview p={p} />}
+              <span className="card-glare" />
+              <span className="card-q mono">{p.q}</span>
+              <PlayBtn className="card-play" />
+            </span>
             <span className="card-info">
-              <span className="mono">{p.cat} · {p.date.slice(0, 4)}</span>
-              <b>{short(p)}</b>
-              <span>{artistOf(p)}</span>
+              <span className="card-t"><b>{short(p)}</b><span>{artistOf(p)}</span></span>
+              <span className="card-m mono">{p.cat}<br />{p.date.slice(0, 4)}</span>
             </span>
           </button>
         ))}
@@ -626,32 +635,111 @@ function Archive({ open }) {
 }
 
 /* ───────── sobre ───────── */
+const PATH_BEFORE = [
+  ["PRISMA BRASIL", "Edição e captação", "2024–2026"],
+  ["UNASP", "Comunicação Social · Rádio e TV", "Rádio e TV"],
+];
+// trajetória como timeline: o cargo atual é o take gravando (REC + timecode correndo), o resto são clipes na trilha
+function Trajectory() {
+  const tcRef = useRef(null);
+  useEffect(() => {
+    let raf, t0 = performance.now();
+    const f = (now) => { if (tcRef.current) tcRef.current.textContent = tc((now - t0) / 1000); raf = requestAnimationFrame(f); };
+    const io = new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting && !reducedMotion()) raf = requestAnimationFrame(f); });
+    io.observe(tcRef.current);
+    return () => { io.disconnect(); cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div className="traj">
+      <article className="traj-now">
+        <span className="traj-scan" aria-hidden="true" />
+        <div className="traj-top">
+          <span className="traj-rec mono"><span className="rec" /> REC · Atual</span>
+          <span className="traj-tc mono" ref={tcRef}>00:00:00:00</span>
+        </div>
+        <b className="traj-name">UNIÃO NOROESTE BRASILEIRA</b>
+        <div className="traj-foot">
+          <span>Editor de mídia e conteúdo</span>
+          <span className="traj-eq" aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ "--i": i }} />)}</span>
+        </div>
+        <span className="traj-corner tl" /><span className="traj-corner tr" /><span className="traj-corner bl" /><span className="traj-corner br" />
+      </article>
+      <div className="traj-track" aria-label="Antes">
+        <span className="traj-lab mono">Antes</span>
+        <div className="traj-clips">
+          {PATH_BEFORE.map(([a, b, c], i) => (
+            <div className="traj-clip" key={a} style={{ "--d": i }}>
+              <small className="mono">{c}</small>
+              <b>{a}</b>
+              <span>{b}</span>
+            </div>
+          ))}
+          <span className="traj-ph" aria-hidden="true"><i /></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+const TOOL_CATS = [["ed", "Edição", I.Scissors], ["cor", "Cor", I.Palette], ["mo", "Motion", I.Layers], ["au", "Áudio", I.Wave], ["ia", "IA", I.Spark], ["dev", "Dev", I.Code]];
+const TOOLS = [
+  ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"], ["Pt", "Pro Tools", "au", "pt"],
+  ["Cf", "ComfyUI", "ia", "cf"], ["Hf", "Higgsfield", "ia", "hf"], ["</>", "Plugins CEP/UXP", "dev", "dev"],
+];
 function About() {
   const card = useRef(null);
+  const [hl, setHl] = useState(null);
   const move = (e) => {
     if (e.pointerType === "touch") return;
     const r = card.current.getBoundingClientRect();
     gsap.to(card.current, { rotateY: ((e.clientX - r.left) / r.width - 0.5) * 10, rotateX: ((e.clientY - r.top) / r.height - 0.5) * -10, duration: 0.8, ease: "power3" });
+    card.current.style.setProperty("--px", `${((e.clientX - r.left) / r.width) * 100}%`);
+    card.current.style.setProperty("--py", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
   const leave = () => gsap.to(card.current, { rotateX: 0, rotateY: 0, duration: 1.2, ease: "elastic.out(1,0.5)" });
-  const path = [["KIGER", "Fundador · produtora audiovisual"], ["Prisma Brasil", "Edição e captação · desde 2024"], ["UNoB", "Editor de mídia e conteúdo"], ["UNASP", "Comunicação Social · Rádio e TV"]];
-  const tools = ["Premiere Pro", "After Effects", "DaVinci Resolve", "Pro Tools", "ComfyUI", "Higgsfield", "Plugins CEP/UXP"];
   return (
     <section id="sobre" className="about section">
       <div className="about-grid">
         <div className="about-photo-wrap" onPointerMove={move} onPointerLeave={leave}>
-          <div className="about-photo js-photo" ref={card}>
+          <a className="about-photo js-photo" ref={card} href={IG} target="_blank" rel="noreferrer" aria-label="Abrir o Instagram de Alex Ascencio (@alexascencioai)">
             <img src="/media/alex-profile.webp" alt="Retrato de Alex Ascencio em fundo vermelho" loading="lazy" />
-            <div className="about-tag"><Mark className="about-mark" /><span>Editor & Filmmaker</span></div>
-          </div>
+            <span className="ig-light" aria-hidden="true" />
+            <span className="ig-cta" aria-hidden="true">
+              <span className="ig-badge"><span className="ig-ring" /><I.Instagram size={30} /></span>
+              <span className="ig-text"><b>@alexascencioai</b><small>Ver no Instagram</small></span>
+              <span className="ig-arrow"><I.Arrow size={16} /></span>
+            </span>
+            <span className="about-tag"><Mark className="about-mark" /><span>Editor & Filmmaker</span></span>
+          </a>
         </div>
         <div className="about-copy">
           <Eyebrow n="06">Sobre</Eyebrow>
           <Title>A pessoa por trás <em>da timeline.</em></Title>
           <p className="reveal lead">Sou Alex Ascencio, editor de vídeo e filmmaker. Trabalho entre videoclipes, documentários, cinema e transmissões, do set à finalização.</p>
           <p className="reveal">Uso IA generativa como ferramenta de produção, com o mesmo critério de um plano filmado: se não passa como real, não entra. Também desenvolvo plugins para Premiere e After Effects que aceleram o meu fluxo.</p>
-          <ul className="path reveal">{path.map(([a, b]) => <li key={a}><b>{a}</b><span>{b}</span></li>)}</ul>
-          <div className="tools reveal">{tools.map((t) => <span key={t}>{t}</span>)}</div>
+
+          <div className="about-block reveal">
+            <span className="mono about-lab">Trajetória</span>
+            <Trajectory />
+          </div>
+
+          <div className="about-block reveal">
+            <span className="mono about-lab">Categorias & softwares</span>
+            <div className="tcats" role="list" onPointerLeave={() => setHl(null)}>
+              {TOOL_CATS.map(([k, n, Icon]) => (
+                <span role="listitem" key={k} className={`tcat${hl === k ? " on" : ""}`} onPointerEnter={() => setHl(k)}>
+                  <Icon size={16} loop={hl === k} />{n}
+                </span>
+              ))}
+            </div>
+            <div className={`tools${hl ? " has-hl" : ""}`} onPointerLeave={() => setHl(null)}>
+              {TOOLS.map(([m, n, c, cls], i) => (
+                <span key={n} className={`tool${hl === c ? " on" : ""}`} style={{ "--d": i }} onPointerEnter={() => setHl(c)}>
+                  <span className={`tool-m tm-${cls}`}><b>{m}</b></span>
+                  <span className="tool-t">{n}<small className="mono">{TOOL_CATS.find(([k]) => k === c)[1]}</small></span>
+                </span>
+              ))}
+            </div>
+          </div>
           <div className="reveal"><Btn href="/Alex_Ascencio_Curriculo.pdf" download variant="glass" icon={<I.Download size={15} />}>Baixar currículo</Btn></div>
         </div>
       </div>
@@ -659,82 +747,108 @@ function About() {
   );
 }
 
-/* ───────── contato ───────── */
+/* ───────── contato (tema claro) ───────── */
 function Contact() {
   const [kind, setKind] = useState("Videoclipe");
   const [copied, setCopied] = useState(false);
-  const [time, setTime] = useState("");
   const [form, setForm] = useState({ name: "", when: "Sem data definida", msg: "" });
+  const time = useBrasilia();
+  const sheet = useRef(null), canvas = useRef(null);
   useEffect(() => {
-    const f = () => setTime(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date()));
-    f(); const id = setInterval(f, 20000); return () => clearInterval(id);
+    let scene, io, alive = true;
+    import("./components/MarkScene").then(({ default: MarkScene }) => {
+      if (!alive || !canvas.current) return;
+      try { scene = new MarkScene(canvas.current); } catch { canvas.current.classList.add("is-fallback"); return; }
+      if (reducedMotion()) { scene.start(); requestAnimationFrame(() => scene.stop()); return; }
+      io = new IntersectionObserver(([e]) => (e.isIntersecting ? scene.start() : scene.stop()), { rootMargin: "120px" });
+      io.observe(canvas.current);
+    });
+    const el = sheet.current;
+    const light = (e) => { const r = el.getBoundingClientRect(); el.style.setProperty("--lx", `${e.clientX - r.left}px`); el.style.setProperty("--ly", `${e.clientY - r.top}px`); };
+    el.addEventListener("pointermove", light);
+    return () => { alive = false; io?.disconnect(); scene?.dispose(); el.removeEventListener("pointermove", light); };
   }, []);
   const kinds = ["Videoclipe", "Documentário", "Curta / cinema", "Motion design", "IA generativa", "Evento / ao vivo", "Outro"];
   const body = `Olá, Alex! Sou ${form.name || "—"}.\nProjeto: ${kind}\nPrazo: ${form.when}\n\n${form.msg}`;
   const valid = form.name.trim() && form.msg.trim();
-  const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
+  const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); sfx.chime(); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
   const channels = [
-    [I.Whatsapp, "WhatsApp", "+55 15 99756-9880", `https://wa.me/${WHATS}`],
+    [I.Whatsapp, "WhatsApp", PHONE, `https://wa.me/${WHATS}`],
     [I.Instagram, "Instagram", "@alexascencioai", IG],
     [I.Linkedin, "LinkedIn", "in/ascencioalexgabriel", LI],
   ];
   return (
-    <section id="contato" className="contact section">
-      <div className="contact-head">
-        <Eyebrow n="07">Contato</Eyebrow>
-        <Title>Vamos fazer o <em>próximo filme.</em></Title>
-        <p className="reveal">Conte a ideia, o formato e o prazo. Eu respondo com um caminho de produção.</p>
-      </div>
-      <div className="contact-grid">
-        <div className="contact-side">
-          <div className="mail-card reveal">
-            <span className="mono">E-mail direto</span>
-            <a href={`mailto:${EMAIL}`} className="mail-link">{EMAIL}</a>
-            <div className="mail-actions">
-              <button className="chip-btn" onClick={copy}>{copied ? <><I.Check size={15} /> Copiado</> : <><I.Copy size={15} /> Copiar</>}</button>
-              <a className="chip-btn" href={`mailto:${EMAIL}`}><I.Mail size={15} /> Escrever</a>
+    <section id="contato" className="contact" data-theme="light">
+      <div className="contact-sheet" ref={sheet}>
+        <div className="contact-top">
+          <div className="contact-head">
+            <Eyebrow n="07">Contato</Eyebrow>
+            <Title>Vamos fazer o <em>próximo filme.</em></Title>
+            <p className="reveal">Conte a ideia, o formato e o prazo. Eu respondo com um caminho de produção.</p>
+            <div className="status reveal">
+              <span><i className="live" /> Agenda aberta</span>
+              <span><I.Clock size={15} /> {time} · Brasília</span>
+              <span><I.Pin size={15} /> Remoto e presencial</span>
             </div>
           </div>
-          <div className="channels">
-            {channels.map(([Icon, n, h, url], i) => (
-              <a key={n} href={url} target="_blank" rel="noreferrer" className="channel reveal" style={{ "--d": i }}>
-                <span className="ch-icon"><Icon size={20} /></span>
-                <span className="ch-text"><b>{n}</b><span>{h}</span></span>
-                <span className="ch-arrow"><I.Arrow size={15} /></span>
-              </a>
-            ))}
-          </div>
-          <div className="meta-row reveal">
-            <span><I.Clock size={15} /> {time} · Brasília</span>
-            <span><I.Pin size={15} /> Remoto e presencial</span>
-            <span><i className="live" /> Agenda aberta</span>
+          <div className="mark3d">
+            <span className="mark3d-floor" aria-hidden="true" />
+            <canvas ref={canvas} data-grab aria-label="Marca Alex Ascencio em 3D. Arraste para girar." role="img" />
+            <span className="mark3d-hint mono" aria-hidden="true"><span className="mark3d-dot" /> Arraste para girar</span>
           </div>
         </div>
 
-        <form className="brief reveal" onSubmit={(e) => { e.preventDefault(); if (valid) window.open(`https://wa.me/${WHATS}?text=${encodeURIComponent(body)}`, "_blank", "noopener"); }}>
-          <div className="brief-head">
-            <div><b>Briefing rápido</b><span>Um minuto. Você escolhe por onde enviar.</span></div>
-            <span className="mono">01 — 03</span>
-          </div>
-          <fieldset>
-            <legend className="mono">Tipo de projeto</legend>
-            <div className="kinds">
-              {kinds.map((k) => <button type="button" key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>{k}</button>)}
+        <div className="contact-grid">
+          <div className="contact-side">
+            <div className="channel is-mail reveal">
+              <a className="ch-main" href={`mailto:${EMAIL}`}>
+                <span className="ch-icon"><I.Mail size={19} /></span>
+                <span className="ch-text"><b>E-mail</b><span>{EMAIL}</span></span>
+              </a>
+              <button type="button" className="ch-copy" onClick={copy} aria-label="Copiar e-mail">{copied ? <I.Check size={15} /> : <I.Copy size={15} />}<span>{copied ? "Copiado" : "Copiar"}</span></button>
             </div>
-          </fieldset>
-          <div className="row">
-            <label><span className="mono">Seu nome</span><input required maxLength={120} autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Como posso te chamar?" /></label>
-            <label><span className="mono">Prazo</span><select value={form.when} onChange={(e) => setForm({ ...form, when: e.target.value })}>
-              {["Sem data definida", "Até 2 semanas", "Até 1 mês", "1 a 3 meses", "Mais de 3 meses"].map((o) => <option key={o}>{o}</option>)}
-            </select></label>
+            {channels.map(([Icon, n, h, url], i) => (
+              <a key={n} href={url} target="_blank" rel="noreferrer" className="channel reveal" style={{ "--d": i + 1 }}>
+                <span className="ch-icon"><Icon size={19} /></span>
+                <span className="ch-text"><b>{n}</b><span>{h}</span></span>
+                <span className="ch-arrow"><I.Arrow size={14} /></span>
+              </a>
+            ))}
+            <div className="process reveal" style={{ "--d": 4 }}>
+              <div className="process-head"><span className="mono">Como o projeto anda</span><I.Film size={17} loop /></div>
+              <ol>
+                {[["Briefing", "Você conta a ideia, o formato e o prazo."], ["Caminho de produção", "Eu devolvo etapas, entregas e cronograma."], ["Rascunho aprovado", "O corte é validado antes do render final e do 4K."], ["Master", "Entrega por destino: 16:9, 9:16 e áudio no LUFS certo."]].map(([t, d], i) => (
+                  <li key={t} style={{ "--i": i }}><span className="process-n mono">0{i + 1}</span><span><b>{t}</b><small>{d}</small></span></li>
+                ))}
+              </ol>
+            </div>
           </div>
-          <label><span className="mono">Sobre o projeto</span><textarea required rows={4} maxLength={2500} value={form.msg} onChange={(e) => setForm({ ...form, msg: e.target.value })} placeholder="Ideia, referências, formato de entrega (16:9, 9:16), duração…" /></label>
-          <div className="brief-actions">
-            <Btn as="button" type="submit" icon={<I.Whatsapp size={15} />} disabled={!valid}>Enviar no WhatsApp</Btn>
-            <Btn href={valid ? `mailto:${EMAIL}?subject=${encodeURIComponent(`Projeto: ${kind}`)}&body=${encodeURIComponent(body)}` : undefined} variant="glass" icon={<I.Mail size={15} />} aria-disabled={!valid} onClick={(e) => !valid && e.preventDefault()}>Enviar por e-mail</Btn>
-          </div>
-          <small className="brief-note">Nada é armazenado aqui. O texto abre pronto no seu WhatsApp ou e-mail.</small>
-        </form>
+
+          <form className="brief reveal" onSubmit={(e) => { e.preventDefault(); if (valid) window.open(`https://wa.me/${WHATS}?text=${encodeURIComponent(body)}`, "_blank", "noopener"); }}>
+            <div className="brief-head">
+              <div><b>Briefing rápido</b><span>Um minuto. Você escolhe por onde enviar.</span></div>
+              <span className="brief-ic"><I.Clapper size={20} loop /></span>
+            </div>
+            <fieldset>
+              <legend className="mono">Tipo de projeto</legend>
+              <div className="kinds">
+                {kinds.map((k) => <button type="button" key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>{k}</button>)}
+              </div>
+            </fieldset>
+            <div className="row">
+              <label><span className="mono">Seu nome</span><input required maxLength={120} autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Como posso te chamar?" /></label>
+              <label><span className="mono">Prazo</span><select value={form.when} onChange={(e) => setForm({ ...form, when: e.target.value })}>
+                {["Sem data definida", "Até 2 semanas", "Até 1 mês", "1 a 3 meses", "Mais de 3 meses"].map((o) => <option key={o}>{o}</option>)}
+              </select></label>
+            </div>
+            <label><span className="mono">Sobre o projeto</span><textarea required rows={3} maxLength={2500} value={form.msg} onChange={(e) => setForm({ ...form, msg: e.target.value })} placeholder="Ideia, referências, formato de entrega (16:9, 9:16), duração…" /></label>
+            <div className="brief-actions">
+              <Btn as="button" type="submit" icon={<I.Whatsapp size={15} />} disabled={!valid}>Enviar no WhatsApp</Btn>
+              <Btn href={valid ? `mailto:${EMAIL}?subject=${encodeURIComponent(`Projeto: ${kind}`)}&body=${encodeURIComponent(body)}` : undefined} variant="ghost" icon={<I.Mail size={15} />} aria-disabled={!valid} onClick={(e) => !valid && e.preventDefault()}>Enviar por e-mail</Btn>
+            </div>
+            <small className="brief-note">Nada é armazenado aqui. O texto abre pronto no seu WhatsApp ou e-mail.</small>
+          </form>
+        </div>
       </div>
     </section>
   );
@@ -742,27 +856,50 @@ function Contact() {
 
 /* ───────── rodapé ───────── */
 function Footer() {
+  const time = useBrasilia();
   return (
     <footer className="footer">
       <Mark className="footer-watermark" />
       <div className="footer-cta">
         <div>
           <span className="mono">Próximo projeto</span>
-          <p>Tem uma história para contar?</p>
+          <p>Tem uma história <em>para contar?</em></p>
         </div>
-        <Btn href="#contato">Vamos conversar</Btn>
+        <div className="footer-cta-r">
+          <Btn href="#contato" size="lg">Vamos conversar</Btn>
+          <span className="mono footer-av"><i className="live" /> Agenda aberta · {time} em Brasília</span>
+        </div>
       </div>
       <div className="footer-cols">
         <div className="footer-brand">
-          <Lockup height={34} />
-          <p><span>Editor & Filmmaker · Criar. Contar. Impactar.</span></p>
+          <Lockup h={30} />
+          <p>Editor de vídeo e filmmaker. Edição, cor, motion e IA generativa com acabamento de cinema.</p>
+          <div className="footer-social">
+            <a href={IG} target="_blank" rel="noreferrer" aria-label="Instagram"><I.Instagram size={18} /></a>
+            <a href={LI} target="_blank" rel="noreferrer" aria-label="LinkedIn"><I.Linkedin size={18} /></a>
+            <a href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><I.Whatsapp size={18} /></a>
+            <a href={`mailto:${EMAIL}`} aria-label="E-mail"><I.Mail size={18} /></a>
+          </div>
         </div>
-        <div><span className="mono">Navegação</span>{NAV.map(([h, t]) => <a key={h} href={h}>{t}</a>)}</div>
-        <div><span className="mono">Contato</span><a href={`mailto:${EMAIL}`}>E-mail</a><a href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">WhatsApp</a><a href="/Alex_Ascencio_Curriculo.pdf" download>Currículo</a></div>
-        <div><span className="mono">Redes</span><a href={IG} target="_blank" rel="noreferrer">Instagram</a><a href={LI} target="_blank" rel="noreferrer">LinkedIn</a></div>
+        <nav aria-label="Rodapé"><span className="mono">Navegação</span>{NAV.map(([h, t]) => <RollLink key={h} href={h}>{t}</RollLink>)}<RollLink href="#contato">Contato</RollLink></nav>
+        <div><span className="mono">Serviços</span>{SERVICES.map(([, t]) => <RollLink key={t} href="#lab">{t}</RollLink>)}</div>
+        <div>
+          <span className="mono">Contato</span>
+          <RollLink href={`mailto:${EMAIL}`}>E-mail</RollLink>
+          <RollLink href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">{PHONE}</RollLink>
+          <RollLink href={IG} target="_blank" rel="noreferrer">Instagram</RollLink>
+          <RollLink href={LI} target="_blank" rel="noreferrer">LinkedIn</RollLink>
+          <RollLink href="/Alex_Ascencio_Curriculo.pdf" download>Currículo (PDF)</RollLink>
+        </div>
+        <div className="footer-info">
+          <span className="mono">Atendimento</span>
+          <p><I.Pin size={15} /> Brasil · remoto e presencial</p>
+          <p><I.Clock size={15} /> Horário de Brasília (UTC−3)</p>
+        </div>
       </div>
       <div className="footer-row">
-        <span className="mono">© {new Date().getFullYear()} Alex Ascencio</span>
+        <span>© {new Date().getFullYear()} Alex Ascencio. Todos os direitos reservados.</span>
+        <span className="footer-made mono">Editor & Filmmaker · Criar. Contar. Impactar.</span>
         <Magnetic><a href="#top" className="top-btn" aria-label="Voltar ao topo"><I.Arrow size={16} style={{ transform: "rotate(-45deg)" }} /></a></Magnetic>
       </div>
     </footer>
@@ -772,7 +909,15 @@ function Footer() {
 /* ───────── app ───────── */
 export default function App() {
   const [project, setProject] = useState(null);
-  const [ready, setReady] = useState(false);
+  const [host, setHost] = useState(null);
+  const [demo, setDemo] = useState(false);
+  const stopDemo = useRef(null);
+  const toggleDemo = () => {
+    if (stopDemo.current) { stopDemo.current(); return; }
+    setDemo(true);
+    sfx.unlock(); sfx.riser(1.1);
+    stopDemo.current = runDemo({ onEnd: () => { stopDemo.current = null; setDemo(false); } });
+  };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
 
@@ -780,57 +925,184 @@ export default function App() {
     const reduced = reducedMotion();
     let lenis, tick;
     if (!reduced) {
-      lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.95 });
+      lenis = new Lenis({ lerp: 0.12, wheelMultiplier: 1 });
       window.__lenis = lenis;
       lenis.on("scroll", ScrollTrigger.update);
       lenis.on("scroll", ({ direction, scroll }) => document.documentElement.classList.toggle("nav-hidden", direction === 1 && scroll > innerHeight * 0.9));
+      let calm;
+      lenis.on("scroll", ({ velocity }) => { sfx.scrollAir(velocity); clearTimeout(calm); calm = setTimeout(() => sfx.scrollAir(0), 140); });
       tick = (t) => lenis.raf(t * 1000);
       gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
+      // lagSmoothing padrão (500 ms / 33 ms): com 0, uma travada no carregamento (shader, decode)
+      // faz o GSAP pular a abertura inteira de uma vez
+      gsap.ticker.lagSmoothing(500, 33);
       lenis.stop();
     }
+    // teletransporte: a tela ondula (turbulência + deslocamento + RGB split), salta no pico e se recompõe no destino
+    const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
+    let warping = false;
+    const teleport = (el, x, y) => {
+      if (!lenis || reduced) { el.scrollIntoView(); return; }
+      if (warping) return;
+      warping = true;
+      sfx.teleport(x);
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
+      const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
+      const o = { s: 0, t: 0 };
+      const paint = () => {
+        turb.setAttribute("baseFrequency", `${(0.0016 + o.s * 0.00002).toFixed(5)} ${(0.018 + o.s * 0.00022).toFixed(5)}`);
+        turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
+        maps[0].setAttribute("scale", (o.s * 0.8).toFixed(1));
+        maps[1].setAttribute("scale", (o.s * 1.25).toFixed(1));
+        if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
+      };
+      veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
+      veil.classList.add("on", chromium ? "is-svg" : "is-blur");
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur"); veil.style.backdropFilter = ""; warping = false; } })
+        .to(o, { s: 120, t: 0.5, duration: 0.36, ease: "power2.in", onUpdate: paint })
+        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
+        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.36, ease: "power2.in" }, 0)
+        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.36)
+        .to(o, { s: 0, t: 1, duration: 0.6, ease: "power3.out", onUpdate: paint }, 0.36)
+        .to(veil, { "--flash": 0, duration: 0.6, ease: "power3.out" }, 0.36);
+    };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
       if (!a) return;
       const el = document.querySelector(a.getAttribute("href"));
       if (!el) return;
       e.preventDefault();
-      lenis ? lenis.scrollTo(el, { offset: 0, duration: 1.6 }) : el.scrollIntoView();
+      teleport(el, e.clientX || innerWidth / 2, e.clientY || innerHeight / 2);
     };
     document.addEventListener("click", onAnchor);
 
-    let field;
+    /* ── som: desbloqueio no primeiro gesto, hover/clique delegados, faíscas nas partículas ── */
+    const unlock = () => sfx.unlock();
+    ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+    let hov = null, px = 0, py = 0, pt = 0;
+    const onOver = (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      const el = t?.closest("a, button, [data-cursor], .floater, .tcat, .tool, .traj-clip, .traj-now, .process li");
+      if (el === hov) return;
+      hov = el;
+      if (!el) return;
+      const x = e.clientX;
+      if (el.closest(".nav-links")) sfx.navTick([...el.parentElement.querySelectorAll("a")].indexOf(el), x);
+      else if (el.hasAttribute("data-cursor")) sfx.projector(x);
+      else if (el.closest(".floater") && !el.closest("button")) sfx.glass(x);
+      else sfx.tick(el.matches(".tcat, .tool, .traj-clip, .process li") ? 1760 : 2350, x, 0.022);
+    };
+    const onDown = (e) => { const a = e.target instanceof Element && e.target.closest("a, button"); if (a && !a.matches('a[href^="#"]')) sfx.thock(e.clientX); };
+    const onPMove = (e) => {
+      const now = performance.now(), sp = Math.hypot(e.clientX - px, e.clientY - py) / Math.max(1, now - pt);
+      px = e.clientX; py = e.clientY; pt = now;
+      if (sp > 1.1 && (window.__lenis?.scroll ?? scrollY) < innerHeight * 0.9 && Math.random() < 0.55) sfx.sparkle(e.clientX, e.clientY);
+    };
+    document.addEventListener("pointerover", onOver, { passive: true });
+    document.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointermove", onPMove, { passive: true });
+
+    let field, live = reduced, morph = 0, fade = 1;
     try {
       field = new ParticleField(fieldCanvas.current);
-      reduced ? field.renderOnce() : field.start();
+      if (reduced) field.renderOnce(); // sem movimento: um quadro; com movimento, liga quando a cortina abre
     } catch { /* sem WebGL */ }
 
     const ctx = gsap.context(() => {
-      if (reduced) return;
+      if (reduced) { gsap.set(".preloader", { display: "none" }); return; }
+
+      /* ── abertura: estado inicial antes do primeiro paint (a hero nunca aparece antes da hora) ── */
+      gsap.set(".hero-word-inner", { perspective: 900 });
+      gsap.set(".hero-word .ch", { yPercent: 118, rotateX: -75, opacity: 0, transformOrigin: "50% 100%" });
+      gsap.set(".hero-person-in", { yPercent: 9, scale: 1.08, opacity: 0 });
+      gsap.set(".hero-haze", { opacity: 0 });
+      gsap.set(".fl-in", { opacity: 0, scale: 0.72, y: 40 });
+      gsap.set(".nav > *", { y: -26, opacity: 0 });
+      gsap.set(".hero-intro .line > span", { yPercent: 115 });
+      gsap.set(".hero-ctas .magnetic, .hero-scroll", { y: 24, opacity: 0 });
+      gsap.set(".pre-lockup", { clipPath: "inset(0 100% 0 0)" });
+      gsap.set(".pre-meta", { opacity: 0, y: 10 });
+
+      const o = { p: 0 };
+      const paint = () => {
+        const t = document.querySelector(".pre-tc"), b = document.querySelector(".pre-bar i");
+        if (t) t.textContent = tc(o.p * 2);
+        if (b) b.style.transform = `scaleX(${o.p})`;
+      };
+      const intro = gsap.timeline();
+      intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 0.75, ease: "expo.inOut" })
+        .to(".pre-meta", { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, "-=0.35")
+        .to(o, { p: 0.82, duration: 0.8, ease: "power2.out", onUpdate: paint }, "<");
+
+      const img = document.querySelector(".hero-person img");
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const loaded = Promise.all([
+        document.fonts?.ready,
+        img?.decode ? img.decode().catch(() => {}) : null,
+        new Promise((r) => intro.eventCallback("onComplete", r)),
+        wait(700),
+      ]);
+      const reveal = () => {
+        gsap.timeline()
+          .to(o, { p: 1, duration: 0.35, ease: "power1.inOut", onUpdate: paint })
+          .to(".pre-center", { opacity: 0, y: -14, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, "+=0.08")
+          .fromTo(".pre-slit", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.55, ease: "expo.inOut" }, "-=0.2")
+          .addLabel("open")
+          .to(".pre-top", { yPercent: -100, duration: 1.3, ease: "expo.inOut" }, "open")
+          .to(".pre-bot", { yPercent: 100, duration: 1.3, ease: "expo.inOut" }, "open")
+          .to(".pre-slit", { scaleY: 60, opacity: 0, duration: 0.9, ease: "expo.out" }, "open+=0.1")
+          .add(() => { live = true; field?.start(); }, "open")
+          .add(() => { window.__lenis?.start(); ScrollTrigger.sort(); ScrollTrigger.refresh(); }, "open+=0.6")
+          .to(".hero-haze", { opacity: 1, duration: 2, ease: "power2.out" }, "open+=0.25")
+          .to(".hero-person-in", { yPercent: 0, scale: 1, opacity: 1, duration: 2, ease: "expo.out" }, "open+=0.3")
+          .to(".hero-word .ch", { yPercent: 0, rotateX: 0, opacity: 1, duration: 1.6, ease: "expo.out", stagger: { each: 0.055, from: "center" } }, "open+=0.35")
+          .to(".nav > *", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=0.7")
+          .to(".hero-intro .line > span", { yPercent: 0, duration: 1.3, ease: "expo.out", stagger: 0.08 }, "open+=0.75")
+          .to(".fl-in", { opacity: 1, scale: 1, y: 0, duration: 1.6, ease: "elastic.out(1, 0.75)", stagger: 0.09, clearProps: "transform" }, "open+=0.85")
+          .to(".hero-ctas .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1")
+          .set(".preloader", { display: "none" });
+      };
+      // portão: o navegador só libera áudio após um gesto — o clique em "Entrar" abre a cortina com som
+      loaded.then(() => {
+        if (!sfx.enabled) { reveal(); return; }
+        const gate = document.querySelector(".pre-gate");
+        gsap.to(".pre-meta", { opacity: 0, y: -6, duration: 0.4, ease: "power2.in" });
+        gsap.fromTo(gate, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.7, ease: "expo.out", delay: 0.2 });
+        gate.addEventListener("click", (e) => {
+          const b = e.target.closest("[data-gate]");
+          if (!b) return;
+          gate.style.pointerEvents = "none";
+          if (b.dataset.gate === "on") { sfx.unlock(); sfx.intro(0.93); } else sfx.set(false);
+          gsap.to(gate, { autoAlpha: 0, duration: 0.3 });
+          reveal();
+        });
+      });
+
+      /* ── hero: saída por scroll (só transform/opacity: nada de filter na foto) ── */
       const mm = gsap.matchMedia();
-      // hero: saída cinematográfica (dolly out + desfoque + fade para o preto)
       gsap.timeline({ scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true } })
-        .to(".hero-word-inner", { yPercent: -28, scale: 0.92, filter: "blur(10px)", opacity: 0, ease: "none" }, 0)
-        .to(".hero-person img", { scale: 0.9, yPercent: 6, filter: "blur(6px) brightness(0.5)", ease: "none" }, 0)
-        .to(".hero-haze", { opacity: 0, ease: "none" }, 0)
-        .to(".hero-fade", { opacity: 0, y: -50, ease: "none" }, 0);
+        .to(".hero-word-inner", { yPercent: -30, scale: 0.94, opacity: 0, ease: "none", duration: 1 }, 0)
+        .to(".hero-person-scroll", { yPercent: 7, scale: 0.92, opacity: 0.15, ease: "none", duration: 1 }, 0)
+        .to(".hero-haze", { opacity: 0.2, ease: "none", duration: 1 }, 0)
+        .to(".hero-floats", { y: -90, opacity: 0, ease: "none", duration: 0.4 }, 0)
+        .to(".hero-bottom", { y: -50, opacity: 0, ease: "none", duration: 0.5 }, 0);
       ScrollTrigger.create({ trigger: ".hero", start: "top top", end: "bottom top", onUpdate: (s) => { const el = document.querySelector(".js-tc"); if (el) el.textContent = tc(s.progress * 12); } });
       // manifesto (pin primeiro para as posições seguintes considerarem o espaçador)
       gsap.timeline({ scrollTrigger: { trigger: "#manifesto", start: "top top", end: () => `+=${innerHeight * 1.6}`, scrub: true, pin: ".manifesto-pin" } })
-        .fromTo(".manifesto .w", { opacity: 0.1, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", stagger: 0.08, ease: "none" })
+        .fromTo(".manifesto .w", { opacity: 0.1 }, { opacity: 1, stagger: 0.08, ease: "none" })
         .from(".stats > div", { y: 30, opacity: 0, stagger: 0.1 }, ">-0.3");
       ScrollTrigger.create({
         trigger: ".stats", start: "top 85%", once: true,
         onEnter: () => document.querySelectorAll(".stats dd[data-count]").forEach((dd) => {
-          const o = { v: 0 }, n = +dd.dataset.count;
-          gsap.to(o, { v: n, duration: 1.6, ease: "power3.out", onUpdate: () => (dd.textContent = Math.round(o.v)) });
+          const c = { v: 0 }, n = +dd.dataset.count;
+          gsap.to(c, { v: n, duration: 1.6, ease: "power3.out", onUpdate: () => (dd.textContent = Math.round(c.v)) });
         }),
       });
       // partículas → marca → somem
-      ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => field?.setMorph(s.progress) });
+      ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => { field?.setMorph(s.progress); morph = s.progress; sfx.padLevel(morph * fade); } });
       ScrollTrigger.create({
         trigger: "#manifesto", start: "bottom bottom", end: "bottom 35%", scrub: true,
-        onUpdate: (s) => { gsap.set(fieldCanvas.current, { opacity: 1 - s.progress }); (s.progress >= 0.999 ? field?.stop() : field?.start()); },
+        onUpdate: (s) => { gsap.set(fieldCanvas.current, { opacity: 1 - s.progress }); fade = 1 - s.progress; sfx.padLevel(morph * fade); if (live) (s.progress >= 0.999 ? field?.stop() : field?.start()); },
       });
       // filmes: horizontal
       mm.add("(min-width: 900px)", () => {
@@ -848,32 +1120,36 @@ export default function App() {
           },
         });
         gsap.utils.toArray(".fcard").forEach((card) => {
-          const img = card.querySelector(".fcard-media img");
-          if (img) gsap.fromTo(img, { xPercent: -7 }, { xPercent: 7, ease: "none", scrollTrigger: { trigger: card, containerAnimation: tween, start: "left right", end: "right left", scrub: true } });
+          const im = card.querySelector(".fcard-media img");
+          if (im) gsap.fromTo(im, { xPercent: -7 }, { xPercent: 7, ease: "none", scrollTrigger: { trigger: card, containerAnimation: tween, start: "left right", end: "right left", scrub: true } });
           gsap.fromTo(card, { scale: 0.92, opacity: 0.55 }, { scale: 1, opacity: 1, ease: "none", scrollTrigger: { trigger: card, containerAnimation: tween, start: "left 95%", end: "left 45%", scrub: true } });
         });
       });
-      // entrada dos filmes: cards sobem por baixo do título
       gsap.from(".featured-track", { yPercent: 18, opacity: 0, ease: "none", scrollTrigger: { trigger: "#filmes", start: "top 95%", end: "top 25%", scrub: true } });
       // lab: moldura arredondada que se expande até sangrar a tela
       gsap.fromTo(".lab-frame", { clipPath: "inset(7% 5% 7% 5% round 44px)" }, { clipPath: "inset(0% 0% 0% 0% round 0px)", ease: "none", scrollTrigger: { trigger: ".lab", start: "top 90%", end: "top 5%", scrub: true } });
       gsap.fromTo(".lab-canvas", { scale: 1.18 }, { scale: 1, ease: "none", scrollTrigger: { trigger: ".lab", start: "top bottom", end: "top top", scrub: true } });
       // títulos: máscara por linha
       gsap.utils.toArray(".js-title .title-inner").forEach((el) => {
-        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 1.3, ease: "expo.out", scrollTrigger: { trigger: el.parentElement, start: "top 90%", once: true } });
+        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 0.95, ease: "expo.out", onStart: () => sfx.reveal(), scrollTrigger: { trigger: el.parentElement, start: "top 95%", once: true } });
       });
       gsap.utils.toArray(".eyebrow").forEach((el) => {
-        gsap.from(el, { opacity: 0, x: -16, duration: 1, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 92%", once: true } });
+        gsap.from(el, { opacity: 0, x: -16, duration: 0.7, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
-      // reveals
       gsap.utils.toArray(".reveal").forEach((el) => {
-        gsap.from(el, { y: 40, opacity: 0, duration: 1.1, ease: "expo.out", delay: (+getComputedStyle(el).getPropertyValue("--d") || 0) * 0.08, scrollTrigger: { trigger: el, start: "top 90%", once: true } });
+        gsap.from(el, { y: 28, opacity: 0, duration: 0.75, ease: "expo.out", delay: (+getComputedStyle(el).getPropertyValue("--d") || 0) * 0.05, scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
-      // grade do arquivo em cascata
-      ScrollTrigger.batch(".grid .card", { start: "top 92%", once: true, onEnter: (els) => gsap.from(els, { y: 50, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.06 }) });
-      // foto do sobre: revelação por cortina
+      // grade: cascata por linha (o tilt mora em .card-media, então não há briga de transform)
+      ScrollTrigger.batch(".grid .card", { start: "top 98%", once: true, onEnter: (els) => gsap.fromTo(els, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.04, clearProps: "transform,opacity,visibility" }) });
+      // sobre
       gsap.fromTo(".js-photo", { clipPath: "inset(100% 0 0 0 round 32px)" }, { clipPath: "inset(0% 0 0 0 round 32px)", duration: 1.6, ease: "expo.inOut", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
       gsap.fromTo(".js-photo img", { scale: 1.25 }, { scale: 1, duration: 2, ease: "expo.out", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
+      gsap.from(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
+      gsap.from(".traj-clip", { y: 24, opacity: 0, duration: 1.1, ease: "expo.out", stagger: 0.12, delay: 0.5, scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
+      gsap.from(".tcat, .tool", { y: 16, opacity: 0, duration: 0.6, ease: "expo.out", stagger: 0.03, scrollTrigger: { trigger: ".tcats", start: "top 96%", once: true } });
+      // contato: folha clara sobe e arredonda
+      gsap.fromTo(".contact-sheet", { scale: 0.94, borderRadius: 64 }, { scale: 1, borderRadius: 40, ease: "none", scrollTrigger: { trigger: ".contact", start: "top bottom", end: "top 20%", scrub: true } });
+      ScrollTrigger.create({ trigger: ".contact-sheet", start: "top 44px", end: "bottom 44px", toggleClass: { targets: document.documentElement, className: "nav-light" } });
       // rodapé
       gsap.fromTo(".footer-watermark", { yPercent: 30, opacity: 0 }, { yPercent: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: ".footer", start: "top bottom", end: "bottom bottom", scrub: true } });
     }, root);
@@ -881,35 +1157,38 @@ export default function App() {
     return () => {
       ctx.revert();
       document.removeEventListener("click", onAnchor);
+      ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.removeEventListener(ev, unlock, true));
+      document.removeEventListener("pointerover", onOver);
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onPMove);
       field?.dispose();
       if (tick) gsap.ticker.remove(tick);
       lenis?.destroy();
     };
   }, []);
 
-  useEffect(() => {
-    if (!ready) return;
-    window.__lenis?.start();
-    ScrollTrigger.sort();
-    ScrollTrigger.refresh();
-    if (reducedMotion()) return;
-    gsap.timeline()
-      .from(".hero-word .ch", { yPercent: 110, opacity: 0, duration: 1.4, ease: "expo.out", stagger: 0.04 })
-      .from(".hero-person img", { yPercent: 10, opacity: 0, duration: 1.8, ease: "expo.out" }, 0.15)
-      .from(".nav > *", { y: -24, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.08 }, 0.4)
-      .from(".hero-fade", { y: 24, opacity: 0, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, 0.6);
-  }, [ready]);
-
   return (
     <div ref={root}>
-      <Preloader onDone={() => setReady(true)} />
-      <Cursor />
+      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+        <symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol>
+        <filter id="warp" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.018" numOctaves="2" seed="1" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d1" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d2" />
+          <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
+          <feBlend in="r" in2="gb" mode="screen" />
+        </filter>
+      </svg>
+      <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
+      <Preloader />
+      <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />
       <div className="grain" aria-hidden="true" />
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />
@@ -920,7 +1199,8 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
-      {project && <Player project={project} onClose={() => setProject(null)} />}
+      {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
+      {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>
   );
 }

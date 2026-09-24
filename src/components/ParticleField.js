@@ -104,7 +104,7 @@ export default class ParticleField {
     this.forceTarget = 0;
   }
   build() {
-    const n = this.mobile ? 3200 : 9000;
+    const n = this.mobile ? 2600 : 6000;
     const home = new Float32Array(n * 3);
     const rnd = new Float32Array(n * 4);
     for (let i = 0; i < n; i++) {
@@ -134,7 +134,7 @@ export default class ParticleField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    const pr = Math.min(window.devicePixelRatio, 1.75);
+    const pr = Math.min(window.devicePixelRatio, 1.25); // pontos suaves: acima de 1,25 só custa GPU
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
