@@ -976,7 +976,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
   .hero-lead { font-size: 27px; }
   .hero-sub { font-size: 14.5px; margin: 10px 0 18px; }
   .hero-intro { max-width: none; }
-  .hero-ctas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hero-ctas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .hero-ctas .magnetic, .hero-ctas .btn { width: 100%; }
   .hero-ctas .btn { justify-content: space-between; }
   .btn.lg { --h: 54px; --ic: 42px; font-size: 15px; padding-left: 20px; }
@@ -1224,3 +1224,17 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .edth-tip button:hover { background: rgba(255,255,255,.08); color: #fff; }
 @keyframes edth-tip { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 @media (max-width: 760px) { .edth-bubble { right: 12px; bottom: 12px; } .edth-launch { width: 54px; height: 54px; } .edth-tip { max-width: 210px; } }
+
+/* mobile: hero limpo — palavra, foto, texto e ações; chips flutuantes, card de lançamento e tour saem da foto */
+.btn-tour-m, .lbl-m, .magnetic:has(> .btn-tour-m) { display: none; }
+@media (max-width: 760px) {
+  .fl-a, .fl-b, .fl-tour, .fl-np { display: none !important; }
+  .magnetic:has(> .btn-tour-m), .btn-tour-m { display: inline-flex; }
+  .lbl-d { display: none; } .lbl-m { display: inline; }
+  .hero-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .hero-modes .magnetic { width: 100%; }
+  .hero-modes .btn { width: 100%; min-width: 0; justify-content: space-between; padding-left: 16px; font-size: 13.5px; white-space: nowrap; }
+  .edth-bubble { transition: opacity .35s, transform .35s var(--ease); }
+  .edth-bubble.is-away { opacity: 0; transform: translateY(16px) scale(.9); pointer-events: none; }
+  .edth-bubble.is-away > * { pointer-events: none; }
+}
