@@ -6,7 +6,7 @@ import { MARK_PATH } from "../brand";
 import { PROJECTS } from "../projects";
 
 // Currículo digital: mesma identidade do site; @media print gera o PDF A4 (2 páginas).
-const PDF = "/media/cv/2026-09-24_alexascencio_curriculo_v01.pdf";
+const PDF = "/media/cv/2026-09-24_alexascencio_curriculo_v02.pdf";
 const CONTACT = [
   ["Telefone", "+55 15 99756-9880", "https://wa.me/5515997569880"],
   ["E-mail", "ascencioalexgabriel@gmail.com", "mailto:ascencioalexgabriel@gmail.com"],
@@ -35,7 +35,7 @@ const METHOD = [
 ];
 const TOOLS = [
   ["Edição", "Premiere Pro · DaVinci Resolve · CapCut"], ["Cor", "DaVinci Resolve · Lumetri"], ["Motion", "After Effects"],
-  ["Áudio", "Pro Tools · medição em LUFS"], ["Ao vivo", "vMix"], ["Imagem", "Photoshop · Lightroom"],
+  ["Áudio", "Mix e master medidos em LUFS"], ["Ao vivo", "vMix"], ["Imagem", "Photoshop · Lightroom"],
   ["IA generativa", "ComfyUI · Higgsfield · Runway · ElevenLabs · Topaz · Midjourney · Claude / GPT"], ["Dev", "Plugins CEP/UXP para Premiere e After Effects"],
 ];
 const SKILLS = ["Edição cinematográfica", "Transmissão ao vivo", "Color grading", "Operação de câmera", "Direção e roteiro", "Motion / VFX", "Fluxos com IA generativa"];
