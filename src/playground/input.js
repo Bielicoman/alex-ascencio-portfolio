@@ -10,9 +10,10 @@ export class Input {
     const upd = (e) => {
       if (e.pointerType === "mouse") {
         if (e.type === "pointerdown") this.mdown = e.currentTarget === stage;
-        this.ptrs.set("mouse", { x: e.clientX, y: e.clientY, pinch: this.mdown && (e.buttons & 1) === 1, touch: false });
+        const prev = this.ptrs.get("mouse");
+        this.ptrs.set("mouse", { x: e.clientX, y: e.clientY, pinch: this.mdown && (e.buttons & 1) === 1, touch: false, path: [...(prev?.path || []), { x: e.clientX, y: e.clientY }].slice(-24) });
       }
-      else if (e.type !== "pointerup" && e.type !== "pointercancel") { if (e.type === "pointerdown" || this.ptrs.has("t" + e.pointerId)) this.ptrs.set("t" + e.pointerId, { x: e.clientX, y: e.clientY, pinch: true, touch: true }); }
+      else if (e.type !== "pointerup" && e.type !== "pointercancel") { if (e.type === "pointerdown" || this.ptrs.has("t" + e.pointerId)) { const prev = this.ptrs.get("t" + e.pointerId); this.ptrs.set("t" + e.pointerId, { x: e.clientX, y: e.clientY, pinch: true, touch: true, path: [...(prev?.path || []), { x: e.clientX, y: e.clientY }].slice(-24) }); } }
       else this.ptrs.delete("t" + e.pointerId);
     };
     this.onDown = (e) => { upd(e); if (e.pointerType !== "mouse") e.preventDefault(); };
@@ -58,7 +59,8 @@ export class Input {
       out.push({ id, x: v.x, y: v.y, pinch: hd.pinch, fingers: v.f.map((p) => ({ ...p })), scale: hd.scale, angle: hd.angle, open: hd.open, fist: hd.fist, src: "cam", lm: hd.lm });
     }
     for (const id of this.view.keys()) if (!seen.has(id)) this.view.delete(id);
-    for (const [id, p] of this.ptrs) out.push({ id, x: p.x, y: p.y, pinch: p.pinch, fingers: [{ x: p.x, y: p.y }], scale: 0.2, angle: -Math.PI / 2, src: p.touch ? "touch" : "mouse" });
+    // caminho do ponteiro desde o último quadro (movimento rápido não "pula" alvos entre quadros)
+    for (const [id, p] of this.ptrs) { out.push({ id, x: p.x, y: p.y, pinch: p.pinch, path: p.path || [], fingers: [{ x: p.x, y: p.y }], scale: 0.2, angle: -Math.PI / 2, src: p.touch ? "touch" : "mouse" }); p.path = []; }
     // bordas de pinça e velocidade por id
     const next = new Map();
     for (const h of out) {

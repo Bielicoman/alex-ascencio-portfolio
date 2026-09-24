@@ -12,10 +12,11 @@ import drums from "./modes/drums";
 import theremin from "./modes/theremin";
 import slice from "./modes/slice";
 import body from "./modes/body";
+import saber from "./modes/saber";
 
 // Playground: laboratório de gestos independente do site. Tutorial de entrada, câmera opcional
 // (mouse e toque sempre funcionam), 6 modos trocados por abas ou por #hash.
-const MODES = [particles, objects, body, piano, drums, theremin, slice];
+const MODES = [particles, objects, body, piano, drums, theremin, slice, saber];
 const GLYPH = {
   hand: '<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.8V4.5a1.5 1.5 0 0 1 3 0V12m0-6a1.5 1.5 0 0 1 3 0v6m0-3.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L3.6 15a1.5 1.5 0 0 1 2.3-2L8 15"/>',
   point: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
@@ -23,6 +24,7 @@ const GLYPH = {
   drag: '<path d="M12 3v18M7.5 7.5 12 3l4.5 4.5M7.5 16.5 12 21l4.5-4.5"/>',
   grab: '<rect x="5" y="8" width="11" height="8" rx="2"/><path d="M16 12h5M18.5 9.5 21 12l-2.5 2.5"/>',
   zoom: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M9 12h6M12 9v6"/>',
+  swipe: '<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
   keys: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/>',
   cam: '<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>',
 };

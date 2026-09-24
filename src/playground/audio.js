@@ -161,3 +161,5 @@ export function boom(v = 0.5) {
   tone(t, "sine", 110, 32, 0.5, v, 1.1, g); nz(t, 0.8, "lowpass", 900, 0.6, 0.25 * v, 0.7, g);
 }
 export { mtof };
+// acesso ao barramento para o sequenciador de música (music.js)
+export const bus = () => ({ ctx, out, rev, send, noiseBuf: NB });
