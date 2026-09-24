@@ -296,7 +296,11 @@ function NowPlaying({ open }) {
     <div className={`np${playing ? " is-playing" : ""}`}>
       <div className="np-media" onPointerEnter={() => preview(true)} onPointerLeave={() => preview(false)}>
         <img key={cur.id} src={thumb(cur)} alt="" draggable="false" />
-        {!playing && cur.video && <video ref={prev} key={`p${cur.id}`} src={cur.video} muted loop playsInline preload="none" aria-hidden="true" />}
+        {!playing && (cur.preview || cur.video) && (
+          <video ref={prev} key={`p${cur.id}`} muted loop playsInline preload="none" aria-hidden="true">
+            {cur.preview ? <><source src={`${cur.preview}.webm`} type="video/webm" /><source src={`${cur.preview}.mp4`} type="video/mp4" /></> : <source src={cur.video} type="video/mp4" />}
+          </video>
+        )}
         {playing && (cur.video
           ? <video ref={vid} key={`v${cur.id}`} src={cur.video} autoPlay playsInline onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onEnded={() => go(1)} />
           : <iframe key={`y${cur.id}`} title={cur.title} src={yt(cur)} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />)}
@@ -418,6 +422,7 @@ function Manifesto() {
 
 /* ───────── filmes ───────── */
 function Featured({ open }) {
+  const [hov, setHov] = useState(null);
   return (
     <section id="filmes" className="featured">
       <div className="featured-pin">
@@ -432,7 +437,7 @@ function Featured({ open }) {
           {FEATURED.map((p, i) => (
             <article className="fcard" key={p.id}>
               <button onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
-                <div className="fcard-media"><img src={thumb(p)} alt="" loading="lazy" /></div>
+                <div className="fcard-media" onPointerEnter={() => canHover() && setHov(p.id)} onPointerLeave={() => setHov(null)}><img src={thumb(p)} alt="" loading="lazy" /><HoverPreview src={p.preview} on={hov === p.id} /></div>
                 <div className="fcard-shade" />
                 <div className="fcard-top"><span className="mono">{String(i + 1).padStart(2, "0")}</span><span className="mono">{p.cat} · {p.date.slice(0, 4)} · {p.q}</span></div>
                 <div className="fcard-meta">
@@ -520,7 +525,25 @@ function Clients() {
 }
 
 /* ───────── arquivo ───────── */
+// loop curto hospedado: monta no primeiro hover, entra com fade só depois do 1º quadro (sem piscar preto)
+function HoverPreview({ src, on }) {
+  const ref = useRef(null), [mounted, setMounted] = useState(false), [ready, setReady] = useState(false);
+  useEffect(() => { if (on) setMounted(true); }, [on]);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (on) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+  }, [on, mounted]);
+  if (!src || !mounted) return null;
+  return (
+    <video ref={ref} className={`hprev${on && ready ? " on" : ""}`} muted loop playsInline preload="auto" onPlaying={() => setReady(true)} aria-hidden="true">
+      <source src={`${src}.webm`} type="video/webm" /><source src={`${src}.mp4`} type="video/mp4" />
+    </video>
+  );
+}
+const canHover = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
 function CardPreview({ p }) {
+  if (p.preview) return null; // com loop hospedado, o HoverPreview já cuida
   return (
     <span className="card-prev" aria-hidden="true">
       {p.video
@@ -532,6 +555,7 @@ function CardPreview({ p }) {
 function Archive({ open }) {
   const [cat, setCat] = useState("Todos");
   const [prev, setPrev] = useState(null);
+  const [hovId, setHovId] = useState(null);
   useEffect(() => {
     const f = (e) => setPrev(e.detail.id);
     window.addEventListener("demo:card", f);
@@ -581,8 +605,9 @@ function Archive({ open }) {
       <div className="grid">
         {list.map((p) => (
           <button key={p.id} data-id={p.id} className="card" onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
-            <span className="card-media" onPointerMove={tilt} onPointerLeave={reset}>
+            <span className="card-media" onPointerMove={tilt} onPointerEnter={() => canHover() && setHovId(p.id)} onPointerLeave={(e) => { reset(e); setHovId(null); }}>
               <img src={thumb(p)} alt="" loading="lazy" width="640" height="360" />
+              <HoverPreview src={p.preview} on={hovId === p.id || prev === p.id} />
               {prev === p.id && <CardPreview p={p} />}
               <span className="card-glare" />
               <span className="card-q mono">{p.q}</span>

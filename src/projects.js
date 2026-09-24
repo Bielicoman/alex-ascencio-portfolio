@@ -1,6 +1,7 @@
 export const PROJECTS = [
   // Vídeo hospedado no próprio site (sem YouTube): use `video` no lugar de `url`.
-  { id: 25, date: "2026-09-23", title: "Homenagem Dia das Profissões | UNoB", cat: "Institucional", q: "HD", video: "/media/videos/2026-09-23_diadasprofissoes_web_v01.mp4", desc: "Homenagem institucional ao Dia das Profissões, produzida para a União Noroeste Brasileira. Vídeo exibido direto do site." },
+  // `preview`: caminho sem extensão de um loop curto (.webm VP9 + .mp4 H.264, 6 s, 960×540, sem áudio) — ver README.
+  { id: 25, date: "2026-09-23", title: "Homenagem Dia das Profissões | UNoB", cat: "Institucional", q: "HD", video: "/media/videos/2026-09-23_diadasprofissoes_web_v01.mp4", preview: "/media/previews/2026-09-24_diadasprofissoes_preview_v01", desc: "Homenagem institucional ao Dia das Profissões, produzida para a União Noroeste Brasileira. Vídeo exibido direto do site." },
   // ── Dates verified directly from YouTube publish dates ──
   // Sort is automatic — just add new videos anywhere with the correct date field
   // IDs are stable unique identifiers (do not change them)

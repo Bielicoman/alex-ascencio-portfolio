@@ -49,3 +49,8 @@ Projetos sem YouTube usam `video: "/media/videos/arquivo.mp4"` em `src/projects.
 Partículas: 6000 pontos (2600 no celular), DPR máx. 1,25. Lente: DPR 1. Marca 3D: DPR 1,5, só renderiza visível.
 Grão estático; flutuantes com `backdrop-filter` de 10 px; nenhum `filter` animado por scroll.
 Medido no Chromium sem GPU (8 s de scroll + mouse): 2,8–4,1 → 4,8 fps em relação à primeira v05.
+
+## Previews de hover
+`preview` em `src/projects.js` é o caminho sem extensão de um loop curto em `public/media/previews/` (.webm VP9 para Chrome/Firefox, .mp4 H.264 para Safari), tocado no hover (grade, Filmes, card da hero) e no tour.
+Sem `preview`, o tour cai no embed do YouTube (lento: carrega o player inteiro).
+Encode: 6 s, 960×540, 24 fps, sem áudio — `ffmpeg -ss <in> -t 6 -i master.mp4 -an -vf "scale=960:540:flags=lanczos,fps=24" -c:v libx264 -profile:v high -preset slow -crf 27 -pix_fmt yuv420p -movflags +faststart AAAA-MM-DD_projeto_preview_v01.mp4` (~300 KB). WebM: `-c:v libvpx-vp9 -b:v 0 -crf 38 -row-mt 1` (~250 KB).
