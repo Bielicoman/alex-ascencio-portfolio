@@ -200,17 +200,32 @@ export class HandTracker {
   parse(res, t) {
     const aspect = (this.video.videoWidth || 640) / (this.video.videoHeight || 480);
     const hands = [], seen = new Set();
-    res.landmarks.forEach((raw, i) => {
-      let key = res.handedness?.[i]?.[0]?.categoryName || "H";
-      if (seen.has(key)) key += i; seen.add(key);
-      let s = this.state.get(key);
-      if (!s) { s = { fx: new OneEuro(1.0, 3.2), fy: new OneEuro(1.0, 3.2), fs: new OneEuro(1, 0.4), pinch: false, t }; this.state.set(key, s); }
-      s.t = t;
+    // identidade por posição (não pelo rótulo esquerda/direita, que às vezes troca entre quadros e
+    // fazia a pinça "resetar" e soltar o objeto): cada detecção pega o estado mais próximo do quadro anterior
+    const dets = res.landmarks.map((raw) => {
       const lm = raw.map((p) => ({ x: 1 - p.x, y: p.y, z: p.z }));
+      return { lm, ax: (lm[0].x + lm[9].x) / 2, ay: (lm[0].y + lm[9].y) / 2 };
+    });
+    const pool = [...this.state.entries()].filter(([, st]) => t - st.t < 0.6);
+    const pairs = [];
+    dets.forEach((dt, i) => pool.forEach(([k, st]) => pairs.push([Math.hypot(dt.ax - st.ax, dt.ay - st.ay), i, k])));
+    pairs.sort((a, b) => a[0] - b[0]);
+    const keyOf = new Map(), used = new Set();
+    for (const [dist, i, k] of pairs) if (!keyOf.has(i) && !used.has(k) && dist < 0.3) { keyOf.set(i, k); used.add(k); }
+    this.nextId = this.nextId || 0;
+    dets.forEach((det, i) => {
+      const key = keyOf.get(i) || "h" + this.nextId++;
+      seen.add(key);
+      let s = this.state.get(key);
+      if (!s) { s = { fx: new OneEuro(1.0, 3.2), fy: new OneEuro(1.0, 3.2), fs: new OneEuro(1, 0.4), pinch: false, flip: 0, t }; this.state.set(key, s); }
+      s.t = t; s.ax = det.ax; s.ay = det.ay;
+      const lm = det.lm;
       const d = (a, b) => Math.hypot((lm[a].x - lm[b].x) * aspect, lm[a].y - lm[b].y);
       const palm = Math.max(1e-4, d(0, 9));
       const pd = d(4, 8) / palm;
-      s.pinch = s.pinch ? pd < PINCH_OFF : pd < PINCH_ON;
+      // pinça com confirmação: fecha após 2 quadros seguidos, abre só após 3 (uma leitura ruim não solta o objeto)
+      const raw = s.pinch ? pd < PINCH_OFF : pd < PINCH_ON;
+      if (raw !== s.pinch) { s.flip = (s.flip || 0) + 1; if (s.flip >= (s.pinch ? 3 : 2)) { s.pinch = raw; s.flip = 0; } } else s.flip = 0;
       // âncora estável: meio da pinça puxado para a base do indicador (a ponta salta quando os dedos fecham)
       const ax = (lm[4].x + lm[8].x) * 0.3 + lm[5].x * 0.4, ay = (lm[4].y + lm[8].y) * 0.3 + lm[5].y * 0.4;
       const r = this.region;
@@ -237,18 +252,26 @@ export class HandTracker {
       if (g === s.cand) s.candN++; else { s.cand = g; s.candN = 1; }
       if (s.candN >= 4 || g === "pinch") s.gesture = g;
       const n = four;
-      hands.push({
-        key, lm, x, y, pinch: s.pinch, pinchD: pd,
+      const pinchPt = { x: map((lm[4].x + lm[8].x) / 2, r.x0, r.x1), y: map((lm[4].y + lm[8].y) / 2, r.y0, r.y1) };
+      s.last = {
+        key, lm, x, y, pinch: s.pinch, pinchD: pd, pinchPt,
         vx: s.fx.dx, vy: s.fy.dx, t, // velocidade filtrada (tela/s) e instante da captura (s): previsão entre quadros
         scale: s.fs.f(palm, t), // tamanho da palma: cresce quando a mão se aproxima da câmera
         open: n === 4 && !s.pinch, fist: n === 0 && !s.pinch,
         fingers: s.f, gesture: s.gesture || "other",
         tips: TIPS.map((k) => ({ x: map(lm[k].x, r.x0, r.x1), y: map(lm[k].y, r.y0, r.y1) })),
         angle: Math.atan2(lm[9].y - lm[0].y, (lm[9].x - lm[0].x) * aspect),
-      });
+      };
+      hands.push(s.last);
     });
-    // mão que sumiu: zera filtros para não "puxar" da última posição quando voltar
-    for (const [k, s] of this.state) if (!seen.has(k) && t - s.t > 0.25) { s.fx.reset(); s.fy.reset(); s.fs.reset(); s.pinch = false; }
+    for (const [k, s] of this.state) {
+      if (seen.has(k)) continue;
+      // tolerância: mão em pinça que some por até 250 ms (desfoque, oclusão) continua segurando na última posição
+      if (s.pinch && s.last && t - s.t <= 0.25) { hands.push({ ...s.last, vx: 0, vy: 0, ghost: true }); continue; }
+      // mão que sumiu de vez: zera filtros para não "puxar" da última posição quando voltar
+      if (t - s.t > 0.25) { s.fx.reset(); s.fy.reset(); s.fs.reset(); s.pinch = false; s.flip = 0; }
+      if (t - s.t > 2) this.state.delete(k);
+    }
     return hands.sort((a, b) => a.x - b.x);
   }
 

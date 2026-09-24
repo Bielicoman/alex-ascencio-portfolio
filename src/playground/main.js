@@ -65,6 +65,7 @@ app.innerHTML = `
 const $ = (id) => document.getElementById(id);
 const stage = $("stage"), skel = $("skel"), sg = skel.getContext("2d"), hud = $("hud"), hc = hud.querySelector("canvas").getContext("2d");
 const input = new Input(stage);
+if (import.meta.env.DEV) window.__pgInput = input;
 let cur = null, curI = -1, camOn = false, last = performance.now();
 
 function mount(i) {

@@ -3,7 +3,7 @@ import { FilesetResolver, HandLandmarker, FaceLandmarker, PoseLandmarker } from 
 // Um worker por tarefa (mãos, rosto, corpo): rodam em paralelo em núcleos diferentes e nunca
 // bloqueiam a thread do site. Recebe ImageBitmap (transferido, sem cópia) e devolve só os pontos.
 const TASKS = {
-  hand: [HandLandmarker, { numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 }],
+  hand: [HandLandmarker, { numHands: 2, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 }],
   face: [FaceLandmarker, { numFaces: 1, outputFaceBlendshapes: true, minFaceDetectionConfidence: 0.5, minTrackingConfidence: 0.5 }],
   pose: [PoseLandmarker, { numPoses: 1, minPoseDetectionConfidence: 0.5, minTrackingConfidence: 0.5 }],
 };
