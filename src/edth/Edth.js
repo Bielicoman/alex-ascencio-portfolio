@@ -48,6 +48,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
       <div class="edth-more" hidden>
         <div class="edth-more-head"><span class="mono">Conversa</span><button class="edth-vbtn" aria-label="Escolher a voz da EDITH" aria-expanded="false">${svg("voice", 16)}</button></div>
         <div class="edth-voices" hidden><p class="mono">Voz da EDITH</p><div class="edth-vlist"></div><small class="edth-vhint"></small></div>
+        <div class="edth-cmds" aria-label="Comandos"></div>
         <div class="edth-log" aria-live="polite"></div>
       </div>
       <div class="edth-say" aria-live="polite"><p></p><div class="edth-say-x"></div></div>
@@ -92,7 +93,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
     if (extra.links?.length) sayX.insertAdjacentHTML("beforeend", `<div class="edth-links">${extra.links.map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener">${esc(l)} ${svg("link", 12)}</a>`).join("")}</div>`);
     if (extra.chips?.length) {
       const c = document.createElement("div"); c.className = "edth-chips";
-      extra.chips.slice(0, 5).forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); c.appendChild(b); });
+      extra.chips.slice(0, extra.all ? 12 : 5).forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); c.appendChild(b); });
       sayX.appendChild(c);
     }
     sayBox.classList.add("on");
@@ -402,7 +403,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
       if (root.dataset.state === "thinking") setState("idle");
     }
     const extra = { links: [...(r.links || [])] };
-    const msg = r.say ? add("bot", r.say, { chips: r.chips }) : null;
+    const msg = r.say ? add("bot", r.say, { chips: r.chips, all: r.all }) : null;
     history.push({ role: "assistant", content: r.say || "(ação)" });
     const speech = speak(r.say);
     for (const a of r.actions || []) await exec(a, extra);
@@ -434,6 +435,9 @@ function create({ actions: app = {}, onClose = () => {} }) {
   // boas-vindas: curta; sugestões só na primeira vez
   let first = true;
   try { first = !localStorage.getItem(SEEN); localStorage.setItem(SEEN, "1"); } catch {}
+  // lista fixa de comandos no topo da conversa completa
+  const cmds = $(".edth-cmds");
+  TUTORIAL.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); cmds.appendChild(b); });
   add("bot", SR ? "Oi, eu sou a EDITH. Pode falar." : "Oi, eu sou a EDITH. Pode digitar.", first ? { chips: TUTORIAL } : {});
   show();
   // microfone já ligado ao abrir e fica ligado até o usuário pedir para desligar

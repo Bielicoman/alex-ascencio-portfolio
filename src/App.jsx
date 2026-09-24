@@ -24,7 +24,8 @@ const EMAIL = "ascencioalexgabriel@gmail.com";
 const IG = "https://instagram.com/alexascencioai";
 const LI = "https://www.linkedin.com/in/ascencioalexgabriel/";
 const ORG = { UNoB: "União Noroeste Brasileira" };
-const thumb = (p) => `/media/${p.id}.webp`;
+// miniatura local otimizada (/media/<id>.webp); vídeo novo sem arquivo local usa a do YouTube (campo thumb)
+const thumb = (p) => p.thumb || `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
 const FEATURED = [25, 24, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
