@@ -1,6 +1,6 @@
 // EDTH · voz neural (sempre a mesma, em qualquer aparelho). Provedores por variável de ambiente no Vercel:
 //   ELEVENLABS_API_KEY (+ ELEVENLABS_VOICE_ID opcional)  → mais realista (eleven_flash_v2_5, multilíngue)
-//   GOOGLE_TTS_API_KEY (+ GOOGLE_TTS_VOICE opcional)      → Google Cloud Chirp 3 HD pt-BR
+//   GOOGLE_TTS_API_KEY (+ GOOGLE_TTS_VOICE opcional)      → Google Cloud Chirp 3 HD pt-BR (Leda: timbre jovem)
 // Sem nenhuma chave responde 501 e o site usa a voz do navegador.
 const ORIGINS = /^https:\/\/(alex-ascencio-portfolio[\w-]*\.vercel\.app)$|^http:\/\/localhost(:\d+)?$/;
 
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     if (g) {
       const r = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${g}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: { text }, voice: { languageCode: "pt-BR", name: process.env.GOOGLE_TTS_VOICE || "pt-BR-Chirp3-HD-Aoede" }, audioConfig: { audioEncoding: "MP3", speakingRate: 1.03 } }),
+        body: JSON.stringify({ input: { text }, voice: { languageCode: "pt-BR", name: process.env.GOOGLE_TTS_VOICE || "pt-BR-Chirp3-HD-Leda" }, audioConfig: { audioEncoding: "MP3", speakingRate: 1.03 } }),
       });
       if (r.ok) { const j = await r.json(); res.setHeader("Content-Type", "audio/mpeg"); res.setHeader("Cache-Control", "public, max-age=86400"); return res.status(200).send(Buffer.from(j.audioContent, "base64")); }
       console.error("[tts] google", r.status, (await r.text()).slice(0, 200));
