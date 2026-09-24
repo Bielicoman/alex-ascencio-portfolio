@@ -23,13 +23,15 @@ class Sound {
     if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.9 : 0, this.ctx.currentTime, 0.08);
     if (on) { this.unlock(); this.chime(); }
     if (this.mus) this.musicApply();
+    this.hint?.();
     this.subs.forEach((f) => f(on));
   }
   unlock() {
     if (!this.enabled) return;
     if (!this.ctx) this.build();
-    if (this.ctx.state === "suspended") this.ctx.resume();
+    if (this.ctx.state === "suspended") this.ctx.resume().then(() => this.hint());
     this.unlocked = true;
+    this.hint();
     if (this.musicWant && !this.mus?.timer) this.music(true);
   }
   ok() { return this.enabled && this.ctx && this.ctx.state === "running"; }
@@ -306,7 +308,9 @@ Object.assign(Sound.prototype, {
     return this.mus;
   },
   // "want": zona da trilha (scroll); "hold": 0 enquanto um vídeo está aberto
-  music(want) { this.musicWant = want; if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
+  // aviso "toque para ouvir": a trilha quer tocar, mas o navegador ainda não liberou o áudio (rolar não conta como gesto)
+  hint() { const show = this.enabled && !!this.musicWant && !(this.ctx && this.ctx.state === "running"); window.dispatchEvent(new CustomEvent("sfx:hint", { detail: show })); },
+  music(want) { this.musicWant = want; this.hint(); if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
   musicHold(h) { if (!this.ctx) return; const m = this.musicBus(); m.hold = h ? 0 : 1; this.musicApply(); },
   musicApply() {
     const m = this.mus, t = this.ctx.currentTime, on = this.enabled && m.want && m.hold;

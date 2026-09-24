@@ -908,6 +908,8 @@ export default function App() {
   const [project, setProject] = useState(null);
   const [host, setHost] = useState(null);
   const [demo, setDemo] = useState(false);
+  const [hint, setHint] = useState(false);
+  useEffect(() => { const f = (e) => setHint(e.detail); window.addEventListener("sfx:hint", f); return () => window.removeEventListener("sfx:hint", f); }, []);
   const stopDemo = useRef(null);
   const toggleDemo = () => {
     if (stopDemo.current) { stopDemo.current(); return; }
@@ -1186,6 +1188,10 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
+      <button className={`snd-hint${hint ? " on" : ""}`} onClick={() => sfx.unlock()} aria-hidden={!hint} tabIndex={hint ? 0 : -1}>
+        <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
+        Toque para ouvir a trilha
+      </button>
       {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
       {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>
