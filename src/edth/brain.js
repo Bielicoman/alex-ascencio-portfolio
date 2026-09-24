@@ -205,6 +205,8 @@ export function createBrain() {
     if (flow?.step?.startsWith("n")) { const r = note(t, raw); if (r) return r; }
     else if (flow) { const r = budget(t, raw); if (r) return r; }
 
+    // ajuda / lista de comandos
+    if (any(t, ["comandos", "lista de comandos", "o que eu posso falar", "o que posso falar", "o que eu posso pedir", "quem e voce", "o que voce faz", "o que voce pode", "como funciona", "ajuda", "tutorial", "seu nome"])) return say(K.me(), [], { chips: TUTORIAL, all: true });
     // microfone e vídeo
     if (cmd && any(t, ["desligar microfone", "desliga o microfone", "desligar o microfone", "desliga microfone", "para de ouvir", "parar de ouvir", "pode desligar", "desligar mic", "fecha o microfone", "sem microfone"])) return say("Microfone desligado.", [{ type: "micoff" }]);
     if (cmd && any(t, ["fechar video", "fecha o video", "fechar o video", "fecha video", "sair do video", "tira o video", "fecha o player", "voltar pro site", "volta pro site"])) return say("", [{ type: "close_video" }]);
@@ -271,7 +273,7 @@ export function createBrain() {
     // conhecimento: só quando a frase é curta ou fala do Alex (conversa pessoal longa vai para a IA)
     const about = n <= 4 || any(t, ["alex", "ele", "dele", "o editor", "seu chefe", "voce"]);
     if (!about) return null;
-    if (any(t, ["quem e voce", "o que voce faz", "o que voce pode", "como funciona", "ajuda", "tutorial", "seu nome"])) return say(K.me(), [], { chips: TUTORIAL });
+
     if (any(t, ["quem e", "quem e ele", "resume", "resumir", "resumo", "sobre ele", "me fala do alex", "fale sobre", "conta sobre", "apresenta", "quem e o alex", "alex ascencio"])) return say(K.who(), [{ type: "nav", id: "sobre", silent: true }], { chips: ["Quais trabalhos ele fez?", "Com quem ele trabalhou?", "Quero um orçamento"] });
     if (any(t, ["experiencia", "trabalhou onde", "onde ele trabalha", "empresa", "carreira", "trajetoria", "emprego"])) return say(K.exp());
     if (any(t, ["clientes", "cliente", "com quem", "marcas", "parceiros", "trabalhou para", "trabalhou com"])) return say(K.clients());
@@ -290,7 +292,7 @@ export function createBrain() {
   return { reply, get flow() { return flow; }, reset() { flow = null; } };
 }
 
-export const TUTORIAL = ["Assistir o site", "Vídeo mais recente", "Quem é o Alex?", "Quero um orçamento", "Mandar recado pro Alex"];
+export const TUTORIAL = ["Assistir o site", "Assistir Tu És", "Vídeo mais recente", "Quem é o Alex?", "Quero um orçamento", "Mandar recado pro Alex", "Abrir o jogo Sabre", "Baixar currículo", "Instagram do Alex"];
 // resumo para a IA (api/edth.js envia no prompt de sistema)
 export const KNOWLEDGE = () => [SUMMARY,
   `Experiência: ${EXP.map(([r, org, y]) => `${r} em ${org.replace("·", "e")} (${y})`).join("; ")}.`, K.clients(),

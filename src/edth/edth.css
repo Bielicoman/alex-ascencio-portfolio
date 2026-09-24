@@ -54,7 +54,7 @@
 .edth-links a:hover { background: #e3222c; color: #fff; }
 
 /* conversa completa (só quando o usuário abre) */
-.edth-more { display: grid; grid-template-rows: auto auto 1fr; max-height: min(340px, 50svh); border-radius: 20px; overflow: hidden;
+.edth-more { display: grid; grid-template-rows: auto auto auto 1fr; max-height: min(340px, 50svh); border-radius: 20px; overflow: hidden;
   background: rgba(12,12,14,.96); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 20px 40px -20px rgba(0,0,0,.9); animation: edth-in .3s both; }
 .edth-more[hidden] { display: none; }
 .edth-more-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 14px; border-bottom: 1px solid rgba(255,255,255,.06); color: #85858f; }
@@ -98,3 +98,8 @@
   .edth-bar { height: 50px; }
   .edth-in { font-size: 16px; } /* evita zoom automático no iOS */
 }
+
+/* comandos fixos na conversa completa */
+.edth-cmds { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.edth-cmds button { padding: 5px 10px; border-radius: 99px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); color: #e2e2e7; font: 500 12px var(--sans, system-ui); cursor: pointer; }
+.edth-cmds button:hover { border-color: rgba(255,59,59,.6); background: rgba(255,59,59,.12); color: #fff; }
