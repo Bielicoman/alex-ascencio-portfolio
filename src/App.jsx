@@ -1153,6 +1153,14 @@ export default function App() {
     const lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches; // celular: sem filtro SVG em tela cheia
     let warping = false;
     const speed = new Speedforce();
+    // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
+    // (currículo). Qualquer rolagem/toque/tecla do usuário assume o controle na hora (o Lenis cede).
+    const autoplay = (el) => {
+      const sp = el.parentElement?.classList.contains("pin-spacer") ? el.parentElement : null;
+      if (!sp || el.id !== "sobre") return;
+      const end = sp.getBoundingClientRect().top + lenis.scroll + sp.offsetHeight - innerHeight;
+      lenis.scrollTo(end, { duration: 6.5, easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2, force: true, lock: false });
+    };
     const teleport = (el, x, y) => {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
       if (warping) return;
@@ -1171,7 +1179,7 @@ export default function App() {
       };
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on", lite ? "is-lite" : chromium ? "is-svg" : "is-blur");
-      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; } })
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; autoplay(el); } })
         .to(o, { s: 130, t: 0.5, duration: 0.28, ease: "power3.in", onUpdate: paint })
         .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
         .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
