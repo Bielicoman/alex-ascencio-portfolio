@@ -14,7 +14,7 @@ import runDemo from "./components/Demo";
 import { sfx } from "./components/Sound";
 import Speedforce from "./components/Speedforce";
 import * as I from "./components/Icons";
-import { LOGO_DR, LOGO_PT, LOGO_COMFY } from "./components/logos";
+import { LOGO_DR, LOGO_HF, LOGO_COMFY } from "./components/logos";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,7 +40,7 @@ const NAV = [["#filmes", "Filmes"], ["#lab", "Lab"], ["#metodo", "Método"], ["#
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
   [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
-  [I.Wave, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · Pro Tools"],
+  [I.Wave, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · LUFS"],
   [I.Aperture, "IA generativa", "Planos gerados que passam como produção real — ou ficam fora do corte.", "ComfyUI · Higgsfield"],
 ];
 const [MARK_R, MARK_L] = MARK_PATH.split(/(?<=Z)\s*/);
@@ -672,15 +672,26 @@ function Trajectory() {
     </div>
   );
 }
-const TOOL_CATS = [["ed", "Edição", I.Scissors], ["cor", "Cor", I.Palette], ["mo", "Motion", I.Layers], ["au", "Áudio", I.Wave], ["ia", "IA", I.Spark], ["dev", "Dev", I.Code]];
+const TOOL_CATS = [["ed", "Edição", I.Scissors], ["cor", "Cor", I.Palette], ["mo", "Motion", I.Layers], ["ia", "IA", I.Spark], ["dev", "Dev", I.Code]];
 const TOOLS = [
-  ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"], ["Pt", "Pro Tools", "au", "pt"],
+  ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"],
   ["Cf", "ComfyUI", "ia", "cf"], ["Hf", "Higgsfield", "ia", "hf"], ["</>", "Plugins CEP/UXP", "dev", "dev"],
 ];
 // ícone de cada software: logos oficiais onde há fonte pública; Adobe pela especificação oficial (#00005B / #9999FF)
 function ToolIcon({ cls, m }) {
-  if (cls === "dr") return <span className="tool-m tm-dr"><svg viewBox="0 0 24 24"><path d={LOGO_DR.path} /></svg></span>;
-  if (cls === "pt") return <span className="tool-m tm-pt"><svg viewBox="0 0 24 24"><path d={LOGO_PT.path} /></svg></span>;
+  // DaVinci: moldura do desenho oficial recortada (o próprio bloco é o quadrado) e cada pétala na sua cor
+  if (cls === "dr") return (
+    <span className="tool-m tm-dr"><svg viewBox="0 0 24 24">
+      <defs>
+        <clipPath id="dr-in"><rect x="1.7" y="1.7" width="20.6" height="20.6" rx="4" /></clipPath>
+        <clipPath id="dr-t"><rect width="24" height="11.75" /></clipPath><clipPath id="dr-l"><rect y="11.75" width="12" height="13" /></clipPath><clipPath id="dr-r"><rect x="12" y="11.75" width="12" height="13" /></clipPath>
+      </defs>
+      <g clipPath="url(#dr-in)">
+        <path clipPath="url(#dr-t)" d={LOGO_DR.path} fill="#e9ff61" /><path clipPath="url(#dr-l)" d={LOGO_DR.path} fill="#00d1f8" /><path clipPath="url(#dr-r)" d={LOGO_DR.path} fill="#ff4b4b" />
+      </g>
+    </svg></span>
+  );
+  if (cls === "hf") return <span className="tool-m tm-hf"><svg viewBox="0 0 512 512"><path d={LOGO_HF.path} /></svg></span>;
   if (cls === "cf") return <span className="tool-m tm-cf"><svg viewBox="0 0 520 520"><path d={LOGO_COMFY.path} /></svg></span>;
   return <span className={`tool-m tm-${cls}`}><b>{m}</b></span>;
 }
@@ -867,10 +878,63 @@ function About() {
 }
 
 /* ───────── contato (tema claro) ───────── */
+// Prazo em calendário: atalhos (2 semanas, 1 mês, 3 meses) + mês navegável; dias passados desabilitados.
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const day0 = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const fmtDate = (d) => `${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+const daysTo = (d) => Math.round((day0(d) - day0(new Date())) / 864e5);
+const whenText = (d) => (d ? `até ${d.toLocaleDateString("pt-BR")} (${daysTo(d) === 0 ? "hoje" : `em ${daysTo(d)} dias`})` : "Sem data definida");
+function DatePick({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const today = day0(new Date());
+  const [view, setView] = useState(() => new Date((value || today).getFullYear(), (value || today).getMonth(), 1));
+  const wrap = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const out = (e) => { if (!wrap.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", out); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", out); document.removeEventListener("keydown", key); };
+  }, [open]);
+  const pick = (d) => { onChange(d); setOpen(false); sfx.tick?.(2400); if (d) setView(new Date(d.getFullYear(), d.getMonth(), 1)); };
+  const first = view.getDay(), n = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+  const cells = [...Array(first).fill(null), ...Array.from({ length: n }, (_, i) => new Date(view.getFullYear(), view.getMonth(), i + 1))];
+  const canPrev = view > new Date(today.getFullYear(), today.getMonth(), 1);
+  const quick = [["2 semanas", 14], ["1 mês", 30], ["3 meses", 90]];
+  return (
+    <div className="dp" ref={wrap}>
+      <button type="button" className={`dp-btn${value ? " has" : ""}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <I.Clock size={16} />
+        <span>{value ? <>{fmtDate(value)}<small>{daysTo(value) === 0 ? "hoje" : `em ${daysTo(value)} dias`}</small></> : "Sem data definida"}</span>
+      </button>
+      {open && (
+        <div className="dp-pop" role="dialog" aria-label="Escolher prazo">
+          <div className="dp-quick">
+            <button type="button" aria-pressed={!value} onClick={() => pick(null)}>Sem data</button>
+            {quick.map(([t, d]) => <button type="button" key={t} aria-pressed={!!value && daysTo(value) === d} onClick={() => pick(addDays(today, d))}>{t}</button>)}
+          </div>
+          <div className="dp-head">
+            <button type="button" aria-label="Mês anterior" disabled={!canPrev} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))}><I.Prev size={16} /></button>
+            <b>{MESES[view.getMonth()]} <span>{view.getFullYear()}</span></b>
+            <button type="button" aria-label="Próximo mês" onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}><I.Next size={16} /></button>
+          </div>
+          <div className="dp-grid" role="grid">
+            {["D", "S", "T", "Q", "Q", "S", "S"].map((w, i) => <span key={"w" + i} className="dp-w">{w}</span>)}
+            {cells.map((d, i) => d ? (
+              <button type="button" key={i} disabled={d < today} aria-label={d.toLocaleDateString("pt-BR")}
+                className={`${+d === +today ? "today" : ""} ${value && +d === +day0(value) ? "sel" : ""}`} onClick={() => pick(d)}>{d.getDate()}</button>
+            ) : <span key={i} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 function Contact() {
   const [kind, setKind] = useState("Videoclipe");
   const [copied, setCopied] = useState(false);
-  const [form, setForm] = useState({ name: "", when: "Sem data definida", msg: "" });
+  const [form, setForm] = useState({ name: "", when: null, msg: "" });
   const time = useBrasilia();
   const sheet = useRef(null), canvas = useRef(null);
   useEffect(() => {
@@ -888,7 +952,7 @@ function Contact() {
     return () => { alive = false; io?.disconnect(); scene?.dispose(); el.removeEventListener("pointermove", light); };
   }, []);
   const kinds = ["Videoclipe", "Documentário", "Curta / cinema", "Motion design", "IA generativa", "Evento / ao vivo", "Outro"];
-  const body = `Olá, Alex! Sou ${form.name || "—"}.\nProjeto: ${kind}\nPrazo: ${form.when}\n\n${form.msg}`;
+  const body = `Olá, Alex! Sou ${form.name || "—"}.\nProjeto: ${kind}\nPrazo: ${whenText(form.when)}\n\n${form.msg}`;
   const valid = form.name.trim() && form.msg.trim();
   const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); sfx.chime(); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
   const channels = [
@@ -956,9 +1020,7 @@ function Contact() {
             </fieldset>
             <div className="row">
               <label><span className="mono">Seu nome</span><input required maxLength={120} autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Como posso te chamar?" /></label>
-              <label><span className="mono">Prazo</span><select value={form.when} onChange={(e) => setForm({ ...form, when: e.target.value })}>
-                {["Sem data definida", "Até 2 semanas", "Até 1 mês", "1 a 3 meses", "Mais de 3 meses"].map((o) => <option key={o}>{o}</option>)}
-              </select></label>
+              <div className="dp-field"><span className="mono">Prazo</span><DatePick value={form.when} onChange={(d) => setForm({ ...form, when: d })} /></div>
             </div>
             <label><span className="mono">Sobre o projeto</span><textarea required rows={3} maxLength={2500} value={form.msg} onChange={(e) => setForm({ ...form, msg: e.target.value })} placeholder="Ideia, referências, formato de entrega (16:9, 9:16), duração…" /></label>
             <div className="brief-actions">

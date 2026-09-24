@@ -36,12 +36,14 @@ export class Input {
 
   // chamado a cada quadro de tela; câmera (~30 Hz) é interpolada para não "degrau"
   frame(dt) {
-    const W = innerWidth, H = innerHeight, k = 1 - Math.exp(-dt * 28);
+    const W = innerWidth, H = innerHeight, k = 1 - Math.exp(-dt * 38), now = performance.now();
     const out = [];
     const seen = new Set();
     for (const hd of this.camHands) {
       const id = "cam:" + hd.key; seen.add(id);
-      const tx = hd.x * W, ty = hd.y * H;
+      // previsão entre quadros da câmera (velocidade filtrada × tempo desde a captura, até 80 ms)
+      const ahead = hd.pinch ? 0 : Math.min(0.08, Math.max(0, (now - (hd.t || 0) * 1000) / 1000));
+      const tx = (hd.x + (hd.vx || 0) * ahead) * W, ty = (hd.y + (hd.vy || 0) * ahead) * H;
       const fingers = hd.tips.slice(1).map((p) => ({ x: p.x * W, y: p.y * H }));
       let v = this.view.get(id);
       if (!v) { v = { x: tx, y: ty, f: fingers.map((p) => ({ ...p })) }; this.view.set(id, v); }

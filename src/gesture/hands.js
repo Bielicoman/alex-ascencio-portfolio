@@ -76,7 +76,7 @@ export class HandTracker {
     let camOk = false;
     const off = onProgress((p) => camOk && this.onStatus("model", p));
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 }, facingMode: "user" }, audio: false });
+      this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 }, facingMode: "user" }, audio: false });
     } catch (e) {
       off();
       throw Object.assign(e, { code: e.name === "NotAllowedError" || e.name === "SecurityError" ? "denied" : e.name === "NotFoundError" || e.name === "OverconstrainedError" ? "nocam" : "camera" });
@@ -95,28 +95,52 @@ export class HandTracker {
     this.loop();
   }
 
-  // worker + CPU (XNNPACK): não disputa a GPU com os efeitos WebGL do site nem bloqueia a thread da página.
-  // Medido: com GPU no worker a página caía a 2 fps; com CPU no worker, 11,75 fps contra 16 sem gestos (Chromium sem GPU).
-  // Sem suporte a worker de módulo: thread principal, GPU com recuo para CPU.
-  async engine(buf) {
-    try {
+  // Web Worker: a inferência nunca bloqueia a thread da página. Começa na GPU (≈5–10 ms por quadro numa
+  // placa real); se a média passar de 40 ms (GPU fraca/integrada disputando com o WebGL do site), troca
+  // sozinho para CPU (XNNPACK). Sem suporte a worker de módulo: thread principal, GPU com recuo para CPU.
+  spawn(buf, delegate) {
+    return new Promise((res, rej) => {
       const w = new Worker(new URL("./hands.worker.js", import.meta.url), { type: "module" });
-      await new Promise((res, rej) => {
-        w.onmessage = ({ data }) => (data.type === "ready" ? res() : data.type === "error" ? rej(new Error(data.message)) : null);
-        w.onerror = (e) => rej(e);
-        w.postMessage({ type: "init", wasm: new URL(WASM, location.href).href, model: buf });
-      });
-      w.onmessage = ({ data }) => {
-        this.busy = false;
-        if (data.type === "result" && this.running) this.onFrame(this.parse(data, data.t / 1000), this.video);
-      };
-      this.worker = w;
+      w.onmessage = ({ data }) => (data.type === "ready" ? res(w) : data.type === "error" ? (w.terminate(), rej(new Error(data.message))) : null);
+      w.onerror = (e) => { w.terminate(); rej(e); };
+      w.postMessage({ type: "init", wasm: new URL(WASM, location.href).href, model: buf, delegate });
+    });
+  }
+  attach(w) {
+    const pf = (this.perf = { n: 0, sum: 0, slow: 0 });
+    w.onmessage = ({ data }) => {
+      if (w !== this.worker || data.type !== "result") return;
+      this.busy = false;
+      if (data.delegate === "GPU" && !this.switching) {
+        pf.n++;
+        if (pf.n > 3) { pf.sum += data.ms; pf.slow = data.ms > 120 ? pf.slow + 1 : 0; } // 3 primeiros = compilação de shaders
+        if (pf.slow >= 3 || (pf.n === 11 && pf.sum / 8 > 40)) this.toCPU();
+      }
+      this.ms = data.ms; this.delegate = data.delegate;
+      if (this.running) this.onFrame(this.parse(data, data.t / 1000), this.video);
+    };
+    this.worker = w;
+  }
+  // GPU lenta: sobe um worker novo na CPU e só troca quando ele estiver pronto (sem interromper o rastreamento)
+  async toCPU() {
+    this.switching = true;
+    try {
+      const w = await this.spawn(this.buf, "CPU");
+      if (this.disposed) { w.terminate(); return; }
+      const old = this.worker; this.attach(w); this.busy = false;
+      old?.postMessage({ type: "close" });
+    } catch (e) { console.warn("[mãos] troca para CPU falhou", e); }
+  }
+  async engine(buf) {
+    this.buf = buf;
+    try {
+      this.attach(await this.spawn(buf, "GPU"));
     } catch (err) {
       console.warn("[mãos] worker indisponível, usando a thread principal", err);
-      this.worker?.terminate(); this.worker = null;
+      this.worker = null;
       const { FilesetResolver, HandLandmarker } = await import("@mediapipe/tasks-vision");
       const files = await FilesetResolver.forVisionTasks(WASM, true);
-      const opts = (delegate) => ({ baseOptions: { modelAssetBuffer: buf, delegate }, runningMode: "VIDEO", numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 });
+      const opts = (delegate) => ({ baseOptions: { modelAssetBuffer: buf.slice(), delegate }, runningMode: "VIDEO", numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 });
       try { this.lm = await HandLandmarker.createFromOptions(files, opts("GPU")); }
       catch { this.lm = await HandLandmarker.createFromOptions(files, opts("CPU")); }
     }
@@ -129,10 +153,11 @@ export class HandTracker {
     if (v.readyState >= 2 && !document.hidden) {
       const now = performance.now();
       if (this.worker) {
-        // um quadro por vez: se o modelo atrasar, descarta quadros em vez de acumular fila
-        if (!this.busy || now - this.sent > 500) {
+        // um quadro por vez, sem fila: se o modelo atrasar, descarta quadros (fila = atraso crescente).
+        // O limite de 4 s só destrava se uma resposta se perder.
+        if (!this.busy || now - this.sent > 4000) {
           this.busy = true; this.sent = now;
-          createImageBitmap(v, { resizeWidth: 480, resizeHeight: 360, resizeQuality: "low" })
+          createImageBitmap(v, { resizeWidth: 320, resizeHeight: 240, resizeQuality: "medium" })
             .then((bitmap) => (this.running ? this.worker.postMessage({ type: "frame", bitmap, t: now }, [bitmap]) : bitmap.close()))
             .catch(() => { this.busy = false; });
         }
@@ -152,7 +177,7 @@ export class HandTracker {
       let key = res.handedness?.[i]?.[0]?.categoryName || "H";
       if (seen.has(key)) key += i; seen.add(key);
       let s = this.state.get(key);
-      if (!s) { s = { fx: new OneEuro(), fy: new OneEuro(), fs: new OneEuro(1, 0.4), pinch: false, t }; this.state.set(key, s); }
+      if (!s) { s = { fx: new OneEuro(1.0, 3.2), fy: new OneEuro(1.0, 3.2), fs: new OneEuro(1, 0.4), pinch: false, t }; this.state.set(key, s); }
       s.t = t;
       const lm = raw.map((p) => ({ x: 1 - p.x, y: p.y, z: p.z }));
       const d = (a, b) => Math.hypot((lm[a].x - lm[b].x) * aspect, lm[a].y - lm[b].y);
@@ -167,6 +192,7 @@ export class HandTracker {
       const n = ext.filter(Boolean).length;
       hands.push({
         key, lm, x, y, pinch: s.pinch, pinchD: pd,
+        vx: s.fx.dx, vy: s.fy.dx, t, // velocidade filtrada (tela/s) e instante da captura (s): previsão entre quadros
         scale: s.fs.f(palm, t), // tamanho da palma: cresce quando a mão se aproxima da câmera
         open: n === 4 && !s.pinch, fist: n === 0 && !s.pinch,
         tips: TIPS.map((k) => ({ x: map(lm[k].x, r.x0, r.x1), y: map(lm[k].y, r.y0, r.y1) })),

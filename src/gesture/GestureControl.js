@@ -192,6 +192,7 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
   const onFrame = (hs, video) => {
     hands = hs;
     const now = performance.now();
+    if (tracker.delegate) root.dataset.engine = `${tracker.delegate} ${Math.round(tracker.ms)}ms`;
     if (hs.length) { lastSeen = now; if (!done.has("hand")) mark("hand"); }
     // preview
     cx.save(); cx.translate(cv.width, 0); cx.scale(-1, 1); cx.drawImage(video, 0, 0, cv.width, cv.height); cx.restore();
@@ -200,7 +201,7 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
 
     const W = innerWidth, H = innerHeight;
     const pts = hs.filter((hd) => Number.isFinite(hd.x) && Number.isFinite(hd.y)).map((hd) => ({ hd, x: hd.x * W, y: hd.y * H }));
-    rets.forEach((r, i) => { const p = pts[i]; r.on = !!p; if (p) { r.tx = p.x; r.ty = p.y; r.pinch = p.hd.pinch; } });
+    rets.forEach((r, i) => { const p = pts[i]; r.on = !!p; if (p) { r.tx = p.x; r.ty = p.y; r.vx = (p.hd.vx || 0) * W; r.vy = (p.hd.vy || 0) * H; r.t = (p.hd.t || 0) * 1000; r.pinch = p.hd.pinch; } });
 
     const pinching = pts.filter((p) => p.hd.pinch);
     if (pinching.length === 2) {
@@ -228,13 +229,16 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
     if (dead) return;
     raf = requestAnimationFrame(frame); // agendado antes: um quadro com erro não derruba o laço
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    const k = 1 - Math.exp(-dt * 26);
+    const k = 1 - Math.exp(-dt * 38);
     const hostEl = host();
     if (root.parentNode !== hostEl) hostEl.appendChild(root);
     rets.forEach((r, i) => {
       if (!r.on) { r.el.classList.remove("on"); return; }
       const jump = !r.el.classList.contains("on");
-      r.x = jump ? r.tx : r.x + (r.tx - r.x) * k; r.y = jump ? r.ty : r.y + (r.ty - r.y) * k;
+      // previsão: entre dois quadros da câmera o anel segue a velocidade da mão (compensa captura + inferência)
+      const ahead = r.pinch ? 0 : Math.min(0.08, Math.max(0, (now - r.t) / 1000));
+      const px = r.tx + (r.vx || 0) * ahead, py = r.ty + (r.vy || 0) * ahead;
+      r.x = jump ? r.tx : r.x + (px - r.x) * k; r.y = jump ? r.ty : r.y + (py - r.y) * k;
       r.el.classList.add("on");
       r.el.classList.toggle("pinch", !!r.pinch);
       r.el.style.transform = `translate3d(${r.x}px, ${r.y}px, 0)`;
