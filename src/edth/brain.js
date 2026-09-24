@@ -19,13 +19,15 @@ export function findProject(text) {
   if (!q.length) return null;
   let best = null;
   for (const p of PROJECTS) {
-    const tt = toks(coreTitle(p)), at = toks(artist(p) + " " + p.cat);
+    const tt = toks(coreTitle(p)), at = toks(artist(p));
     const hitT = tt.filter((w) => q.includes(w)).length, hitA = at.filter((w) => q.includes(w)).length;
     const cover = tt.length ? hitT / tt.length : 0;
     const score = cover * 3 + hitA * 0.6 + (hitT ? 0.5 : 0);
-    if (!best || score > best.score || (score === best.score && p.date > best.p.date)) best = { p, score, cover };
+    const qcover = hitT / q.length;
+    if (!best || score > best.score || (score === best.score && p.date > best.p.date)) best = { p, score, cover, hitA, qcover };
   }
-  return best && (best.cover >= 0.5 || best.score >= 1.2) ? best.p : null;
+  // precisa cobrir boa parte do título, ou citar o artista (evita "que dia é hoje" → "Dia das Profissões")
+  return best && (best.cover >= 0.6 || best.hitA >= 1 || (best.qcover >= 1 && q.length <= 3 && q[0].length > 4)) ? best.p : null;
 }
 export const latest = () => PROJECTS[0];
 
@@ -197,6 +199,8 @@ export function createBrain() {
 
   function reply(raw) {
     const t = norm(raw), n = toks(raw).length, words = t.trim().split(" ").length;
+    // pergunta aberta ("que dia é hoje", "como está o tempo") não vira comando: vai para a IA
+    const isQ = /^ (que|qual|quais|quando|como|onde|quem|por que|porque|pq|quanto|quantos|quantas|sera|voce sabe|me diz|me fala|o que|e se) /.test(t) || /\?\s*$/.test(raw);
     const cmd = words <= 7; // comandos de controle só em frases curtas (conversa longa não dispara ação por acaso)
     if (flow?.step?.startsWith("n")) { const r = note(t, raw); if (r) return r; }
     else if (flow) { const r = budget(t, raw); if (r) return r; }
@@ -227,7 +231,7 @@ export function createBrain() {
       if (cmd && any(t, words) && !any(t, ["enviar", "manda", "mandar", "meu"])) return say(`Abrindo o ${label}.`, [{ type: "open", href: SOCIAL[k], label }]);
     }
     // jogos
-    if (cmd && any(t, ["jogo", "jogos", "jogar", "playground", "brincar"]) || GAMES.some(([, ws]) => any(t, ws.filter((w) => w.length > 5)))) {
+    if (cmd && !isQ && (any(t, ["jogos", "jogar", "playground", "brincar", "abre o jogo", "abrir o jogo", "abrir jogo", "quero jogar"]) || GAMES.some(([, ws]) => any(t, ws.filter((w) => w.length > 5))))) {
       const g = GAMES.find(([, ws]) => any(t, ws));
       return say(g ? `Abrindo o ${g[0] === "sabre" ? "Sabre" : g[0]}.` : "Abrindo o Playground.", [{ type: "go", href: `/playground/${g ? "#" + g[0] : ""}` }]);
     }
@@ -245,22 +249,22 @@ export function createBrain() {
     }
     const cat = Object.entries(CATS).find(([k]) => t.includes(" " + k + " "));
     const proj = findProject(raw);
-    if (proj && ((wantsVideo && cmd) || n <= 4)) return say(`Abrindo ${coreTitle(proj)}.`, [{ type: "play", id: proj.id }]);
+    if (proj && !isQ && ((wantsVideo && cmd) || n <= 4)) return say(`Abrindo ${coreTitle(proj)}.`, [{ type: "play", id: proj.id }]);
     // pedido genérico ("abre um vídeo dele", "um vídeo do YouTube", "outro"): alterna entre os destaques
     const generic = any(t, ["video", "videos", "clipe", "trabalho", "trabalhos", "filme", "algo", "alguma coisa", "youtube", "exemplo"]);
-    if ((wantsVideo && generic && !cat && cmd) || (pickN > 0 && any(t, ["outro", "outro video", "mais um", "proximo video", "proximo", "outra"]))) {
+    if ((wantsVideo && generic && !cat && cmd && !isQ) || (pickN > 0 && any(t, ["outro", "outro video", "mais um", "proximo video", "proximo", "outra"]))) {
       const yt = t.includes(" youtube ");
       const pool = (yt ? PROJECTS.filter((p) => p.url) : [...highlights(), ...PROJECTS.filter((p) => p.q === "4K" && !highlights().includes(p))]);
       const p = pool[pickN++ % pool.length];
       return say(`Abrindo ${coreTitle(p)}.`, [{ type: "play", id: p.id }], { chips: ["Outro", "Vídeo mais recente"] });
     }
-    if (cat && cmd && (wantsVideo || any(t, ["quais", "tem", "lista", "filtrar", "so"]))) {
+    if (cat && cmd && !isQ && (wantsVideo || any(t, ["quais", "tem", "lista", "filtrar", "so"]))) {
       const list = PROJECTS.filter((p) => p.cat === cat[1]);
       const plural = { Clipes: "clipes", "Documentário": "documentários", Cinema: "filmes de cinema", "Reality Show": "reality show", "Turnê": "registros de turnê", Bastidores: "making ofs", Institucional: "institucionais" }[cat[1]] || cat[1].toLowerCase();
       return say(`${list.length} ${plural}. Mostrando na seleção.`, [{ type: "filter", cat: cat[1] }]);
     }
     // seções
-    if (cmd && (any(t, ["ir para", "vai para", "va para", "leva", "mostra", "abrir", "abre", "secao", "pagina", "ver", "quero ver"]) || n <= 3)) {
+    if (cmd && !isQ && (any(t, ["ir para", "vai para", "va para", "leva", "mostra", "abrir", "abre", "secao", "pagina", "ver", "quero ver"]) || n <= 3)) {
       const s = SECTIONS.find(([, ws]) => any(t, ws));
       if (s) return say("", [{ type: "nav", id: s[0] }]);
     }
