@@ -1193,3 +1193,11 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .btn-gest[aria-pressed="true"] { border-color: rgba(255,59,59,.6); box-shadow: 0 0 0 3px rgba(255,59,59,.15); }
 .btn-gest:hover .ai-hand .p-wave { animation: hand-wave .9s var(--ease) 2; transform-origin: 40% 90%; }
 @keyframes hand-wave { 30% { transform: rotate(-14deg); } 70% { transform: rotate(10deg); } }
+
+/* modos de controle na hero: voz (EDTH) e mãos */
+.hero-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.btn-edth .ai-mic .p-cap { animation: edth-cap 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes edth-cap { 50% { transform: scaleY(.8); } }
+.edth-pulse { animation: edth-pulse 1.2s ease-in-out 2; }
+@keyframes edth-pulse { 50% { box-shadow: 0 0 0 8px rgba(227,34,44,.25); transform: scale(1.04); } }
+@media (max-width: 760px) { .hero-modes { display: grid; grid-template-columns: 1fr; } }
