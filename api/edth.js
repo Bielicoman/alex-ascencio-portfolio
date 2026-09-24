@@ -5,13 +5,14 @@ import { KNOWLEDGE } from "../src/edth/brain.js";
 
 // modelos em ordem de preferência; a lista real da conta é consultada e cacheada (a Groq aposenta modelos)
 const PREF = [process.env.EDTH_MODEL, "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "moonshotai/kimi-k2-instruct", "qwen/qwen3-32b", "meta-llama/llama-4-maverick-17b-128e-instruct", "openai/gpt-oss-20b", "llama-3.1-8b-instant"].filter(Boolean);
-let MODELS = null, MODELS_AT = 0;
+let MODELS = null, MODELS_AT = 0, ALL = [];
 async function models(key) {
   if (MODELS && Date.now() - MODELS_AT < 6 * 3600e3) return MODELS;
   try {
     const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${key}` } });
     if (r.ok) {
       const ids = new Set(((await r.json()).data || []).map((m) => m.id));
+      ALL = [...ids];
       const pick = PREF.filter((m) => ids.has(m));
       const extra = [...ids].filter((id) => /llama|gpt-oss|qwen|kimi/i.test(id) && !/guard|whisper|tts|prompt/i.test(id) && !pick.includes(id));
       MODELS = [...pick, ...extra].slice(0, 4); MODELS_AT = Date.now();
@@ -48,21 +49,27 @@ Ações permitidas:
 Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem. Em conversa comum, "actions": [].
 Pesquisa na internet: se a resposta depender de informação atual ou que você não sabe com certeza (notícias, clima, jogos, cotações, preços, eventos, pessoas, lugares, qualquer fato fora do site), não chute: responda {"say": "", "search": "<consulta curta em português para a web>", "actions": []}.`;
 
-// busca na web: sistemas Compound da Groq (pesquisa embutida); resposta curta, sem markdown nem links
+// busca na web: ferramenta browser_search da Groq nos modelos gpt-oss (ou um sistema "compound", se a conta tiver)
 async function webSearch(key, question, query) {
-  for (const model of ["groq/compound-mini", "groq/compound"]) {
+  await models(key);
+  const sys = `Agora é ${now()} (horário de Brasília). Pesquise na web e responda em português do Brasil, em no máximo duas frases curtas, só o essencial, como fala natural. Sem markdown, sem links, sem citar fontes.`;
+  const tries = [
+    ...["openai/gpt-oss-120b", "openai/gpt-oss-20b"].filter((m) => !ALL.length || ALL.includes(m)).map((model) => ({ model, tools: [{ type: "browser_search" }], tool_choice: "required" })),
+    ...ALL.filter((m) => /compound/i.test(m)).map((model) => ({ model })),
+  ];
+  for (const t of tries) {
     try {
       const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, temperature: 0.3, max_tokens: 400, messages: [
-          { role: "system", content: `Agora é ${now()} (horário de Brasília). Pesquise na web e responda em português do Brasil, em no máximo duas frases curtas, só o essencial, como fala natural. Sem markdown, sem links, sem citar fontes.` },
+        body: JSON.stringify({ ...t, temperature: 0.3, max_completion_tokens: 1200, messages: [
+          { role: "system", content: sys },
           { role: "user", content: `${question}\n(consulta sugerida: ${query})` },
         ] }),
       });
-      if (!r.ok) { console.error("[edth] search", model, r.status, (await r.text()).slice(0, 200)); continue; }
-      const t = ((await r.json()).choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").replace(/\[(\d+|[^\]]*)\]\([^)]*\)|\[\d+\]|[*_#`]/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
-      if (t) return { say: t, model };
-    } catch (e) { console.error("[edth] search", model, e.message); }
+      if (!r.ok) { console.error("[edth] search", t.model, r.status, (await r.text()).slice(0, 200)); continue; }
+      const txt = ((await r.json()).choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").replace(/【[^】]*】/g, "").replace(/\[(\d+|[^\]]*)\]\([^)]*\)|\[\d+\]|[*_#`]/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+      if (txt) return { say: txt, model: t.model };
+    } catch (e) { console.error("[edth] search", t.model, e.message); }
   }
   return null;
 }
