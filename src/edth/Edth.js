@@ -15,6 +15,7 @@ const ICON = {
   min: '<path d="M6 12h12"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   link: '<path d="M7 17 17 7M8 7h9v9"/>',
+  voice: '<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>',
 };
 const svg = (k, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -25,7 +26,7 @@ const OPEN_KEYS = { instagram: SOCIAL.instagram, linkedin: SOCIAL.linkedin, what
 
 let instance = null;
 export default function openEdth(opts = {}) {
-  if (instance) { instance.show(); return instance; }
+  if (instance) { instance.show(true); return instance; }
   instance = create(opts);
   return instance;
 }
@@ -40,9 +41,11 @@ function create({ actions: app = {}, onClose = () => {} }) {
       <header class="edth-head">
         <span class="edth-orb" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
         <span class="edth-id"><b>EDTH</b><small class="mono">Assistente do Alex · voz e texto</small></span>
+        <button class="edth-vbtn" aria-label="Escolher a voz da EDTH" aria-expanded="false">${svg("voice")}</button>
         <button class="edth-min" aria-label="Minimizar">${svg("min")}</button>
         <button class="edth-x" aria-label="Fechar a EDTH">${svg("close")}</button>
       </header>
+      <div class="edth-voices" hidden><p class="mono">Voz da EDTH</p><div class="edth-vlist"></div><small class="edth-vhint"></small></div>
       <div class="edth-log" aria-live="polite"></div>
       <p class="edth-live mono" hidden></p>
       <form class="edth-bar">
@@ -75,55 +78,120 @@ function create({ actions: app = {}, onClose = () => {} }) {
   };
 
   // ── voz: fala (feminina pt-BR) ──
-  let voice = null;
+  // voz feminina pt-BR: ranking por nome, masculinas fora; escolha manual fica salva
+  const FEM = ["francisca", "thalita", "google portugu", "luciana", "maria", "vitoria", "vitória", "camila", "fernanda", "helena", "leila", "raquel", "yara", "elza", "manuela", "brenda", "giovanna", "leticia", "female", "feminin"];
+  const MALE = /(daniel|ant[oô]nio|felipe|ricardo|heitor|donato|fabio|f[aá]bio|humberto|julio|j[uú]lio|nicolau|valerio|val[eé]rio|male\b|masculin)/i;
+  const VKEY = "edth-voice";
+  let serverTTS = null; // voz neural do site: null = ainda não testada
+  const vbox = root.querySelector(".edth-voices"), vlist = root.querySelector(".edth-vlist"), vhint = root.querySelector(".edth-vhint");
+  let voice = null, voices = [];
+  const ptVoices = () => speechSynthesis.getVoices().filter((v) => /^pt[-_](BR)/i.test(v.lang) || /portugu[eê]s.*brasil|brazil/i.test(v.name));
+  const rank = (v) => { const n = v.name.toLowerCase(); if (MALE.test(n) && !/female/.test(n)) return 99; const i = FEM.findIndex((f) => n.includes(f)); return (i < 0 ? 50 : i) - (/natural|online|neural/i.test(n) ? 0.5 : 0); };
   const pickVoice = () => {
-    const vs = speechSynthesis.getVoices().filter((v) => /^pt[-_]BR/i.test(v.lang) || /portugu[eê]s.*brasil/i.test(v.name));
-    const fem = /(francisca|luciana|maria|thalita|leila|vit[oó]ria|camila|fernanda|helena|female|feminin|google portugu)/i;
-    voice = vs.find((v) => fem.test(v.name)) || vs.find((v) => !/(antonio|daniel|male|masculin)/i.test(v.name)) || vs[0] || null;
+    voices = ptVoices().sort((a, b) => rank(a) - rank(b));
+    let saved = null; try { saved = localStorage.getItem(VKEY); } catch {}
+    voice = voices.find((v) => v.name === saved) || voices.find((v) => rank(v) < 50) || voices.find((v) => rank(v) < 99) || null;
+    renderVoices();
   };
-  if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-  let convo = false, speaking = false, afterSpeak = null;
-  const speak = (text) => new Promise((res) => {
-    if (!text || !("speechSynthesis" in window)) { res(); return; }
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/EDTH/g, "Édith").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba "));
-    u.lang = "pt-BR"; if (voice) u.voice = voice; u.rate = 1.04; u.pitch = 1.08; u.volume = 1;
-    speaking = true; setState("speaking"); sfx.musicHold?.(true);
-    u.onend = u.onerror = () => { speaking = false; sfx.musicHold?.(false); if (root.dataset.state === "speaking") setState("idle"); res(); afterSpeak?.(); afterSpeak = null; if (convo && !dead) listen(); };
-    speechSynthesis.speak(u);
+  const voicesReady = new Promise((res) => {
+    if (!("speechSynthesis" in window)) { res(); return; }
+    const done = () => { pickVoice(); if (voices.length) res(); };
+    done(); speechSynthesis.onvoiceschanged = () => { done(); res(); };
+    setTimeout(res, 1500); // alguns navegadores nunca disparam o evento
   });
+  function renderVoices() {
+    if (!vlist) return;
+    vlist.innerHTML = "";
+    voices.forEach((v) => {
+      const b = document.createElement("button"); b.type = "button";
+      b.textContent = v.name.replace(/Microsoft |Google |\(.*?\)| - Portuguese.*$/g, "").trim() || v.name;
+      b.title = v.name; b.setAttribute("aria-pressed", String(voice === v));
+      if (rank(v) === 99) b.classList.add("male");
+      b.onclick = () => { voice = v; try { localStorage.setItem(VKEY, v.name); } catch {} renderVoices(); speak("Oi, eu sou a EDTH. Essa é a minha voz."); };
+      vlist.appendChild(b);
+    });
+    const hasFem = voices.some((v) => rank(v) < 99);
+    if (serverTTS) { vhint.textContent = "Usando a voz neural do site (a mesma em qualquer aparelho). As vozes abaixo só entram se ela ficar indisponível."; return; }
+    vhint.textContent = !voices.length ? "Nenhuma voz em português instalada neste aparelho." : hasFem ? "Toque para ouvir e escolher." : "Não há voz feminina em português instalada. No Windows: Configurações → Hora e idioma → Fala → Adicionar vozes → Português (Brasil). No Edge, a voz Francisca (natural) já vem pronta.";
+  }
+  let convo = false, speaking = false, afterSpeak = null;
+  // voz: 1º a voz neural do site (/api/tts, sempre igual e realista); sem ela, a voz do navegador
+  let audio = null, speakId = 0;
+  const ttsCache = new Map();
+  const spoken = (t) => t.replace(/EDTH/g, "Édith").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba ");
+  const neural = async (text) => {
+    if (serverTTS === false) return null;
+    if (ttsCache.has(text)) return ttsCache.get(text);
+    try {
+      const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      if (!r.ok) { if (r.status === 501 || r.status === 404) serverTTS = false; return null; }
+      const url = URL.createObjectURL(await r.blob());
+      serverTTS = true; ttsCache.set(text, url); renderVoices();
+      return url;
+    } catch { return null; }
+  };
+  const stopSpeech = () => { speakId++; try { audio?.pause(); } catch {} if ("speechSynthesis" in window) speechSynthesis.cancel(); };
+  const speak = async (text) => {
+    if (!text) return;
+    stopSpeech();
+    const id = ++speakId, t = spoken(text);
+    const begin = () => { speaking = true; setState("speaking"); sfx.musicHold?.(true, "edth"); };
+    const end = () => { if (id !== speakId) return; speaking = false; sfx.musicHold?.(false, "edth"); if (root.dataset.state === "speaking") setState("idle"); afterSpeak?.(); afterSpeak = null; if (convo && !dead) listen(); };
+    setState("thinking");
+    const url = await neural(t);
+    if (id !== speakId) return;
+    if (url) {
+      await new Promise((res) => {
+        audio = new Audio(url); audio.volume = 1;
+        audio.onplay = begin;
+        audio.onended = audio.onerror = () => { end(); res(); };
+        audio.play().catch(() => { end(); res(); });
+      });
+      return;
+    }
+    await voicesReady;
+    if (!("speechSynthesis" in window) || id !== speakId) { end(); return; }
+    await new Promise((res) => {
+      const u = new SpeechSynthesisUtterance(t);
+      // sem voz feminina disponível, sobe o tom para aproximar (paliativo); com voz feminina, tom natural
+      u.lang = "pt-BR"; if (voice) u.voice = voice; u.rate = 1.03; u.pitch = voice && rank(voice) < 99 ? 1.05 : 1.35; u.volume = 1;
+      begin();
+      u.onend = u.onerror = () => { end(); res(); };
+      speechSynthesis.speak(u);
+    });
+  };
 
   // ── voz: escuta ──
   let rec = null, empty = 0;
+  // cada escuta é um objeto próprio; escuta interrompida de propósito (abort) não processa nem conta silêncio
+  const abortRec = () => { if (rec) { rec.aborted = true; try { rec.abort(); } catch {} } };
   const listen = () => {
     if (!SR || dead || speaking) return;
-    try { rec?.abort(); } catch {}
-    rec = new SR(); rec.lang = "pt-BR"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    abortRec();
+    const r = (rec = new SR()); r.lang = "pt-BR"; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
     let got = "";
-    rec.onstart = () => { setState("listening"); live.hidden = false; live.textContent = "Ouvindo…"; sfx.musicHold?.(true); };
-    rec.onresult = (e) => {
-      let txt = ""; for (const r of e.results) txt += r[0].transcript;
-      live.textContent = txt; got = txt;
-      if (e.results[e.results.length - 1].isFinal) got = txt;
-    };
-    rec.onerror = (e) => {
+    r.onstart = () => { if (r.aborted) return; setState("listening"); live.hidden = false; live.textContent = "Ouvindo…"; sfx.musicHold?.(true, "edth"); };
+    r.onresult = (e) => { let txt = ""; for (const x of e.results) txt += x[0].transcript; live.textContent = txt; got = txt; };
+    r.onerror = (e) => {
       if (e.error === "not-allowed" || e.error === "service-not-allowed") { convo = false; mic.setAttribute("aria-pressed", "false"); add("bot", "O microfone está bloqueado neste navegador. Libere no cadeado da barra de endereço, ou digite aqui embaixo."); }
     };
-    rec.onend = () => {
-      live.hidden = true; sfx.musicHold?.(false);
+    r.onend = () => {
+      if (r.aborted || r !== rec) return;
+      live.hidden = true; sfx.musicHold?.(false, "edth");
       if (root.dataset.state === "listening") setState("idle");
-      if (got.trim()) { empty = 0; handle(got.trim()); }
-      else if (convo && ++empty < 2) setTimeout(listen, 200);
+      const text = got.trim(); got = "";
+      if (text) { empty = 0; handle(text); }
+      else if (convo && ++empty < 3) setTimeout(listen, 200);
       else { convo = false; mic.setAttribute("aria-pressed", "false"); }
     };
-    try { rec.start(); } catch {}
+    try { r.start(); } catch {}
   };
-  const stopListening = () => { convo = false; mic.setAttribute("aria-pressed", "false"); try { rec?.abort(); } catch {} };
+  const stopListening = () => { convo = false; mic.setAttribute("aria-pressed", "false"); abortRec(); if (root.dataset.state === "listening") setState("idle"); live.hidden = true; };
   mic.onclick = () => {
     sfx.unlock?.();
     if (!SR) { add("bot", "Este navegador não reconhece voz (o Firefox, por exemplo). Pode digitar aqui que eu entendo."); input.focus(); return; }
-    if (convo) { stopListening(); speechSynthesis.cancel(); setState("idle"); return; }
-    convo = true; empty = 0; mic.setAttribute("aria-pressed", "true"); speechSynthesis.cancel(); speaking = false; listen();
+    if (convo) { stopListening(); stopSpeech(); speaking = false; setState("idle"); return; }
+    convo = true; empty = 0; mic.setAttribute("aria-pressed", "true"); stopSpeech(); speaking = false; listen();
   };
   $(".edth-bar").onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { input.value = ""; handle(t); } };
 
@@ -196,10 +264,13 @@ function create({ actions: app = {}, onClose = () => {} }) {
         break;
       }
       case "tour": stopListening(); app.tour?.(); break;
-      case "stop": speechSynthesis.cancel(); app.stopTour?.(); lenis()?.scrollTo(lenis().scroll, { immediate: true, force: true }); break;
+      case "stop": stopSpeech(); speaking = false; app.stopTour?.(); lenis()?.scrollTo(lenis().scroll, { immediate: true, force: true }); break;
       case "sound": app.sound?.(!!a.on); break;
       case "scroll": { const L = lenis(); L?.scrollTo(L.targetScroll + innerHeight * 0.8 * (a.dir > 0 ? 1 : -1), { duration: 1, force: true }); break; }
-      case "form": window.dispatchEvent(new CustomEvent("edth:form", { detail: a.patch })); break;
+      case "form":
+        window.dispatchEvent(new CustomEvent("edth:form", { detail: a.patch }));
+        if (a.patch?.msg && a.patch.msg.includes("\n")) add("bot", a.patch.msg).classList.add("brief"); // mostra o briefing organizado
+        break;
       case "send": {
         const ev = new CustomEvent("edth:send", { detail: { via: a.via === "email" ? "email" : "whatsapp", href: null } });
         window.dispatchEvent(ev);
@@ -207,6 +278,11 @@ function create({ actions: app = {}, onClose = () => {} }) {
           const w = window.open(ev.detail.href, "_blank");
           if (w) w.opener = null; else extra.links.push([a.via === "email" ? "Enviar por e-mail" : "Enviar no WhatsApp", ev.detail.href]);
         }
+        break;
+      }
+      case "refine": { // IA reorganiza o briefing em segundo plano e atualiza o formulário
+        fetch("/api/edth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "brief", raw: a.raw, kind: a.kind, when: a.when }) })
+          .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.brief && !dead) { window.dispatchEvent(new CustomEvent("edth:form", { detail: { msg: j.brief } })); add("bot", "Refinei o briefing com IA:\n" + j.brief).classList.add("brief"); } }).catch(() => {});
         break;
       }
       case "budget": return handle("quero fazer um orçamento", true);
@@ -249,15 +325,20 @@ function create({ actions: app = {}, onClose = () => {} }) {
 
   // ── abrir / minimizar / fechar ──
   let dead = false;
-  const show = () => { panel.hidden = false; fab.hidden = true; root.classList.add("open"); setTimeout(() => input.focus({ preventScroll: true }), 300); };
+  const show = (listenNow) => {
+    panel.hidden = false; fab.hidden = true; root.classList.add("open");
+    if (listenNow && SR && !convo) { convo = true; empty = 0; mic.setAttribute("aria-pressed", "true"); listen(); }
+    else setTimeout(() => input.focus({ preventScroll: true }), 300);
+  };
   const minimize = () => { panel.hidden = true; fab.hidden = false; root.classList.remove("open"); stopListening(); };
   function close() {
-    dead = true; stopListening(); speechSynthesis.cancel(); sfx.musicHold?.(false);
+    dead = true; stopListening(); stopSpeech(); sfx.musicHold?.(false, "edth");
     root.classList.add("out"); cursor.remove();
     setTimeout(() => root.remove(), 350);
     instance = null; onClose();
   }
-  $(".edth-min").onclick = minimize; fab.onclick = show; $(".edth-x").onclick = close;
+  $(".edth-vbtn").onclick = () => { vbox.hidden = !vbox.hidden; $(".edth-vbtn").setAttribute("aria-expanded", String(!vbox.hidden)); if (!vbox.hidden) pickVoice(); };
+  $(".edth-min").onclick = minimize; fab.onclick = () => show(true); $(".edth-x").onclick = close;
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden && document.activeElement && root.contains(document.activeElement)) minimize(); });
 
   // boas-vindas + mini tutorial (completo só na primeira vez)
@@ -268,6 +349,8 @@ function create({ actions: app = {}, onClose = () => {} }) {
     : "Oi de novo! Toque no microfone e me diga o que quer ver.";
   add("bot", hello, { chips: TUTORIAL });
   show();
-  speak(hello);
+  // microfone já ligado ao abrir: fala uma saudação curta e começa a ouvir (o texto completo fica no painel)
+  if (SR) { convo = true; empty = 0; mic.setAttribute("aria-pressed", "true"); }
+  speak(SR ? "Oi, eu sou a EDTH. Pode falar." : hello).then(() => { if (convo && !speaking && root.dataset.state !== "listening") listen(); }); // sem voz disponível: ouve direto
   return { show, close, minimize, ask: (t) => handle(t) };
 }

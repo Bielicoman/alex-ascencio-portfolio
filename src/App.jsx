@@ -937,6 +937,31 @@ function DatePick({ value, onChange }) {
     </div>
   );
 }
+// balão da EDTH no canto inferior direito (lugar clássico do botão de WhatsApp)
+function EdthBubble({ onOpen, hidden }) {
+  const [tip, setTip] = useState(false);
+  useEffect(() => {
+    let seen = false; try { seen = sessionStorage.getItem("edth-tip") === "1"; } catch {}
+    if (seen) return;
+    const a = setTimeout(() => setTip(true), 7000), b = setTimeout(() => { setTip(false); try { sessionStorage.setItem("edth-tip", "1"); } catch {} }, 16000);
+    return () => { clearTimeout(a); clearTimeout(b); };
+  }, []);
+  if (hidden) return null;
+  return (
+    <div className="edth-bubble">
+      {tip && (
+        <div className="edth-tip" role="status">
+          <b>Oi, eu sou a EDTH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
+          <button onClick={() => { setTip(false); try { sessionStorage.setItem("edth-tip", "1"); } catch {} }} aria-label="Fechar aviso"><I.Close size={12} /></button>
+        </div>
+      )}
+      <button className="edth-launch" onClick={() => { setTip(false); onOpen(); }} aria-label="Falar com a EDTH, assistente por voz">
+        <span className="edth-launch-orb"><i /><i /><b /></span>
+        <span className="edth-launch-mic"><I.Mic size={14} /></span>
+      </button>
+    </div>
+  );
+}
 function Contact() {
   const [kind, setKind] = useState("Videoclipe");
   const [copied, setCopied] = useState(false);
@@ -1154,10 +1179,11 @@ export default function App() {
     });
   };
   // EDTH (assistente por voz): carrega sob demanda; mesmas ações que os gestos
+  const [edthOn, setEdthOn] = useState(false);
   const openEdthNow = async () => {
-    sfx.unlock();
+    sfx.unlock(); setEdthOn(true);
     const { default: openEdth } = await import("./edth/Edth");
-    openEdth({ actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on) } });
+    openEdth({ onClose: () => setEdthOn(false), actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on) } });
   };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
@@ -1454,6 +1480,7 @@ export default function App() {
         <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
         Toque para ouvir a trilha
       </button>
+      <EdthBubble onOpen={openEdthNow} hidden={edthOn || gest || !!project} />
       {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
       {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>
