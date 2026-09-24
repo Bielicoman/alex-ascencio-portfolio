@@ -30,7 +30,7 @@ export default {
     markGeo.center(); markGeo.scale(2.6 / MARK_W, 2.6 / MARK_W, 2.6 / MARK_W);
     const defs = [
       [markGeo, new MeshPhysicalMaterial({ color: 0xb50f1c, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05 }), 1.2],
-      [new SphereGeometry(0.95, 64, 48), new MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, transmission: 1, thickness: 1.2, ior: 1.45 }), 0.95],
+      [new SphereGeometry(0.95, 64, 48), new MeshPhysicalMaterial({ color: 0x0b0b0e, roughness: 0.05, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.6, iridescenceIOR: 1.4 }), 0.95],
       [new TorusKnotGeometry(0.62, 0.22, 180, 24), new MeshStandardMaterial({ color: 0xdadade, metalness: 1, roughness: 0.14 }), 0.95],
       [new RoundedBoxGeometry(1.4, 1.4, 1.4, 5, 0.18), new MeshStandardMaterial({ color: 0x141416, roughness: 0.55, metalness: 0.2 }), 1],
       [new IcosahedronGeometry(0.9, 0), new MeshStandardMaterial({ color: 0xff3b3b, roughness: 0.35, flatShading: true }), 0.9],

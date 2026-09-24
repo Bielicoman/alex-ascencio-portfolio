@@ -2,7 +2,7 @@ import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "./playground.css";
 import { Input } from "./input";
-import { CONNECTIONS, ERR } from "../gesture/hands";
+import { CONNECTIONS, ERR, preloadHands } from "../gesture/hands";
 import { MARK_PATH } from "../brand";
 import * as A from "./audio";
 import particles from "./modes/particles";
@@ -83,7 +83,12 @@ async function camera(on) {
   btn.classList.add("busy"); btn.querySelector("span").textContent = "Ligando…";
   hud.hidden = false;
   try {
-    await input.startCamera((s) => { $("hudS").textContent = { camera: "Pedindo acesso…", model: "Carregando modelo…", live: "Mostre a mão" }[s] || s; });
+    await input.startCamera((s, pct) => {
+      const t = s === "model" ? `Baixando modelo · ${Math.round((pct || 0) * 100)}%` : { camera: "Pedindo acesso…", init: "Iniciando…", live: "Mostre a mão" }[s] || s;
+      $("hudS").textContent = t;
+      const go = $("go");
+      if (go && !$("intro").classList.contains("out") && s !== "live") go.lastChild.textContent = " " + t;
+    });
     camOn = true; btn.classList.add("on"); btn.querySelector("span").textContent = "Desligar câmera";
     return true;
   } catch (e) {
@@ -100,6 +105,8 @@ $("go").onclick = async () => {
   catch (e) { const el = $("err"); el.hidden = false; el.textContent = ERR[e.code] || ERR.model; $("go").disabled = false; $("go").lastChild.textContent = " Tentar de novo"; }
 };
 $("skip").onclick = () => { A.unlock(); closeIntro(); };
+// pré-carga ao mirar nos botões de câmera
+for (const id of ["go", "cam"]) { $(id).addEventListener("pointerenter", () => preloadHands().catch(() => {}), { once: true }); $(id).addEventListener("focus", () => preloadHands().catch(() => {}), { once: true }); }
 function toast(t) { const el = document.createElement("div"); el.className = "pg-toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 4200); }
 window.addEventListener("pointerdown", () => A.unlock(), { once: true });
 
