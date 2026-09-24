@@ -22,6 +22,7 @@ class Sound {
     try { localStorage.setItem(KEY, on ? "on" : "off"); } catch { /* sem storage */ }
     if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.9 : 0, this.ctx.currentTime, 0.08);
     if (on) { this.unlock(); this.chime(); }
+    if (this.mus) this.musicApply();
     this.subs.forEach((f) => f(on));
   }
   unlock() {
@@ -29,6 +30,7 @@ class Sound {
     if (!this.ctx) this.build();
     if (this.ctx.state === "suspended") this.ctx.resume();
     this.unlocked = true;
+    if (this.musicWant && !this.mus?.timer) this.music(true);
   }
   ok() { return this.enabled && this.ctx && this.ctx.state === "running"; }
   // limita a taxa de disparo por tipo (ms)
@@ -283,6 +285,86 @@ class Sound {
     this.whoosh(0.55, true, 0.025);
   }
 }
+
+/* ───────── trilha: groove cinematográfico gerado ao vivo (lá menor, 96 BPM, Am–F–C–G) ───────── */
+const BPM = 96, STEP = 60 / BPM / 4;
+const CHORDS = [
+  { root: 110, pad: [220, 261.63, 329.63] },   // Am
+  { root: 87.31, pad: [174.61, 220, 261.63] }, // F
+  { root: 130.81, pad: [196, 261.63, 329.63] }, // C
+  { root: 98, pad: [196, 246.94, 293.66] },    // G
+];
+const KICK = [0, 7, 8, 10], CLAP = [4, 12], BASS = [0, 3, 6, 8, 11, 14];
+Object.assign(Sound.prototype, {
+  musicBus() {
+    if (this.mus) return this.mus;
+    const ctx = this.ctx, g = ctx.createGain(); g.gain.value = 0.0001;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 30;
+    g.connect(hp).connect(this.master);
+    const rv = ctx.createGain(); rv.gain.value = 0.18; g.connect(rv).connect(this.revIn);
+    this.mus = { g, on: false, want: false, step: 0, next: 0, timer: null, level: 0.25, hold: 1 }; // ~ −29 dB RMS: fundo
+    return this.mus;
+  },
+  // "want": zona da trilha (scroll); "hold": 0 enquanto um vídeo está aberto
+  music(want) { this.musicWant = want; if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
+  musicHold(h) { if (!this.ctx) return; const m = this.musicBus(); m.hold = h ? 0 : 1; this.musicApply(); },
+  musicApply() {
+    const m = this.mus, t = this.ctx.currentTime, on = this.enabled && m.want && m.hold;
+    if (on) {
+      if (!m.timer) { m.next = t + 0.06; m.timer = setInterval(() => this.musicTick(), 25); }
+      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(m.level, t, 0.9); // fade-in ~2,5 s
+    } else if (m.timer) {
+      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(0.0001, t, 0.55); // fade-out ~1,8 s
+      clearTimeout(m.stopT); m.stopT = setTimeout(() => { if (!(this.enabled && m.want && m.hold)) { clearInterval(m.timer); m.timer = null; } }, 2600);
+    }
+  },
+  musicTick() { // agendador com antecipação de 120 ms
+    const m = this.mus;
+    while (m.next < this.ctx.currentTime + 0.12) { this.musicStep(m.step, m.next); m.next += STEP; m.step++; }
+  },
+  musicStep(n, t) {
+    const s = n % 16, bar = Math.floor(n / 16), ch = CHORDS[bar % 4], full = bar % 16 >= 4, g = this.mus.g;
+    const tone = (type, f, at, peak, dec, dest = g, fl) => {
+      const o = this.osc(type, f, at), e = this.env(peak, 0.004, dec, at);
+      if (fl) { o.connect(fl); fl.connect(e); } else o.connect(e);
+      e.connect(dest); o.start(at); o.stop(at + dec + 0.05);
+    };
+    if (KICK.includes(s)) {
+      const o = this.osc("sine", 150, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.12);
+      const e = this.env(0.9, 0.002, 0.34, t); o.connect(e).connect(g); o.start(t); o.stop(t + 0.4);
+    }
+    if (full && CLAP.includes(s)) {
+      const nz = this.src(this.noise, t, 0.2), b = this.ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 1800; b.Q.value = 0.9;
+      const e = this.env(0.32, 0.002, 0.16, t); nz.connect(b).connect(e).connect(g);
+      tone("triangle", 190, t, 0.12, 0.08);
+    }
+    { // hats: 16 avos com acento no contratempo; aberto no passo 14
+      const open = s === 14, nz = this.src(this.noise, t, open ? 0.3 : 0.05), h = this.ctx.createBiquadFilter(); h.type = "highpass"; h.frequency.value = 7500;
+      const e = this.env((s % 4 === 2 ? 0.1 : 0.045) * (open ? 1.4 : 1), 0.001, open ? 0.24 : 0.035, t); nz.connect(h).connect(e).connect(g);
+    }
+    if (BASS.includes(s)) {
+      const f = ch.root * (s === 6 || s === 14 ? 2 : 1), lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
+      lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(160, t + 0.2);
+      tone("sawtooth", f, t, 0.22, 0.24, g, lp);
+      tone("sine", f / 2, t, 0.3, 0.26);
+    }
+    if (s === 0) { // pad do compasso, com respiração no kick (sidechain)
+      const dur = STEP * 16, lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = 0.6;
+      const e = this.ctx.createGain(); e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.07, t + 0.5);
+      KICK.forEach((k) => { const kt = t + k * STEP; e.gain.setValueAtTime(0.02, kt + 0.001); e.gain.linearRampToValueAtTime(0.07, kt + 0.28); });
+      e.gain.setTargetAtTime(0.0001, t + dur - 0.2, 0.08);
+      ch.pad.forEach((f) => [-9, 9].forEach((d) => { const o = this.osc("sawtooth", f, t); o.detune.value = d; o.connect(lp); o.start(t); o.stop(t + dur + 0.3); }));
+      lp.connect(e).connect(g);
+      const sp = this.ctx.createGain(); sp.gain.value = 0.5; e.connect(sp).connect(this.revIn);
+    }
+    if (full && s % 2 === 0) { // arpejo de pluck, duas oitavas acima
+      const f = ch.pad[(s / 2) % 3] * (s % 8 === 6 ? 4 : 2), e = this.env(0.05, 0.002, 0.18, t), o = this.osc("triangle", f, t);
+      const p = this.ctx.createStereoPanner(); p.pan.value = ((s / 2) % 3 - 1) * 0.5;
+      o.connect(e).connect(p).connect(g); const sp = this.ctx.createGain(); sp.gain.value = 0.6; p.connect(sp).connect(this.revIn);
+      o.start(t); o.stop(t + 0.22);
+    }
+  },
+});
 
 export const sfx = new Sound();
 if (typeof window !== "undefined") window.__sfx = sfx; // medição de nível nos testes

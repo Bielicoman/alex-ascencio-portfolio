@@ -215,8 +215,9 @@ function Player({ project, onClose, onHost, onNav }) {
     d.showModal();
     onHost(d);
     sfx.whoosh(0.45, true, 0.09); setTimeout(() => sfx.boom(0.12), 280);
+    sfx.musicHold(true);
     window.__lenis?.stop();
-    return () => { sfx.whoosh(0.35, false, 0.06); onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
+    return () => { sfx.whoosh(0.35, false, 0.06); sfx.musicHold(false); onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
   }, [onHost]);
   const watch = project.url?.replace("/embed/", "/watch?v=");
   return (
@@ -1147,6 +1148,8 @@ export default function App() {
       gsap.from(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
       gsap.from(".traj-clip", { y: 24, opacity: 0, duration: 1.1, ease: "expo.out", stagger: 0.12, delay: 0.5, scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
       gsap.from(".tcat, .tool", { y: 16, opacity: 0, duration: 0.6, ease: "expo.out", stagger: 0.03, scrollTrigger: { trigger: ".tcats", start: "top 96%", once: true } });
+      // trilha: entra em "Filmes em destaque" e segue até o fim; some ao voltar para cima
+      ScrollTrigger.create({ trigger: "#filmes", start: "top 65%", end: "max", onEnter: () => sfx.music(true), onLeaveBack: () => sfx.music(false) });
       // contato: folha clara sobe e arredonda
       gsap.fromTo(".contact-sheet", { scale: 0.94, borderRadius: 64 }, { scale: 1, borderRadius: 40, ease: "none", scrollTrigger: { trigger: ".contact", start: "top bottom", end: "top 20%", scrub: true } });
       ScrollTrigger.create({ trigger: ".contact-sheet", start: "top 44px", end: "bottom 44px", toggleClass: { targets: document.documentElement, className: "nav-light" } });
