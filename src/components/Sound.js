@@ -235,18 +235,18 @@ class Sound {
     if (!this.ok()) return;
     const ctx = this.ctx, t0 = ctx.currentTime, hit = t0 + 0.36;
     // 1. sucção: ruído subindo + riser tonal + prato ao contrário
-    this.whoosh(0.36, true, 0.2, x);
+    this.whoosh(0.36, true, 0.13, x);
     const r = this.osc("sawtooth", 180, t0); r.frequency.exponentialRampToValueAtTime(1400, hit);
     const rl = ctx.createBiquadFilter(); rl.type = "bandpass"; rl.Q.value = 3; rl.frequency.setValueAtTime(300, t0); rl.frequency.exponentialRampToValueAtTime(3000, hit);
-    const rg = ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.06, hit - 0.01); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.02);
+    const rg = ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.032, hit - 0.01); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.02);
     r.connect(rl).connect(rg); this.out(rg, { rev: 0.4, pan: this.panX(x) }); r.start(t0); r.stop(hit + 0.05);
     const cy = this.src(this.noise, t0, 0.4), ch = ctx.createBiquadFilter(); ch.type = "highpass"; ch.frequency.value = 5000;
-    const cg = ctx.createGain(); cg.gain.setValueAtTime(0.0001, t0); cg.gain.exponentialRampToValueAtTime(0.09, hit - 0.005); cg.gain.linearRampToValueAtTime(0.0001, hit + 0.01);
+    const cg = ctx.createGain(); cg.gain.setValueAtTime(0.0001, t0); cg.gain.exponentialRampToValueAtTime(0.045, hit - 0.005); cg.gain.linearRampToValueAtTime(0.0001, hit + 0.01);
     cy.connect(ch).connect(cg); this.out(cg, { rev: 0.3 });
-    setTimeout(() => this.duck(0.12, 1.4), 330);
-    this.impact(hit);
+    setTimeout(() => this.duck(0.3, 1), 330);
+    this.impact(hit, 0.4); // −8 dB: presença sem susto
     // 3. cauda
-    setTimeout(() => { this.shimmer(0.03); this.glitch(0.06, 5); this.whoosh(0.8, false, 0.09); }, 360);
+    setTimeout(() => { this.shimmer(0.018); this.glitch(0.035, 3); this.whoosh(0.6, false, 0.05); }, 360);
   }
   // impacto de trailer: estalo + soco saturado + sub + braam (serras desafinadas com filtro fechando)
   impact(hit = this.ctx.currentTime, g = 1) {

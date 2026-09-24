@@ -134,10 +134,6 @@ function Preloader() {
           <span className="pre-bar"><i /></span>
           <span className="pre-lab">SEQ_Portfolio_v05 · 24 fps</span>
         </div>
-        <div className="pre-gate">
-          <button className="pre-enter" data-gate="on"><span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>Entrar</button>
-          <button className="pre-mute" data-gate="off">Entrar sem som</button>
-        </div>
       </div>
     </div>
   );
@@ -1063,21 +1059,9 @@ export default function App() {
           .to(".hero-ctas .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1")
           .set(".preloader", { display: "none" });
       };
-      // portão: o navegador só libera áudio após um gesto — o clique em "Entrar" abre a cortina com som
-      loaded.then(() => {
-        if (!sfx.enabled) { reveal(); return; }
-        const gate = document.querySelector(".pre-gate");
-        gsap.to(".pre-meta", { opacity: 0, y: -6, duration: 0.4, ease: "power2.in" });
-        gsap.fromTo(gate, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.7, ease: "expo.out", delay: 0.2 });
-        gate.addEventListener("click", (e) => {
-          const b = e.target.closest("[data-gate]");
-          if (!b) return;
-          gate.style.pointerEvents = "none";
-          if (b.dataset.gate === "on") { sfx.unlock(); sfx.intro(0.93); } else sfx.set(false);
-          gsap.to(gate, { autoAlpha: 0, duration: 0.3 });
-          reveal();
-        });
-      });
+      // sem portão: a abertura roda sozinha. O navegador só libera áudio após um gesto,
+      // então a trilha da abertura só toca se o áudio já estiver liberado.
+      loaded.then(() => { if (sfx.ok()) sfx.intro(0.93); reveal(); });
 
       /* ── hero: saída por scroll (só transform/opacity: nada de filter na foto) ── */
       const mm = gsap.matchMedia();
