@@ -1,4 +1,4 @@
-// Dados do Alex (fonte única): currículo digital e assistente EDTH leem daqui.
+// Dados do Alex (fonte única): currículo digital e assistente EDITH leem daqui.
 export const PDF = "/media/cv/2026-09-24_alexascencio_curriculo_v02.pdf";
 export const CONTACT = [
   ["Telefone", "+55 15 99756-9880", "https://wa.me/5515997569880"],

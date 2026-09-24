@@ -397,7 +397,7 @@ function Hero({ open, onDemo, demo, onGest, gest, onEdth }) {
           </div>
           <div className="hero-modes">
             <Btn as="button" type="button" variant="glass" className="btn-tour-m" onClick={onDemo} aria-pressed={demo} icon={<I.Play size={13} />}>{demo ? "Parar tour" : "Assistir o site"}</Btn>
-            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}><span className="lbl-d">Controlar por voz · EDTH</span><span className="lbl-m">Falar com a EDTH</span></Btn>
+            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}><span className="lbl-d">Controlar por voz · EDITH</span><span className="lbl-m">Falar com a EDITH</span></Btn>
             <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
@@ -938,10 +938,10 @@ function DatePick({ value, onChange }) {
     </div>
   );
 }
-// balão da EDTH no canto inferior direito (lugar clássico do botão de WhatsApp)
+// balão da EDITH no canto inferior direito (lugar clássico do botão de WhatsApp)
 function EdthBubble({ onOpen, hidden }) {
   const [tip, setTip] = useState(false);
-  // mobile: o hero já tem o botão da EDTH; o balão só aparece depois de sair do hero e sem o aviso automático
+  // mobile: o hero já tem o botão da EDITH; o balão só aparece depois de sair do hero e sem o aviso automático
   const [inHero, setInHero] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 760px)"), hero = document.getElementById("top");
@@ -961,11 +961,11 @@ function EdthBubble({ onOpen, hidden }) {
     <div className={"edth-bubble" + (inHero ? " is-away" : "")}>
       {tip && (
         <div className="edth-tip" role="status">
-          <b>Oi, eu sou a EDTH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
+          <b>Oi, eu sou a EDITH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
           <button onClick={() => { setTip(false); try { sessionStorage.setItem("edth-tip", "1"); } catch {} }} aria-label="Fechar aviso"><I.Close size={12} /></button>
         </div>
       )}
-      <button className="edth-launch" onClick={() => { setTip(false); onOpen(); }} aria-label="Falar com a EDTH, assistente por voz">
+      <button className="edth-launch" onClick={() => { setTip(false); onOpen(); }} aria-label="Falar com a EDITH, assistente por voz">
         <span className="edth-launch-orb"><i /><i /><b /></span>
         <span className="edth-launch-mic"><I.Mic size={14} /></span>
       </button>
@@ -993,7 +993,7 @@ function Contact() {
     return () => { alive = false; io?.disconnect(); scene?.dispose(); el.removeEventListener("pointermove", light); };
   }, []);
   const kinds = ["Videoclipe", "Documentário", "Curta / cinema", "Motion design", "IA generativa", "Evento / ao vivo", "Outro"];
-  // EDTH preenche o formulário por voz e pede o envio
+  // EDITH preenche o formulário por voz e pede o envio
   const formRef = useRef(form); formRef.current = form;
   const kindRef = useRef(kind); kindRef.current = kind;
   useEffect(() => {
@@ -1188,12 +1188,12 @@ export default function App() {
       },
     });
   };
-  // EDTH (assistente por voz): carrega sob demanda; mesmas ações que os gestos
+  // EDITH (assistente por voz): carrega sob demanda; mesmas ações que os gestos
   const [edthOn, setEdthOn] = useState(false);
   const openEdthNow = async () => {
     sfx.unlock(); setEdthOn(true);
     const { default: openEdth } = await import("./edth/Edth");
-    openEdth({ onClose: () => setEdthOn(false), actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on) } });
+    openEdth({ onClose: () => setEdthOn(false), actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on), closePlayer: () => setProject(null) } });
   };
   const fieldCanvas = useRef(null);
   const root = useRef(null);

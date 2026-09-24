@@ -73,12 +73,10 @@ O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm 
 - Cada modelo roda no seu Web Worker (em paralelo); mãos começam na GPU e caem para CPU se a média passar de 40 ms.
 - Código: `src/gesture/` (rastreador, worker, voz, controle da home), `src/playground/` (página, áudio sintetizado e modos).
 
-## EDTH · assistente por voz
-- Hero → "Controlar por voz · EDTH": painel com microfone (Web Speech API, pt-BR, modo conversa contínua), texto, sugestões e voz feminina (speechSynthesis; escolhe Google português / Francisca / Luciana / Maria quando disponíveis).
-- Motor local (`src/edth/brain.js`, sem custo): abre qualquer vídeo pelo nome (o cursor vai até o card e abre o player), vídeo mais recente, filtros por formato, seções, demonstração, som, rolar, currículo (abrir/baixar), redes (Instagram, LinkedIn, WhatsApp, e-mail), jogos do Playground, perguntas sobre o Alex (quem é, experiência, clientes, ferramentas, formação, método, IA, contato) e orçamento por etapas que preenche o formulário de contato e abre o envio.
-- Perguntas livres: `api/edth.js` (Vercel Function) → Groq `llama-3.3-70b-versatile`, com os dados do Alex no prompt e ações validadas no cliente. Ativar: criar a chave em console.groq.com → Vercel → Settings → Environment Variables → `GROQ_API_KEY` → Redeploy. Sem chave (ou no limite do plano gratuito) a EDTH segue só com o motor local.
-- Dados do Alex (currículo e EDTH): `src/profile.js`.
-- Voz neural (a mesma em qualquer aparelho): `api/tts.js`. Variáveis no Vercel: `ELEVENLABS_API_KEY` (+ `ELEVENLABS_VOICE_ID`, opcional) **ou** `GOOGLE_TTS_API_KEY` (+ `GOOGLE_TTS_VOICE`, padrão `pt-BR-Chirp3-HD-Aoede`). Sem chave, usa a voz do navegador (ranking de vozes femininas pt-BR + seletor no painel).
-- Orçamento: a fala vira briefing em tópicos (Ideia, Estilo / referência, Duração, Formato, Plataforma, IA) no formulário; com a Groq ativa, a IA refina o texto em seguida.
-- Balão fixo da EDTH no canto inferior direito; microfone liga ao abrir.
-- IA: `api/edth.js` escolhe o modelo disponível na conta Groq (preferência `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`…; `EDTH_MODEL` força um) e registra o erro no log do Vercel.
+## EDITH · assistente por voz (fala-se "Édite")
+- Barra compacta no canto inferior direito: orbe = microfone, campo de texto, conversa completa sob demanda (▲) e fechar. Última resposta aparece numa bolha curta que some sozinha.
+- Microfone contínuo: liga ao abrir e só desliga quando o usuário pede ("desliga o microfone") ou fecha. Com vídeo aberto, só reage depois de ouvir "Edith" ("Edith, fecha o vídeo", "Edith, próximo").
+- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes, jogos, som. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas.
+- Voz: `api/tts.js` → ElevenLabs (`ELEVENLABS_API_KEY`) › Google (`GOOGLE_TTS_API_KEY`) › voz neural do Edge (Thalita pt-BR, grátis, não oficial; `EDGE_TTS_VOICE`) › voz do navegador. Diagnóstico: `GET /api/tts?probe=1`.
+- Recados: `api/contact.js` envia com Resend (`RESEND_API_KEY`, `CONTACT_TO`); sem chave, o navegador envia pelo FormSubmit para o e-mail do Alex (o primeiro envio pede ativação por e-mail).
+- Dados do Alex (currículo e EDITH): `src/profile.js`.

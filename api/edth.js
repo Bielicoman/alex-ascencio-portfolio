@@ -1,4 +1,4 @@
-// EDTH · IA para perguntas livres (Vercel Serverless Function → Groq, plano gratuito).
+// EDITH · IA para conversa livre (Vercel Serverless Function → Groq, plano gratuito).
 // A chave fica só no servidor: Vercel → Environment Variables → GROQ_API_KEY.
 // Sem chave responde 501 e o site segue com o motor local (src/edth/brain.js).
 import { KNOWLEDGE } from "../src/edth/brain.js";
@@ -21,10 +21,12 @@ async function models(key) {
   return PREF.slice(0, 4);
 }
 
-const SYSTEM = `Você é a EDTH, assistente do site de portfólio do Alex Ascencio (editor de vídeo e filmmaker).
-Fale em português do Brasil, com frases curtas e naturais para serem ditas em voz alta (máx. 3 frases, sem listas, sem emoji, sem markdown).
-Responda só com base nos fatos abaixo. Se não souber, diga que não tem essa informação e ofereça falar com o Alex pelo WhatsApp.
-Nunca invente preços, datas ou trabalhos. Para valores, ofereça montar um orçamento.
+const SYSTEM = `Você é a EDITH (pronuncia-se "Édite"), assistente do site de portfólio do Alex Ascencio, editor de vídeo e filmmaker.
+Fale sempre em português do Brasil, como uma moça jovem, educada e natural numa conversa por voz.
+Respostas curtas: uma ou duas frases, só o essencial. Sem listas, sem emoji, sem markdown.
+Nunca termine com ofertas genéricas como "se precisar de mim", "estou à disposição" ou "posso ajudar em algo mais".
+Se a pessoa quiser conversar sobre a vida dela ou qualquer assunto, converse de verdade, com interesse e empatia, pelo tempo que ela quiser, sem puxar o assunto de volta para o Alex.
+Sobre o Alex e o trabalho dele, use só os fatos abaixo; se não souber, diga que não tem essa informação. Nunca invente preços, datas ou trabalhos. Para valores, ofereça montar um orçamento.
 
 FATOS:
 ${KNOWLEDGE()}
@@ -39,7 +41,9 @@ Ações permitidas:
 - {"type":"go","href":"/curriculo/" ou "/playground/#sabre|particulas|objetos|corpo|piano|bateria|teremim|corte"}
 - {"type":"tour"} (demonstração automática do site)
 - {"type":"budget"} (começar orçamento por voz)
-Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem.`;
+- {"type":"message"} (a pessoa quer mandar um recado ou e-mail para o Alex)
+- {"type":"close_video"} (fechar o vídeo aberto)
+Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem. Em conversa comum, "actions": [].`;
 
 const parse = (txt) => {
   if (!txt) return {};
@@ -82,7 +86,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
   }
   const message = String(body?.message || "").slice(0, 600);
   if (!message.trim()) return res.status(400).json({ error: "mensagem vazia" });
-  const history = (Array.isArray(body?.history) ? body.history : []).slice(-8)
+  const history = (Array.isArray(body?.history) ? body.history : []).slice(-20)
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
     .map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 600) }));
   const messages = [{ role: "system", content: SYSTEM }, ...history, { role: "user", content: message }];
@@ -92,7 +96,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
         const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, temperature: 0.4, max_tokens: 500, ...(json ? { response_format: { type: "json_object" } } : {}), messages }),
+          body: JSON.stringify({ model, temperature: 0.6, max_tokens: 300, ...(json ? { response_format: { type: "json_object" } } : {}), messages }),
         });
         if (r.status === 429) { console.error("[edth] 429", model); break; }
         if (!r.ok) { console.error("[edth]", model, json ? "json" : "text", r.status, (await r.text()).slice(0, 300)); continue; }
@@ -100,7 +104,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
         const out = parse(j.choices?.[0]?.message?.content);
         if (!out.say) continue;
         res.setHeader("Cache-Control", "no-store");
-        return res.status(200).json({ say: String(out.say).slice(0, 700), actions: Array.isArray(out.actions) ? out.actions.slice(0, 2) : [], model });
+        return res.status(200).json({ say: String(out.say).slice(0, 400), actions: Array.isArray(out.actions) ? out.actions.slice(0, 2) : [], model });
       } catch (e) { console.error("[edth]", model, e.message); }
     }
   }

@@ -1,7 +1,7 @@
 import { PROJECTS } from "../projects.js";
 import { SUMMARY, EXP, CLIENTS, TOOLS, EDU, METHOD, SOCIAL, PDF } from "../profile.js";
 
-// Motor local da EDTH: entende pedidos em português (voz ou texto), conduz o orçamento por etapas e
+// Motor local da EDITH: entende pedidos em português (voz ou texto), conduz o orçamento por etapas e
 // responde sobre o Alex a partir dos dados do site. Devolve { say, actions, chips, links }.
 // O que não reconhece vai para a IA (api/edth.js, Groq) quando disponível.
 export const norm = (s) => ` ${String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9/ ]/g, " ").replace(/\s+/g, " ").trim()} `;
@@ -31,6 +31,7 @@ export const latest = () => PROJECTS[0];
 
 const CATS = { clipes: "Clipes", clipe: "Clipes", videoclipes: "Clipes", documentarios: "Documentário", documentario: "Documentário", cinema: "Cinema", curtas: "Cinema", curta: "Cinema", reality: "Reality Show", turne: "Turnê", turnes: "Turnê", bastidores: "Bastidores", "making": "Bastidores", institucional: "Institucional", institucionais: "Institucional" };
 const SECTIONS = [["top", ["inicio", "topo", "comeco", "home"]], ["filmes", ["filmes", "destaques", "filmes em destaque"]], ["lab", ["lab", "laboratorio", "servicos"]], ["metodo", ["metodo", "timeline", "processo"]], ["arquivo", ["selecao", "portfolio", "trabalhos", "projetos", "arquivo"]], ["sobre", ["sobre", "sobre ele", "sobre o alex", "sobre mim", "biografia"]], ["contato", ["contato", "falar com ele", "fale com ele"]]];
+const TOUR = ["assistir o site", "assistir site", "ver site", "ver o site", "ver demonstracao", "ver a demonstracao", "demonstracao", "demo", "modo assistir", "tour", "comecar tour", "comecar o tour", "iniciar tour", "iniciar o tour", "inicia o tour", "faz um tour", "fazer um tour", "tour guiado", "visita guiada", "passeio", "me mostra o site", "mostra o site", "mostrar o site", "apresenta o site", "apresentar o site", "apresentacao", "me mostra tudo", "mostra tudo", "navega sozinha", "piloto automatico", "modo automatico", "conhecer o site"];
 const GAMES = [["sabre", ["sabre", "beat saber", "sabres", "sabre de luz"]], ["particulas", ["particulas"]], ["objetos", ["objetos", "objetos 3d", "3d"]], ["corpo", ["corpo", "homem de ferro"]], ["piano", ["piano"]], ["bateria", ["bateria"]], ["teremim", ["teremim", "theremin"]], ["corte", ["corte", "jogo do corte", "cortar clipes"]]];
 const KINDS = [["Videoclipe", ["clipe", "videoclipe", "musica", "clip"]], ["Documentário", ["documentario", "doc"]], ["Curta / cinema", ["curta", "filme", "cinema", "longa"]], ["Motion design", ["motion", "animacao", "vinheta"]], ["IA generativa", ["ia", "inteligencia artificial", "gerado", "ia generativa"]], ["Evento / ao vivo", ["evento", "ao vivo", "live", "transmissao", "casamento", "culto", "show"]]];
 
@@ -54,6 +55,16 @@ export function parseWhen(text) {
   return null;
 }
 const fmt = (d) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+
+// e-mail ditado ("joao ponto silva arroba gmail ponto com") → joao.silva@gmail.com; null se não fechar
+export function parseEmail(raw) {
+  let t = String(raw).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  t = t.replace(/^(o )?(meu )?(e-?mail|email) (e|eh)\s+/, "");
+  t = t.replace(/\s*(arroba|arrouba)\s*/g, "@").replace(/\s*(ponto|dot)\s*/g, ".").replace(/\s*(underline|underscore|sublinhado)\s*/g, "_")
+    .replace(/\s*(traco|hifen|menos)\s*/g, "-").replace(/\s+/g, "").replace(/[,;]+$/, "").replace(/\.$/, "");
+  const m = t.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/);
+  return m ? m[0] : null;
+}
 
 // ── briefing: transforma a fala solta em tópicos (a IA refina depois, se disponível) ──
 const PLATS = [["netflix", "Netflix"], ["youtube", "YouTube"], ["instagram", "Instagram"], ["reels", "Instagram Reels"], ["tiktok", "TikTok"], ["tv", "TV"], ["televisao", "TV"], ["cinema", "Cinema"], ["festival", "Festivais"], ["spotify", "Spotify"], ["globoplay", "Globoplay"], ["prime", "Prime Video"], ["telao", "Telão / evento"], ["igreja", "Igreja"], ["site", "Site"]];
@@ -92,28 +103,35 @@ const count = (cat) => PROJECTS.filter((p) => p.cat === cat).length;
 const catsLine = () => [...new Set(PROJECTS.map((p) => p.cat))].map((c) => `${count(c)} ${c.toLowerCase()}`).join(", ");
 const highlights = () => [25, 24, 7, 14, 16].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
 const K = {
-  who: () => SUMMARY,
-  exp: () => `Experiência: ${EXP.map(([r, org, y]) => `${r} em ${org.replace("·", "e")} (${y})`).join("; ")}.`,
+  who: () => SUMMARY.split(/(?<=\.)\s+/).slice(0, 2).join(" "),
+  exp: () => `${EXP.slice(0, 2).map(([r, org, y]) => `${r} em ${org.split("·")[0].trim()} (${y})`).join("; ")}.`,
   clients: () => `Ele já trabalhou para ${CLIENTS.slice(0, -1).join(", ")} e ${CLIENTS.at(-1)}.`,
-  tools: () => `Ferramentas: ${TOOLS.map(([k, v]) => `${k.toLowerCase()} com ${v.replace(/ · /g, ", ")}`).join("; ")}.`,
+  tools: () => "Premiere, DaVinci Resolve e After Effects. Na IA, ComfyUI, Higgsfield e Runway.",
   edu: () => `Formação: ${EDU.map(([t, o, y]) => `${t}, ${o.split("·")[0].trim()} (${y})`).join("; ")}.`,
   method: () => `Como ele trabalha: ${METHOD.map(([t, d]) => `${t.toLowerCase()}: ${d}`).join(" ")}`,
-  works: () => `São ${PROJECTS.length} trabalhos no portfólio: ${catsLine()}. Destaques: ${highlights().map((p) => `${coreTitle(p)}${artist(p) ? " com " + artist(p) : ""}, de ${year(p)}`).join("; ")}. Quer que eu abra algum?`,
-  contact: () => "Você pode falar com o Alex pelo WhatsApp, pelo e-mail ascencioalexgabriel@gmail.com, pelo Instagram arroba alexascencioai ou pelo LinkedIn. Ele atende remoto e no Brasil todo.",
-  ai: () => "O Alex usa IA generativa como ferramenta de produção: ComfyUI, Higgsfield, Runway, ElevenLabs e Topaz. A regra dele é simples: rascunho barato, plano aprovado e resolução final só no que passa como filmado de verdade.",
-  price: () => "O valor depende de formato, duração e prazo. O melhor caminho é um orçamento rápido: eu anoto seus dados aqui mesmo, por voz, e mando pro Alex. Vamos?",
-  local: () => "Ele é de São Paulo, no Brasil, e atende projetos remotos e no país todo.",
-  me: () => "Eu sou a EDTH, a assistente do site do Alex. Posso abrir qualquer vídeo, navegar pelas seções, montar seu orçamento por voz, baixar o currículo, abrir os jogos do Playground e contar tudo sobre o trabalho dele.",
+  works: () => `São ${PROJECTS.length} trabalhos: ${catsLine()}. Destaques: ${highlights().slice(0, 3).map((p) => coreTitle(p)).join(", ")}.`,
+  contact: () => "Pelo WhatsApp, e-mail, Instagram ou LinkedIn. Se quiser, eu mesma mando um recado seu pra ele.",
+  ai: () => "Ele usa ComfyUI, Higgsfield, Runway, ElevenLabs e Topaz. Só entra no filme o que passa como filmado de verdade.",
+  price: () => "Depende de formato, duração e prazo. Eu monto o orçamento com você agora.",
+  local: () => "Ele é de São Paulo e atende no Brasil todo, também remoto.",
+  me: () => "Sou a EDITH, assistente do Alex. Abro vídeos, navego pelo site, monto orçamento, mando recado pro Alex e converso com você.",
 };
 
 // orçamento por etapas
 const Q = {
-  name: "Vamos montar seu orçamento. Qual é o seu nome?",
-  kind: (n) => `Prazer, ${n}. Que tipo de projeto? Videoclipe, documentário, curta, motion design, IA generativa ou evento ao vivo?`,
-  when: "Tem prazo? Pode dizer uma data, como dia 20 de outubro, ou em duas semanas, ou sem prazo.",
-  msg: "Agora me conta sobre o projeto: a ideia, referências, formato e duração.",
-  more: "Anotei. Quer acrescentar algo? Ou diga: enviar pelo WhatsApp, ou enviar por e-mail.",
+  name: "Vamos lá. Qual é o seu nome?",
+  kind: (n) => `Prazer, ${n}. Que tipo de projeto?`,
+  when: "Tem prazo?",
+  msg: "Me conta a ideia: referências, formato e duração.",
+  more: "Anotei. Quer acrescentar algo, ou envio pelo WhatsApp ou por e-mail?",
 };
+
+function cleanName(raw) {
+  // tira "meu nome é / me chamo / sou o…" comparando sem acento e removendo o mesmo número de palavras
+  const words = raw.replace(/[.,!?]/g, " ").trim().split(/\s+/);
+  const pre = ["meu nome e", "me chamo", "pode me chamar de", "eu sou o", "eu sou a", "eu sou", "sou o", "sou a", "sou", "e o", "e a"].find((p) => norm(words.slice(0, p.split(" ").length).join(" ")).trim() === p);
+  return words.slice(pre ? pre.split(" ").length : 0).slice(0, 3).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 
 export function createBrain() {
   let flow = null; // { step, data }
@@ -124,11 +142,7 @@ export function createBrain() {
     const d = flow.data;
     if (any(t, ["cancelar", "cancela", "deixa pra la", "esquece"])) { flow = null; return say("Tudo bem, cancelei o orçamento."); }
     if (flow.step === "name") {
-      // tira "meu nome é / me chamo / sou o…" comparando sem acento e removendo o mesmo número de palavras
-      const words = raw.replace(/[.,!?]/g, " ").trim().split(/\s+/);
-      const pre = ["meu nome e", "me chamo", "pode me chamar de", "eu sou o", "eu sou a", "eu sou", "sou o", "sou a", "sou", "e o", "e a"].find((p) => norm(words.slice(0, p.split(" ").length).join(" ")).trim() === p);
-      let n = words.slice(pre ? pre.split(" ").length : 0).join(" ");
-      n = n.split(" ").slice(0, 3).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      const n = cleanName(raw);
       d.name = n; flow.step = "kind";
       return say(Q.kind(n.split(" ")[0]), [{ type: "form", patch: { name: n } }], { chips: ["Videoclipe", "Documentário", "Curta", "Motion design", "IA generativa", "Evento ao vivo"] });
     }
@@ -143,45 +157,79 @@ export function createBrain() {
       d.when = w.date; flow.step = "msg";
       return say(`${w.date ? `Prazo até ${fmt(w.date)}.` : "Sem prazo definido."} ${Q.msg}`, [{ type: "form", patch: { when: w.date } }]);
     }
+    if (flow.step === "bemail") {
+      const e = parseEmail(raw);
+      if (!e) return say("Não peguei o e-mail. Pode digitar aqui embaixo?");
+      const brief = `Orçamento · ${d.kind || "projeto"}\nPrazo: ${d.when ? fmt(d.when) : "sem prazo"}\n\n${d.msg || d.raw || ""}`;
+      flow = null;
+      return say("Enviando pro Alex.", [{ type: "mail", name: d.name, email: e, message: brief, subject: `Orçamento: ${d.kind || "projeto"}` }]);
+    }
     if (flow.step === "msg" || flow.step === "more") {
       if (flow.step === "more" && any(t, ["whatsapp", "zap", "enviar", "manda", "mandar", "email", "e mail"])) {
-        const via = any(t, ["email", "e mail"]) ? "email" : "whatsapp";
+        if (any(t, ["email", "e mail"])) { flow.step = "bemail"; return say("Qual é o seu e-mail? Pode falar ou digitar."); }
         flow = null;
-        return say(`Pronto. Vou abrir o ${via === "email" ? "e-mail" : "WhatsApp"} com tudo preenchido. Se não abrir sozinho, é só tocar no botão de envio.`, [{ type: "send", via }]);
+        return say("Abrindo o WhatsApp com tudo preenchido.", [{ type: "send", via: "whatsapp" }]);
       }
       if (flow.step === "more" && any(t, ["nao", "so isso", "e isso", "nada", "pronto"])) { flow.step = "more"; return say("Então é só dizer: enviar pelo WhatsApp, ou enviar por e-mail.", [], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail"] }); }
       d.raw = (d.raw ? d.raw + " " : "") + raw.trim();
       d.msg = organizeBrief(d.raw);
       flow.step = "more";
-      return say(`Organizei o briefing no formulário. ${Q.more}`, [{ type: "form", patch: { msg: d.msg } }, { type: "refine", raw: d.raw, kind: d.kind, when: d.when ? fmt(d.when) : "sem prazo" }], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail", "Cancelar"] });
+      return say(`Organizei o briefing. ${Q.more}`, [{ type: "form", patch: { msg: d.msg } }, { type: "refine", raw: d.raw, kind: d.kind, when: d.when ? fmt(d.when) : "sem prazo" }], { chips: ["Enviar pelo WhatsApp", "Enviar por e-mail", "Cancelar"] });
+    }
+  }
+
+  // recado por e-mail: nome → e-mail → mensagem → confirma e envia
+  function note(t, raw) {
+    const d = flow.data;
+    if (any(t, ["cancelar", "cancela", "deixa pra la", "esquece"])) { flow = null; return say("Cancelado."); }
+    if (flow.step === "nname") { d.name = cleanName(raw); flow.step = "nemail"; return say(`Oi, ${d.name.split(" ")[0]}. Qual é o seu e-mail?`); }
+    if (flow.step === "nemail") {
+      const e = parseEmail(raw);
+      if (!e) return say("Não peguei o e-mail. Pode digitar aqui embaixo?");
+      d.email = e; flow.step = "ntext"; return say("Pode falar o recado.");
+    }
+    if (flow.step === "ntext") { d.message = raw.trim(); flow.step = "nok"; return say("Envio assim?", [], { chips: ["Enviar", "Cancelar"] }); }
+    if (flow.step === "nok") {
+      if (any(t, ["sim", "pode", "envia", "enviar", "manda", "mandar", "isso", "ok", "pode mandar", "confirmo"])) { flow = null; return say("Enviando.", [{ type: "mail", name: d.name, email: d.email, message: d.message, subject: "Recado pelo site" }]); }
+      d.message += "\n" + raw.trim(); return say("Acrescentei. Envio?", [], { chips: ["Enviar", "Cancelar"] });
     }
   }
 
   function reply(raw) {
-    const t = norm(raw);
-    if (flow) { const r = budget(t, raw); if (r) return r; }
+    const t = norm(raw), n = toks(raw).length, words = t.trim().split(" ").length;
+    const cmd = words <= 7; // comandos de controle só em frases curtas (conversa longa não dispara ação por acaso)
+    if (flow?.step?.startsWith("n")) { const r = note(t, raw); if (r) return r; }
+    else if (flow) { const r = budget(t, raw); if (r) return r; }
+
+    // microfone e vídeo
+    if (cmd && any(t, ["desligar microfone", "desliga o microfone", "desligar o microfone", "desliga microfone", "para de ouvir", "parar de ouvir", "pode desligar", "desligar mic", "fecha o microfone", "sem microfone"])) return say("Microfone desligado.", [{ type: "micoff" }]);
+    if (cmd && any(t, ["fechar video", "fecha o video", "fechar o video", "fecha video", "sair do video", "tira o video", "fecha o player", "voltar pro site", "volta pro site"])) return say("", [{ type: "close_video" }]);
+    // recado para o Alex
+    if (any(t, ["mandar mensagem", "mandar uma mensagem", "mandar recado", "mandar um recado", "deixar recado", "deixar um recado", "mandar email", "mandar um email", "mandar e mail", "mandar um e mail", "enviar email", "enviar um email", "enviar e mail", "enviar mensagem", "enviar uma mensagem", "escrever para o alex", "escrever pro alex", "recado para o alex", "recado pro alex", "falar com o alex por email", "mensagem para o alex", "mensagem pro alex"])) {
+      flow = { step: "nname", data: {} }; return say("Mando sim. Qual é o seu nome?");
+    }
 
     // controle
-    if (any(t, ["parar", "pare", "para tudo", "chega", "stop", "silencio", "cala a boca"])) return say("Parei.", [{ type: "stop" }]);
-    if (any(t, ["assistir o site", "ver demonstracao", "demonstracao", "ver a demonstracao", "modo assistir", "tour", "me mostra o site", "apresenta o site"])) return say("Começando a demonstração do site. Mexa o mouse ou role a página quando quiser assumir.", [{ type: "tour" }]);
-    if (any(t, ["ligar som", "ligar o som", "liga o som", "ligar musica", "com som"])) return say("Som ligado.", [{ type: "sound", on: true }]);
-    if (any(t, ["desligar som", "desligar o som", "desliga o som", "sem som", "mudo"])) return say("Som desligado.", [{ type: "sound", on: false }]);
-    if (any(t, ["descer", "desce", "rolar para baixo", "pra baixo", "para baixo"])) return say("", [{ type: "scroll", dir: 1 }]);
-    if (any(t, ["subir", "sobe", "rolar para cima", "pra cima", "para cima"])) return say("", [{ type: "scroll", dir: -1 }]);
+    if (cmd && any(t, ["parar", "pare", "para", "para tudo", "chega", "stop", "silencio", "cala a boca", "parar tour", "para o tour", "sair do tour"])) return say("Parei.", [{ type: "stop" }]);
+    if (cmd && any(t, TOUR)) return say("Começando. Mexa o mouse ou role pra assumir.", [{ type: "tour" }]);
+    if (cmd && any(t, ["ligar som", "ligar o som", "liga o som", "ligar musica", "liga a musica", "com som", "tocar musica", "som ligado"])) return say("Som ligado.", [{ type: "sound", on: true }]);
+    if (cmd && any(t, ["desligar som", "desligar o som", "desliga o som", "desliga a musica", "desligar musica", "sem som", "mudo", "tirar o som"])) return say("Som desligado.", [{ type: "sound", on: false }]);
+    if (cmd && any(t, ["descer", "desce", "rolar", "rola", "rolar para baixo", "pra baixo", "para baixo", "continua", "proxima secao"])) return say("", [{ type: "scroll", dir: 1 }]);
+    if (cmd && any(t, ["subir", "sobe", "rolar para cima", "pra cima", "para cima", "secao anterior"])) return say("", [{ type: "scroll", dir: -1 }]);
 
     // currículo
     if (any(t, ["curriculo", "cv"])) {
-      if (any(t, ["baixar", "baixa", "download", "pdf", "salvar"])) return say("Baixando o currículo do Alex em PDF.", [{ type: "download", href: PDF }]);
-      return say("Abrindo o currículo digital do Alex.", [{ type: "go", href: "/curriculo/" }]);
+      if (any(t, ["baixar", "baixa", "download", "pdf", "salvar"])) return say("Baixando o currículo.", [{ type: "download", href: PDF }]);
+      return say("Abrindo o currículo.", [{ type: "go", href: "/curriculo/" }]);
     }
     // redes
     for (const [k, words, label] of [["instagram", ["instagram", "insta"], "Instagram"], ["linkedin", ["linkedin", "linked in"], "LinkedIn"], ["whatsapp", ["whatsapp", "zap", "whats"], "WhatsApp"], ["email", ["email", "e mail"], "e-mail"]]) {
-      if (any(t, words) && !any(t, ["enviar", "manda"])) return say(`Abrindo o ${label} do Alex.`, [{ type: "open", href: SOCIAL[k], label }]);
+      if (cmd && any(t, words) && !any(t, ["enviar", "manda", "mandar", "meu"])) return say(`Abrindo o ${label}.`, [{ type: "open", href: SOCIAL[k], label }]);
     }
     // jogos
-    if (any(t, ["jogo", "jogos", "jogar", "playground", "brincar"]) || GAMES.some(([, ws]) => any(t, ws.filter((w) => w.length > 5)))) {
+    if (cmd && any(t, ["jogo", "jogos", "jogar", "playground", "brincar"]) || GAMES.some(([, ws]) => any(t, ws.filter((w) => w.length > 5)))) {
       const g = GAMES.find(([, ws]) => any(t, ws));
-      return say(g ? `Abrindo o ${g[0] === "sabre" ? "jogo Sabre" : g[0]} no Playground.` : "Abrindo o Playground, com os jogos e instrumentos.", [{ type: "go", href: `/playground/${g ? "#" + g[0] : ""}` }]);
+      return say(g ? `Abrindo o ${g[0] === "sabre" ? "Sabre" : g[0]}.` : "Abrindo o Playground.", [{ type: "go", href: `/playground/${g ? "#" + g[0] : ""}` }]);
     }
     // orçamento
     if (any(t, ["orcamento", "orcar", "contratar", "quanto custa", "quanto cobra", "preco", "valor", "proposta", "fazer um video", "fazer um clipe", "quero um video", "fechar um projeto"])) {
@@ -193,30 +241,32 @@ export function createBrain() {
     const wantsVideo = any(t, ["assistir", "ver", "abrir", "abre", "tocar", "toca", "toque", "coloca", "coloque", "mostra", "mostrar", "play", "reproduzir", "passa"]);
     if (any(t, ["mais recente", "ultimo lancamento", "ultimo video", "lancamento", "video novo", "mais novo", "ultimo trabalho"])) {
       const p = latest();
-      return say(`O mais recente é ${coreTitle(p)}${artist(p) ? ", " + artist(p) : ""}. Abrindo agora.`, [{ type: "play", id: p.id }]);
+      return say(`Abrindo ${coreTitle(p)}, o mais recente.`, [{ type: "play", id: p.id }]);
     }
     const cat = Object.entries(CATS).find(([k]) => t.includes(" " + k + " "));
     const proj = findProject(raw);
-    if (proj && (wantsVideo || toks(raw).length <= 4)) return say(`Abrindo ${coreTitle(proj)}${artist(proj) ? ", " + artist(proj) : ""}, de ${year(proj)}.`, [{ type: "play", id: proj.id }]);
+    if (proj && ((wantsVideo && cmd) || n <= 4)) return say(`Abrindo ${coreTitle(proj)}.`, [{ type: "play", id: proj.id }]);
     // pedido genérico ("abre um vídeo dele", "um vídeo do YouTube", "outro"): alterna entre os destaques
     const generic = any(t, ["video", "videos", "clipe", "trabalho", "trabalhos", "filme", "algo", "alguma coisa", "youtube", "exemplo"]);
-    if ((wantsVideo && generic && !cat) || (pickN > 0 && any(t, ["outro", "outro video", "mais um", "proximo video", "proximo", "outra"]))) {
+    if ((wantsVideo && generic && !cat && cmd) || (pickN > 0 && any(t, ["outro", "outro video", "mais um", "proximo video", "proximo", "outra"]))) {
       const yt = t.includes(" youtube ");
       const pool = (yt ? PROJECTS.filter((p) => p.url) : [...highlights(), ...PROJECTS.filter((p) => p.q === "4K" && !highlights().includes(p))]);
       const p = pool[pickN++ % pool.length];
-      return say(`Vou abrir ${coreTitle(p)}${artist(p) ? ", " + artist(p) : ""}, de ${year(p)}${yt ? ", que está no YouTube" : ""}. Se quiser outro, é só dizer: outro.`, [{ type: "play", id: p.id }], { chips: ["Outro", "Vídeo mais recente", "Quais trabalhos ele fez?"] });
+      return say(`Abrindo ${coreTitle(p)}.`, [{ type: "play", id: p.id }], { chips: ["Outro", "Vídeo mais recente"] });
     }
-    if (cat && (wantsVideo || any(t, ["quais", "tem", "lista", "filtrar", "so"]))) {
+    if (cat && cmd && (wantsVideo || any(t, ["quais", "tem", "lista", "filtrar", "so"]))) {
       const list = PROJECTS.filter((p) => p.cat === cat[1]);
       const plural = { Clipes: "clipes", "Documentário": "documentários", Cinema: "filmes de cinema", "Reality Show": "reality show", "Turnê": "registros de turnê", Bastidores: "making ofs", Institucional: "institucionais" }[cat[1]] || cat[1].toLowerCase();
-      return say(`${list.length} ${plural}: ${list.slice(0, 5).map((p) => coreTitle(p)).join(", ")}${list.length > 5 ? " e outros" : ""}. Mostrando na seleção.`, [{ type: "filter", cat: cat[1] }]);
+      return say(`${list.length} ${plural}. Mostrando na seleção.`, [{ type: "filter", cat: cat[1] }]);
     }
     // seções
-    if (any(t, ["ir para", "vai para", "va para", "leva", "mostra", "abrir", "abre", "secao", "pagina"]) || toks(raw).length <= 3) {
+    if (cmd && (any(t, ["ir para", "vai para", "va para", "leva", "mostra", "abrir", "abre", "secao", "pagina", "ver", "quero ver"]) || n <= 3)) {
       const s = SECTIONS.find(([, ws]) => any(t, ws));
       if (s) return say("", [{ type: "nav", id: s[0] }]);
     }
-    // conhecimento
+    // conhecimento: só quando a frase é curta ou fala do Alex (conversa pessoal longa vai para a IA)
+    const about = n <= 4 || any(t, ["alex", "ele", "dele", "o editor", "seu chefe", "voce"]);
+    if (!about) return null;
     if (any(t, ["quem e voce", "o que voce faz", "o que voce pode", "como funciona", "ajuda", "tutorial", "seu nome"])) return say(K.me(), [], { chips: TUTORIAL });
     if (any(t, ["quem e", "quem e ele", "resume", "resumir", "resumo", "sobre ele", "me fala do alex", "fale sobre", "conta sobre", "apresenta", "quem e o alex", "alex ascencio"])) return say(K.who(), [{ type: "nav", id: "sobre", silent: true }], { chips: ["Quais trabalhos ele fez?", "Com quem ele trabalhou?", "Quero um orçamento"] });
     if (any(t, ["experiencia", "trabalhou onde", "onde ele trabalha", "empresa", "carreira", "trajetoria", "emprego"])) return say(K.exp());
@@ -225,18 +275,21 @@ export function createBrain() {
     if (any(t, ["formacao", "faculdade", "estudou", "curso", "cursos", "graduacao"])) return say(K.edu());
     if (any(t, ["como ele trabalha", "metodo", "processo", "estilo", "jeito de editar"])) return say(K.method());
     if (any(t, ["trabalhos", "portfolio", "projetos", "o que ele ja fez", "quais videos", "ja fez"])) return say(K.works(), [{ type: "nav", id: "arquivo", silent: true }]);
-    if (any(t, ["ia", "inteligencia artificial", "ia generativa"])) return say(K.ai());
+    if (any(t, ["inteligencia artificial", "ia generativa", "usa ia", "com ia", "sobre ia", "e ia", "de ia"])) return say(K.ai());
     if (any(t, ["contato", "falar com ele", "telefone", "numero"])) return say(K.contact(), [{ type: "nav", id: "contato", silent: true }], { links: [["WhatsApp", SOCIAL.whatsapp], ["Instagram", SOCIAL.instagram], ["LinkedIn", SOCIAL.linkedin]] });
     if (any(t, ["onde ele mora", "de onde", "cidade", "mora onde", "atende onde"])) return say(K.local());
-    if (any(t, ["oi", "ola", "bom dia", "boa tarde", "boa noite", "e ai", "hey"])) return say("Oi! Eu sou a EDTH, assistente do Alex. Posso abrir vídeos, contar sobre o trabalho dele ou montar seu orçamento. O que você quer ver?", [], { chips: TUTORIAL });
-    if (any(t, ["obrigado", "obrigada", "valeu", "brigado"])) return say("Por nada! Se precisar, é só chamar.");
-    if (any(t, ["tchau", "ate mais", "fechar", "sair"])) return say("Até mais!", [{ type: "close" }]);
+    if (n <= 3 && any(t, ["oi", "ola", "bom dia", "boa tarde", "boa noite", "e ai", "hey", "opa"])) return say("Oi! O que você quer ver?");
+    if (n <= 3 && any(t, ["obrigado", "obrigada", "valeu", "brigado"])) return say("Por nada!");
+    if (cmd && any(t, ["tchau", "ate mais", "fechar", "sair", "fecha", "fechar edith", "fecha a edith"])) return say("Até mais!", [{ type: "close" }]);
     return null; // desconhecido → IA
   }
   return { reply, get flow() { return flow; }, reset() { flow = null; } };
 }
 
-export const TUTORIAL = ["Quem é o Alex?", "Assistir Tu És", "Vídeo mais recente", "Quero fazer um orçamento", "Abrir o jogo Sabre", "Baixar currículo", "Instagram do Alex", "Assistir o site"];
+export const TUTORIAL = ["Assistir o site", "Vídeo mais recente", "Quem é o Alex?", "Quero um orçamento", "Mandar recado pro Alex"];
 // resumo para a IA (api/edth.js envia no prompt de sistema)
-export const KNOWLEDGE = () => [SUMMARY, K.exp(), K.clients(), K.tools(), K.edu(), K.method(), K.contact(),
+export const KNOWLEDGE = () => [SUMMARY,
+  `Experiência: ${EXP.map(([r, org, y]) => `${r} em ${org.replace("·", "e")} (${y})`).join("; ")}.`, K.clients(),
+  `Ferramentas: ${TOOLS.map(([k, v]) => `${k.toLowerCase()} com ${v.replace(/ · /g, ", ")}`).join("; ")}.`, K.edu(), K.method(),
+  "Contato: WhatsApp, e-mail ascencioalexgabriel@gmail.com, Instagram @alexascencioai, LinkedIn. Atende remoto e no Brasil todo.", K.local(),
   "Trabalhos (id · título · categoria · ano): " + PROJECTS.map((p) => `${p.id} · ${p.title} · ${p.cat} · ${year(p)}`).join(" | ")].join("\n");

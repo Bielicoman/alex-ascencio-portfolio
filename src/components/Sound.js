@@ -372,7 +372,7 @@ Object.assign(Sound.prototype, {
   // aviso "toque para ouvir": a trilha quer tocar, mas o navegador ainda não liberou o áudio (rolar não conta como gesto)
   hint() { const show = this.enabled && !!this.musicWant && !(this.ctx && this.ctx.state === "running"); window.dispatchEvent(new CustomEvent("sfx:hint", { detail: show })); },
   music(want) { this.musicWant = want; this.hint(); if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
-  // trava por dono: o player e a EDTH seguram a música de forma independente (a EDTH soltar não religa a trilha com o vídeo aberto)
+  // trava por dono: o player e a EDITH seguram a música de forma independente (a EDITH soltar não religa a trilha com o vídeo aberto)
   musicHold(h, who = "player") {
     this.holds = this.holds || new Set();
     h ? this.holds.add(who) : this.holds.delete(who);
