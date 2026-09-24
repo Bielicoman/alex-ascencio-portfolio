@@ -22,15 +22,27 @@ class Sound {
     try { localStorage.setItem(KEY, on ? "on" : "off"); } catch { /* sem storage */ }
     if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.9 : 0, this.ctx.currentTime, 0.08);
     if (on) { this.unlock(); this.chime(); }
+    if (this.mus) this.musicApply();
+    this.hint?.();
     this.subs.forEach((f) => f(on));
   }
   unlock() {
     if (!this.enabled) return;
     if (!this.ctx) this.build();
-    if (this.ctx.state === "suspended") this.ctx.resume();
+    if (this.ctx.state === "suspended") this.ctx.resume().then(() => this.hint());
     this.unlocked = true;
+    this.hint();
+    if (this.musicWant && !this.mus?.timer) this.music(true);
   }
   ok() { return this.enabled && this.ctx && this.ctx.state === "running"; }
+  // tenta começar sem gesto: o navegador libera quando o site tem permissão de som
+  // (Chrome "Som: Permitir"/alto engajamento de mídia, Firefox "Permitir áudio e vídeo"); senão fica suspenso até o 1º clique
+  tryAutoplay() {
+    if (!this.enabled) return Promise.resolve(false);
+    if (!this.ctx) this.build();
+    const done = () => { const on = this.ctx.state === "running"; if (on) { this.unlocked = true; if (this.musicWant && !this.mus?.timer) this.music(true); } this.hint(); return on; };
+    return Promise.race([this.ctx.resume().then(done, done), new Promise((r) => setTimeout(() => r(done()), 400))]);
+  }
   // limita a taxa de disparo por tipo (ms)
   rate(k, ms) { const n = performance.now(); if (n - (this.last[k] || 0) < ms) return false; this.last[k] = n; return true; }
 
@@ -229,22 +241,47 @@ class Sound {
     for (const b of [this.air.g, this.pad.g, this.whirr.g]) { b.gain.cancelScheduledValues(t); b.gain.setTargetAtTime(b.gain.value * depth, t, 0.02); }
     setTimeout(() => this.scrollAir(0), hold * 1000);
   }
-  teleport(x) {
+  // estalo elétrico: micro-rajadas de ruído agudo com ganhos e filtros aleatórios
+  crackle(dur = 0.6, g = 0.08, x, at = this.ctx.currentTime, density = 70) {
+    const n = Math.round(dur * density);
+    for (let i = 0; i < n; i++) {
+      const t = at + Math.random() * dur, fade = 1 - (t - at) / dur;
+      const s = this.src(this.noise, t, 0.012), b = this.ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 2500 + Math.random() * 6000; b.Q.value = 1.5;
+      const e = this.env(g * (0.3 + Math.random() * 0.7) * fade + 0.0002, 0.0005, 0.004 + Math.random() * 0.01, t);
+      s.connect(b).connect(e); this.out(e, { rev: 0.2, pan: x == null ? Math.random() * 1.6 - 0.8 : this.panX(x) + (Math.random() - 0.5) * 0.6 });
+    }
+  }
+  zap(at = this.ctx.currentTime, g = 0.07, x) { // descarga: serra despencando de 2,6 kHz
+    const o = this.osc("sawtooth", 2400 + Math.random() * 800, at); o.frequency.exponentialRampToValueAtTime(160 + Math.random() * 120, at + 0.09);
+    const b = this.ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 1800; b.Q.value = 0.8;
+    const e = this.env(g, 0.001, 0.1, at); o.connect(b).connect(e); this.out(e, { rev: 0.3, pan: x == null ? Math.random() - 0.5 : this.panX(x) }); o.start(at); o.stop(at + 0.13);
+  }
+  teleport(x) { // "speed force": carga elétrica → estrondo sônico no salto → passagem com Doppler → estalos morrendo
     if (!this.ok()) return;
-    const ctx = this.ctx, t0 = ctx.currentTime, hit = t0 + 0.36;
-    // 1. sucção: ruído subindo + riser tonal + prato ao contrário
-    this.whoosh(0.36, true, 0.2, x);
-    const r = this.osc("sawtooth", 180, t0); r.frequency.exponentialRampToValueAtTime(1400, hit);
-    const rl = ctx.createBiquadFilter(); rl.type = "bandpass"; rl.Q.value = 3; rl.frequency.setValueAtTime(300, t0); rl.frequency.exponentialRampToValueAtTime(3000, hit);
-    const rg = ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.06, hit - 0.01); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.02);
-    r.connect(rl).connect(rg); this.out(rg, { rev: 0.4, pan: this.panX(x) }); r.start(t0); r.stop(hit + 0.05);
-    const cy = this.src(this.noise, t0, 0.4), ch = ctx.createBiquadFilter(); ch.type = "highpass"; ch.frequency.value = 5000;
-    const cg = ctx.createGain(); cg.gain.setValueAtTime(0.0001, t0); cg.gain.exponentialRampToValueAtTime(0.09, hit - 0.005); cg.gain.linearRampToValueAtTime(0.0001, hit + 0.01);
-    cy.connect(ch).connect(cg); this.out(cg, { rev: 0.3 });
-    setTimeout(() => this.duck(0.12, 1.4), 330);
-    this.impact(hit);
-    // 3. cauda
-    setTimeout(() => { this.shimmer(0.03); this.glitch(0.06, 5); this.whoosh(0.8, false, 0.09); }, 360);
+    const ctx = this.ctx, t0 = ctx.currentTime, hit = t0 + 0.28;
+    setTimeout(() => this.duck(0.2, 1), 250);
+    // carga: zumbido de campo (60/120 Hz com tremolo de 28 Hz) + estalos + zaps
+    const hum = ctx.createGain(); hum.gain.setValueAtTime(0.0001, t0); hum.gain.exponentialRampToValueAtTime(0.09, hit); hum.gain.exponentialRampToValueAtTime(0.0001, hit + 0.7);
+    // tremolo num estágio próprio (0–1), antes do envelope — modular o envelope direto somava ±0,5 ao ganho
+    const vca = ctx.createGain(); vca.gain.value = 0.5; vca.connect(hum);
+    const trem = this.osc("sine", 28, t0), tg = ctx.createGain(); tg.gain.value = 0.5; trem.connect(tg).connect(vca.gain);
+    [[60, "sawtooth"], [120, "square"]].forEach(([f, ty]) => { const o = this.osc(ty, f, t0), l = ctx.createBiquadFilter(); l.type = "lowpass"; l.frequency.value = 900; o.connect(l).connect(vca); o.start(t0); o.stop(hit + 0.8); });
+    trem.start(t0); trem.stop(hit + 0.8); this.out(hum, { rev: 0.2 });
+    this.crackle(0.3, 0.075, x, t0, 90);
+    [0, 0.08, 0.17, 0.24].forEach((d) => this.zap(t0 + d, 0.055, x));
+    this.whoosh(0.28, true, 0.13, x);
+    // salto: estrondo sônico (impacto mais contido) + estalo largo
+    this.impact(hit, 0.3);
+    const cr = this.src(this.noise, hit, 0.1), ch = ctx.createBiquadFilter(); ch.type = "highpass"; ch.frequency.value = 1500;
+    const ce = this.env(0.22, 0.001, 0.09, hit); cr.connect(ch).connect(ce); this.out(ce, { rev: 0.5 });
+    // passagem Doppler: faixa brilhante varrendo de 6 kHz a 300 Hz, esquerda → direita
+    const dp = this.src(this.noise, hit, 0.6), db = ctx.createBiquadFilter(); db.type = "bandpass"; db.Q.value = 2.2;
+    db.frequency.setValueAtTime(6000, hit); db.frequency.exponentialRampToValueAtTime(300, hit + 0.5);
+    const de = this.env(0.1, 0.01, 0.48, hit), pan = ctx.createStereoPanner(); pan.pan.setValueAtTime(-0.9, hit); pan.pan.linearRampToValueAtTime(0.9, hit + 0.5);
+    dp.connect(db).connect(de).connect(pan); pan.connect(this.master); const sd = ctx.createGain(); sd.gain.value = 0.3; pan.connect(sd).connect(this.revIn);
+    // rescaldo: raios na tela inteira = estalos espalhados + zaps rarefeitos
+    this.crackle(0.75, 0.05, null, hit + 0.02, 60);
+    [0.06, 0.18, 0.33, 0.5].forEach((d) => this.zap(hit + d, 0.038));
   }
   // impacto de trailer: estalo + soco saturado + sub + braam (serras desafinadas com filtro fechando)
   impact(hit = this.ctx.currentTime, g = 1) {
@@ -262,27 +299,137 @@ class Sound {
     [55, 82.41, 110, 164.81].forEach((f, i) => [-14, 9].forEach((det) => { const o = this.osc("sawtooth", f, hit); o.detune.value = det + i * 3; o.connect(braam); o.start(hit); o.stop(hit + 2.4); }));
     braam.connect(bd).connect(be); this.out(be, { rev: 0.85 });
   }
-  // abertura: fenda de luz (sopro + riser) → impacto quando o letterbox abre → um tick por letra
-  intro(openAt = 0.9, letters = 9) {
+  // ── abertura: trilha própria, sutil, sincronizada com a animação (sem o impacto do teleporte) ──
+  // fase 1 — logo em wipe + timecode contando
+  introPre(dur = 1.4) {
     if (!this.ok()) return;
-    const t0 = this.ctx.currentTime, hit = t0 + openAt;
-    this.whoosh(openAt, true, 0.14);
-    const r = this.osc("sine", 220, t0); r.frequency.exponentialRampToValueAtTime(880, hit);
-    const rg = this.ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.035, hit - 0.02); rg.gain.linearRampToValueAtTime(0.0001, hit + 0.03);
-    r.connect(rg); this.out(rg, { rev: 0.6 }); r.start(t0); r.stop(hit + 0.05);
-    this.impact(hit, 0.85);
-    setTimeout(() => this.shimmer(0.028), openAt * 1000 + 150);
-    for (let i = 0; i < letters; i++) {
-      const d = Math.abs(i - (letters - 1) / 2), at = hit + 0.35 + d * 0.055;
-      const o = this.osc("sine", PENT[(4 + i) % PENT.length] * 2, at), e = this.env(0.014, 0.002, 0.12, at);
-      o.connect(e); this.out(e, { rev: 0.5, pan: (i / (letters - 1)) * 1.2 - 0.6 }); o.start(at); o.stop(at + 0.15);
+    const t0 = this.ctx.currentTime;
+    this.whoosh(0.8, true, 0.035);
+    const o = this.osc("sine", 42, t0); o.frequency.exponentialRampToValueAtTime(64, t0 + dur); // "fita ganhando velocidade"
+    const e = this.ctx.createGain(); e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(0.05, t0 + 0.6); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.4);
+    o.connect(e); this.out(e, { rev: 0.2 }); o.start(t0); o.stop(t0 + dur + 0.5);
+    for (let k = 0; k < Math.floor(dur * 8); k++) { // ticks do timecode
+      const t = t0 + 0.35 + k / 8, c = this.osc("square", 3200, t), ce = this.env(0.0035 + (k % 4 === 0 ? 0.003 : 0), 0.0008, 0.012, t);
+      const h = this.ctx.createBiquadFilter(); h.type = "highpass"; h.frequency.value = 2500; c.connect(h).connect(ce); this.out(ce, { rev: 0.1 }); c.start(t); c.stop(t + 0.02);
     }
+  }
+  // fase 2 — fenda de luz → letterbox abre → letras do centro para fora → foto → chips
+  introOpen(openAt = 0.9, letters = 9) {
+    if (!this.ok()) return;
+    const ctx = this.ctx, t0 = ctx.currentTime, open = t0 + openAt;
+    // fenda: glissando agudo fino, como luz acendendo
+    const sl = this.osc("sine", 1760, t0 + openAt - 0.55); sl.frequency.exponentialRampToValueAtTime(3520, open);
+    const se = ctx.createGain(); se.gain.setValueAtTime(0.0001, t0 + openAt - 0.55); se.gain.exponentialRampToValueAtTime(0.014, open - 0.05); se.gain.exponentialRampToValueAtTime(0.0001, open + 0.4);
+    sl.connect(se); this.out(se, { rev: 0.8 }); sl.start(t0 + openAt - 0.55); sl.stop(open + 0.5);
+    // letterbox: "whoomp" grave e macio + ar descendo (sem transiente duro)
+    const w = this.osc("sine", 70, open); w.frequency.exponentialRampToValueAtTime(44, open + 1);
+    const we = ctx.createGain(); we.gain.setValueAtTime(0.0001, open); we.gain.exponentialRampToValueAtTime(0.14, open + 0.18); we.gain.exponentialRampToValueAtTime(0.0001, open + 1.4);
+    w.connect(we); this.out(we, { rev: 0.35 }); w.start(open); w.stop(open + 1.5);
+    setTimeout(() => this.whoosh(1.1, false, 0.04), openAt * 1000);
+    // letras: plucks afinados, do centro para fora (mesma ordem da animação)
+    for (let i = 0; i < letters; i++) {
+      const d = Math.abs(i - (letters - 1) / 2), at = open + 0.35 + d * 0.055;
+      const o = this.osc("triangle", PENT[(2 + Math.round(d)) % PENT.length], at), e = this.env(0.012, 0.003, 0.35, at);
+      o.connect(e); this.out(e, { rev: 0.55, pan: (i / (letters - 1)) * 1.2 - 0.6 }); o.start(at); o.stop(at + 0.4);
+    }
+    // foto: pad quente (lá menor com 9ª) entrando devagar
+    const pad = ctx.createBiquadFilter(); pad.type = "lowpass"; pad.frequency.setValueAtTime(300, open + 0.3); pad.frequency.exponentialRampToValueAtTime(1400, open + 2.2);
+    const pe = ctx.createGain(); pe.gain.setValueAtTime(0.0001, open + 0.3); pe.gain.exponentialRampToValueAtTime(0.022, open + 1.4); pe.gain.exponentialRampToValueAtTime(0.0001, open + 4.2);
+    [220, 261.63, 329.63, 493.88].forEach((f) => [-6, 6].forEach((det) => { const o = this.osc("sawtooth", f, open + 0.3); o.detune.value = det; o.connect(pad); o.start(open + 0.3); o.stop(open + 4.4); }));
+    pad.connect(pe); this.out(pe, { rev: 0.9 });
+    // chips surgindo: pings de vidro bem leves, em cascata
+    [0, 0.09, 0.18, 0.27, 0.36].forEach((d, i) => {
+      const at = open + 0.85 + d, o = this.osc("sine", 2637 + i * 220, at), e = this.env(0.006, 0.003, 0.4, at);
+      o.connect(e); this.out(e, { rev: 0.7, pan: i % 2 ? 0.5 : -0.5 }); o.start(at); o.stop(at + 0.45);
+    });
   }
   reveal() { // título de seção entrando: sopro muito leve
     if (!this.ok() || !this.rate("reveal", 700)) return;
     this.whoosh(0.55, true, 0.025);
   }
 }
+
+/* ───────── trilha: groove cinematográfico gerado ao vivo (lá menor, 96 BPM, Am–F–C–G) ───────── */
+const BPM = 96, STEP = 60 / BPM / 4;
+const CHORDS = [
+  { root: 110, pad: [220, 261.63, 329.63] },   // Am
+  { root: 87.31, pad: [174.61, 220, 261.63] }, // F
+  { root: 130.81, pad: [196, 261.63, 329.63] }, // C
+  { root: 98, pad: [196, 246.94, 293.66] },    // G
+];
+const KICK = [0, 7, 8, 10], CLAP = [4, 12], BASS = [0, 3, 6, 8, 11, 14];
+Object.assign(Sound.prototype, {
+  musicBus() {
+    if (this.mus) return this.mus;
+    const ctx = this.ctx, g = ctx.createGain(); g.gain.value = 0.0001;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 30;
+    g.connect(hp).connect(this.master);
+    const rv = ctx.createGain(); rv.gain.value = 0.18; g.connect(rv).connect(this.revIn);
+    this.mus = { g, on: false, want: false, step: 0, next: 0, timer: null, level: 0.25, hold: 1 }; // ~ −29 dB RMS: fundo
+    return this.mus;
+  },
+  // "want": zona da trilha (scroll); "hold": 0 enquanto um vídeo está aberto
+  // aviso "toque para ouvir": a trilha quer tocar, mas o navegador ainda não liberou o áudio (rolar não conta como gesto)
+  hint() { const show = this.enabled && !!this.musicWant && !(this.ctx && this.ctx.state === "running"); window.dispatchEvent(new CustomEvent("sfx:hint", { detail: show })); },
+  music(want) { this.musicWant = want; this.hint(); if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
+  musicHold(h) { if (!this.ctx) return; const m = this.musicBus(); m.hold = h ? 0 : 1; this.musicApply(); },
+  musicApply() {
+    const m = this.mus, t = this.ctx.currentTime, on = this.enabled && m.want && m.hold;
+    if (on) {
+      if (!m.timer) { m.next = t + 0.06; m.timer = setInterval(() => this.musicTick(), 25); }
+      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(m.level, t, 0.9); // fade-in ~2,5 s
+    } else if (m.timer) {
+      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(0.0001, t, 0.55); // fade-out ~1,8 s
+      clearTimeout(m.stopT); m.stopT = setTimeout(() => { if (!(this.enabled && m.want && m.hold)) { clearInterval(m.timer); m.timer = null; } }, 2600);
+    }
+  },
+  musicTick() { // agendador com antecipação de 120 ms
+    const m = this.mus;
+    while (m.next < this.ctx.currentTime + 0.12) { this.musicStep(m.step, m.next); m.next += STEP; m.step++; }
+  },
+  musicStep(n, t) {
+    const s = n % 16, bar = Math.floor(n / 16), ch = CHORDS[bar % 4], full = bar % 16 >= 4, g = this.mus.g;
+    const tone = (type, f, at, peak, dec, dest = g, fl) => {
+      const o = this.osc(type, f, at), e = this.env(peak, 0.004, dec, at);
+      if (fl) { o.connect(fl); fl.connect(e); } else o.connect(e);
+      e.connect(dest); o.start(at); o.stop(at + dec + 0.05);
+    };
+    if (KICK.includes(s)) {
+      const o = this.osc("sine", 150, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.12);
+      const e = this.env(0.9, 0.002, 0.34, t); o.connect(e).connect(g); o.start(t); o.stop(t + 0.4);
+    }
+    if (full && CLAP.includes(s)) {
+      const nz = this.src(this.noise, t, 0.2), b = this.ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 1800; b.Q.value = 0.9;
+      const e = this.env(0.32, 0.002, 0.16, t); nz.connect(b).connect(e).connect(g);
+      tone("triangle", 190, t, 0.12, 0.08);
+    }
+    { // hats: 16 avos com acento no contratempo; aberto no passo 14
+      const open = s === 14, nz = this.src(this.noise, t, open ? 0.3 : 0.05), h = this.ctx.createBiquadFilter(); h.type = "highpass"; h.frequency.value = 7500;
+      const e = this.env((s % 4 === 2 ? 0.1 : 0.045) * (open ? 1.4 : 1), 0.001, open ? 0.24 : 0.035, t); nz.connect(h).connect(e).connect(g);
+    }
+    if (BASS.includes(s)) {
+      const f = ch.root * (s === 6 || s === 14 ? 2 : 1), lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
+      lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(160, t + 0.2);
+      tone("sawtooth", f, t, 0.22, 0.24, g, lp);
+      tone("sine", f / 2, t, 0.3, 0.26);
+    }
+    if (s === 0) { // pad do compasso, com respiração no kick (sidechain)
+      const dur = STEP * 16, lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = 0.6;
+      const e = this.ctx.createGain(); e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.07, t + 0.5);
+      KICK.forEach((k) => { const kt = t + k * STEP; e.gain.setValueAtTime(0.02, kt + 0.001); e.gain.linearRampToValueAtTime(0.07, kt + 0.28); });
+      e.gain.setTargetAtTime(0.0001, t + dur - 0.2, 0.08);
+      ch.pad.forEach((f) => [-9, 9].forEach((d) => { const o = this.osc("sawtooth", f, t); o.detune.value = d; o.connect(lp); o.start(t); o.stop(t + dur + 0.3); }));
+      lp.connect(e).connect(g);
+      const sp = this.ctx.createGain(); sp.gain.value = 0.5; e.connect(sp).connect(this.revIn);
+    }
+    if (full && s % 2 === 0) { // arpejo de pluck, duas oitavas acima
+      const f = ch.pad[(s / 2) % 3] * (s % 8 === 6 ? 4 : 2), e = this.env(0.05, 0.002, 0.18, t), o = this.osc("triangle", f, t);
+      const p = this.ctx.createStereoPanner(); p.pan.value = ((s / 2) % 3 - 1) * 0.5;
+      o.connect(e).connect(p).connect(g); const sp = this.ctx.createGain(); sp.gain.value = 0.6; p.connect(sp).connect(this.revIn);
+      o.start(t); o.stop(t + 0.22);
+    }
+  },
+});
 
 export const sfx = new Sound();
 if (typeof window !== "undefined") window.__sfx = sfx; // medição de nível nos testes
