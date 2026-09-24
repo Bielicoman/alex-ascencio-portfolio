@@ -14,6 +14,7 @@ import runDemo from "./components/Demo";
 import { sfx } from "./components/Sound";
 import Speedforce from "./components/Speedforce";
 import * as I from "./components/Icons";
+import { LOGO_DR, LOGO_PT, LOGO_COMFY } from "./components/logos";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -544,16 +545,6 @@ function HoverPreview({ src, on }) {
   );
 }
 const canHover = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
-function CardPreview({ p }) {
-  if (p.preview) return null; // com loop hospedado, o HoverPreview já cuida
-  return (
-    <span className="card-prev" aria-hidden="true">
-      {p.video
-        ? <video src={p.video} muted autoPlay playsInline loop />
-        : <iframe title="" tabIndex={-1} src={`${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&start=15`} allow="autoplay; encrypted-media" />}
-    </span>
-  );
-}
 function Archive({ open }) {
   const [cat, setCat] = useState("Todos");
   const [prev, setPrev] = useState(null);
@@ -611,7 +602,6 @@ function Archive({ open }) {
             <span className="card-media" onPointerMove={tilt} onPointerEnter={() => canHover() && setHovId(p.id)} onPointerLeave={(e) => { reset(e); setHovId(null); }}>
               <img src={thumb(p)} alt="" loading="lazy" width="640" height="360" />
               <HoverPreview src={p.preview} on={hovId === p.id || prev === p.id} />
-              {prev === p.id && <CardPreview p={p} />}
               <span className="card-glare" />
               <span className="card-q mono">{p.q}</span>
               <PlayBtn className="card-play" />
@@ -684,6 +674,13 @@ const TOOLS = [
   ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"], ["Pt", "Pro Tools", "au", "pt"],
   ["Cf", "ComfyUI", "ia", "cf"], ["Hf", "Higgsfield", "ia", "hf"], ["</>", "Plugins CEP/UXP", "dev", "dev"],
 ];
+// ícone de cada software: logos oficiais onde há fonte pública; Adobe pela especificação oficial (#00005B / #9999FF)
+function ToolIcon({ cls, m }) {
+  if (cls === "dr") return <span className="tool-m tm-dr"><svg viewBox="0 0 24 24"><path d={LOGO_DR.path} /></svg></span>;
+  if (cls === "pt") return <span className="tool-m tm-pt"><svg viewBox="0 0 24 24"><path d={LOGO_PT.path} /></svg></span>;
+  if (cls === "cf") return <span className="tool-m tm-cf"><svg viewBox="0 0 520 520"><path d={LOGO_COMFY.path} /></svg></span>;
+  return <span className={`tool-m tm-${cls}`}><b>{m}</b></span>;
+}
 // "Sobre" como apresentação: no desktop a seção fica fixa e o scroll conduz uma cena em capítulos;
 // no celular a mesma coreografia roda por tempo quando a seção entra. Som em cada marcação.
 const CHAPTERS = [["01", "Quem sou"], ["02", "Trajetória"], ["03", "Ferramentas"]];
@@ -697,8 +694,10 @@ function About() {
     gsap.to(card.current, { rotateY: ((e.clientX - r.left) / r.width - 0.5) * 8, rotateX: ((e.clientY - r.top) / r.height - 0.5) * -8, duration: 0.8, ease: "power3" });
     card.current.style.setProperty("--px", `${((e.clientX - r.left) / r.width) * 100}%`);
     card.current.style.setProperty("--py", `${((e.clientY - r.top) / r.height) * 100}%`);
+    const gx = ((e.clientX - r.left) / r.width - 0.5), gy = ((e.clientY - r.top) / r.height - 0.5);
+    gsap.to(".ab-glow", { x: gx * 60, y: gy * 60, scale: 1.12, opacity: 0.95, duration: 0.9, ease: "power3" });
   };
-  const leave = () => gsap.to(card.current, { rotateX: 0, rotateY: 0, duration: 1.2, ease: "elastic.out(1,0.5)" });
+  const leave = () => { gsap.to(card.current, { rotateX: 0, rotateY: 0, duration: 1.2, ease: "elastic.out(1,0.5)" }); gsap.to(".ab-glow", { x: 0, y: 0, scale: 1.04, opacity: 0.7, duration: 1.2, ease: "power3" }); };
 
   useEffect(() => {
     const el = root.current;
@@ -721,6 +720,7 @@ function About() {
           .set(".ab-slide", { autoAlpha: 0, y: 40 })
           .set(".ab-light", { xPercent: -120 })
           .to(".ab-kin", { opacity: 1, xPercent: -8, duration: 2.4, ease: "none" }, 0)
+          .fromTo(".ab-kin", { letterSpacing: "0.02em" }, { letterSpacing: "-0.06em", duration: 2.4, ease: "power2.out" }, 0)
           .call(cue(() => { sfx.whoosh(0.9, true, 0.07); }), null, 0.05)
           .to(photo, { clipPath: "circle(75% at 50% 45%)", duration: 1.3, ease: "expo.inOut" }, 0.2)
           .to(".ab-photo img", { scale: 1.12, duration: 1.6, ease: "power2.out" }, 0.2)
@@ -768,13 +768,13 @@ function About() {
           .to({}, { duration: 0.8 });
         if (desk) {
           stRef.current = ScrollTrigger.create({
-            trigger: el, start: "top top", end: () => `+=${innerHeight * 4.5}`, pin: true, scrub: 0.6, animation: tl, refreshPriority: -1, invalidateOnRefresh: true,
+            trigger: el, start: "top top", end: () => `+=${innerHeight * 2.6}`, pin: true, scrub: 0.5, animation: tl, refreshPriority: -1, invalidateOnRefresh: true,
             onToggle: (st) => { tl.__live = st.isActive; },
             onUpdate: (st) => { const tt = tl.time(); setCh(tt >= 8.7 ? 2 : tt >= 5.7 ? 1 : 0); },
           });
         } else {
           tl.pause();
-          ScrollTrigger.create({ trigger: el, start: "top 70%", once: true, onEnter: () => { tl.__live = true; tl.timeScale(1.15).play(); } });
+          ScrollTrigger.create({ trigger: el, start: "top 70%", once: true, onEnter: () => { tl.__live = true; tl.timeScale(1.9).play(); } });
         }
         return () => { tl.kill(); stRef.current = null; };
       };
@@ -797,6 +797,7 @@ function About() {
       <div className="ab-grid">
         <div className="ab-photo-wrap" onPointerMove={move} onPointerLeave={leave}>
           <div className="ab-photo">
+            <img className="ab-glow" src="/media/alex-profile.webp" alt="" aria-hidden="true" />
             <a className="about-photo" ref={card} href={IG} target="_blank" rel="noreferrer" aria-label="Abrir o Instagram de Alex Ascencio (@alexascencioai)">
               <img src="/media/alex-profile.webp" alt="Retrato de Alex Ascencio em fundo vermelho" loading="lazy" />
               <span className="ab-light" aria-hidden="true" />
@@ -843,7 +844,7 @@ function About() {
               <div className={`tools${hl ? " has-hl" : ""}`} onPointerLeave={() => setHl(null)}>
                 {TOOLS.map(([m, n, c, cls], i) => (
                   <span key={n} className={`tool${hl === c ? " on" : ""}`} style={{ "--d": i }} onPointerEnter={() => setHl(c)}>
-                    <span className={`tool-m tm-${cls}`}><b>{m}</b></span>
+                    <ToolIcon cls={cls} m={m} />
                     <span className="tool-t">{n}<small className="mono">{TOOL_CATS.find(([k]) => k === c)[1]}</small></span>
                   </span>
                 ))}
@@ -1028,6 +1029,11 @@ export default function App() {
   const [demo, setDemo] = useState(false);
   const [hint, setHint] = useState(false);
   useEffect(() => { const f = (e) => setHint(e.detail); window.addEventListener("sfx:hint", f); return () => window.removeEventListener("sfx:hint", f); }, []);
+  useEffect(() => { // o tour abre e fecha o player de verdade
+    const o = (e) => setProject(PROJECTS.find((p) => p.id === e.detail.id) || null), c = () => setProject(null);
+    window.addEventListener("demo:open", o); window.addEventListener("demo:close", c);
+    return () => { window.removeEventListener("demo:open", o); window.removeEventListener("demo:close", c); };
+  }, []);
   const stopDemo = useRef(null);
   const toggleDemo = () => {
     if (stopDemo.current) { stopDemo.current(); return; }
@@ -1057,6 +1063,7 @@ export default function App() {
     }
     // teletransporte: a tela ondula (turbulência + deslocamento + RGB split), salta no pico e se recompõe no destino
     const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
+    const lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches; // celular: sem filtro SVG em tela cheia
     let warping = false;
     const speed = new Speedforce();
     const teleport = (el, x, y) => {
@@ -1073,11 +1080,11 @@ export default function App() {
         turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
         maps[0].setAttribute("scale", (o.s * 0.7).toFixed(1));
         maps[1].setAttribute("scale", (o.s * 1.35).toFixed(1));
-        if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
+        if (!chromium && !lite) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
       };
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
-      veil.classList.add("on", chromium ? "is-svg" : "is-blur");
-      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur"); veil.style.backdropFilter = ""; warping = false; } })
+      veil.classList.add("on", lite ? "is-lite" : chromium ? "is-svg" : "is-blur");
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; } })
         .to(o, { s: 130, t: 0.5, duration: 0.28, ease: "power3.in", onUpdate: paint })
         .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
         .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
