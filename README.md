@@ -1,4 +1,4 @@
-# Alex Ascencio — Portfólio v03
+# Alex Ascencio — Portfólio v04
 
 Reconstrução completa do site. React 19 + Vite 7, three.js (partículas e lente em shader), GSAP ScrollTrigger + Lenis (scroll suave), fontes Geist / Geist Mono hospedadas localmente.
 
@@ -29,3 +29,9 @@ Movimento reduzido respeitado (sem pins, sem Lenis, poster estático no Lab).
 
 ## Build
 `public/` guarda originais pesados de identidade (não publicados). `vite.config.js` copia para `dist/` só: media, brand, favicons, currículo, robots e sitemap.
+
+## Vídeos hospedados no site
+Projetos sem YouTube usam `video: "/media/videos/arquivo.mp4"` em `src/projects.js` e a miniatura em `public/media/{id}.webp`. Encode: H.264 High, CRF 22, maxrate 3 Mb/s, AAC 160k, `-movflags +faststart` (~20 MB por minuto de 1080p).
+
+## Logotipo
+`Lockup` e `Wordmark` em `src/App.jsx` usam `WM_PATH` (src/brand.js): "Alex Ascencio" em Geist 640 com os dois A substituídos pelo A triangular da marca (86% de largura). Arquivos finais em `G:\Meu Drive\01 PESSOAL\IDENTIDADE VISUAL\LOGOTIPO`.

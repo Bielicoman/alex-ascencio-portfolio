@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { PROJECTS } from "./projects";
-import { MARK_PATH } from "./brand";
+import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
 import ParticleField from "./components/ParticleField";
 import LensField from "./components/LensField";
 import * as I from "./components/Icons";
@@ -17,7 +17,7 @@ const LI = "https://www.linkedin.com/in/ascencioalexgabriel/";
 const thumb = (p) => `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => (p.title.split(/\||—/)[1] || p.cat).trim();
-const FEATURED = [24, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
+const FEATURED = [25, 24, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
 const CATS = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
 // altura em px calculada por área óptica equivalente (ver README)
 const CLIENTS = [
@@ -25,7 +25,7 @@ const CLIENTS = [
   ["Prisma Brasil", "prisma", 52], ["Dilson Castro", "dilson", 38.1], ["Via Global", "via-global", 33.6], ["Entre Aspas", "entre-aspas", 27.5],
 ];
 const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Communion", "Kati Carvalho", "Califórnia Dreams", "Willian Krusty", "Pedro Valença", "Prisminha", "Dunamis Studio", "Patrícia de Paiva", "CPB"];
-const NAV = [["#filmes", "Filmes"], ["#lab", "Lab"], ["#metodo", "Método"], ["#arquivo", "Arquivo"], ["#sobre", "Sobre"]];
+const NAV = [["#filmes", "Filmes"], ["#lab", "Lab"], ["#metodo", "Método"], ["#arquivo", "Seleção"], ["#sobre", "Sobre"]];
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const fps = 24;
 const tc = (sec) => {
@@ -42,8 +42,19 @@ function Mark({ className = "" }) {
     </svg>
   );
 }
-function Badge({ size = 44 }) {
-  return <span className="badge" style={{ width: size, height: size }}><Mark /></span>;
+// Logotipo: marca AA + fio + "Alex Ascencio" (A's derivados da marca)
+function Lockup({ height = 28, className = "", mark = "var(--red-hi)" }) {
+  const mh = WM_H, mw = (mh * 262) / 151, gap = 400, W = mw + gap * 2 + WM_W;
+  return (
+    <svg className={`lockup ${className}`} viewBox={`0 0 ${W.toFixed(0)} ${mh}`} style={{ height }} role="img" aria-label="Alex Ascencio">
+      <g transform={`scale(${(mh / 151).toFixed(4)})`}><path d={MARK_PATH} fill={mark} /></g>
+      <rect x={mw + gap - 18} y={mh * 0.08} width="36" height={mh * 0.92} fill="currentColor" opacity=".3" />
+      <path d={WM_PATH} fill="currentColor" transform={`translate(${mw + gap * 2} 0)`} />
+    </svg>
+  );
+}
+function Wordmark({ height = 28, className = "" }) {
+  return <svg className={`wordmark ${className}`} viewBox={`0 0 ${WM_W} ${WM_H}`} style={{ height }} role="img" aria-label="Alex Ascencio"><path d={WM_PATH} fill="currentColor" /></svg>;
 }
 function Magnetic({ children, strength = 0.3 }) {
   const ref = useRef(null);
@@ -82,38 +93,80 @@ function Title({ children, className = "" }) {
   return <h2 className={`display js-title ${className}`}><span className="title-inner">{children}</span></h2>;
 }
 
-/* ───────── cursor ───────── */
+/* ───────── cursor: seta 3D arredondada ───────── */
 function Cursor() {
-  const dot = useRef(null), pill = useRef(null), label = useRef(null);
+  const wrap = useRef(null), tilt = useRef(null), glow = useRef(null), label = useRef(null);
   useEffect(() => {
     if (matchMedia("(pointer: coarse)").matches) return;
     const root = document.documentElement;
     root.classList.add("has-cursor");
-    const xd = gsap.quickTo(dot.current, "x", { duration: 0.12, ease: "power3" }), yd = gsap.quickTo(dot.current, "y", { duration: 0.12, ease: "power3" });
-    const xp = gsap.quickTo(pill.current, "x", { duration: 0.5, ease: "power3" }), yp = gsap.quickTo(pill.current, "y", { duration: 0.5, ease: "power3" });
-    const move = (e) => { xd(e.clientX); yd(e.clientY); xp(e.clientX); yp(e.clientY); root.classList.add("cursor-live"); };
+    const rx = gsap.quickTo(tilt.current, "rotateX", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
+    const ry = gsap.quickTo(tilt.current, "rotateY", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
+    const rz = gsap.quickTo(tilt.current, "rotateZ", { duration: 0.9, ease: "elastic.out(1, 0.4)" });
+    const gx = gsap.quickTo(glow.current, "x", { duration: 0.55, ease: "power3" }), gy = gsap.quickTo(glow.current, "y", { duration: 0.55, ease: "power3" });
+    let lx = 0, ly = 0, lt = performance.now(), idle;
+    const clamp = (v, m) => Math.max(-m, Math.min(m, v));
+    const move = (e) => {
+      const x = e.clientX, y = e.clientY, t = performance.now(), dt = Math.max(8, t - lt);
+      const vx = ((x - lx) / dt) * 16, vy = ((y - ly) / dt) * 16;
+      wrap.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      gx(x); gy(y);
+      ry(clamp(vx * 2.2, 40)); rx(clamp(-vy * 2.2, 40)); rz(clamp(vx * 0.9, 16));
+      tilt.current.style.setProperty("--sx", `${50 + clamp(vx * 3, 45)}%`);
+      tilt.current.style.setProperty("--sy", `${50 + clamp(vy * 3, 45)}%`);
+      lx = x; ly = y; lt = t;
+      clearTimeout(idle); idle = setTimeout(() => { rx(0); ry(0); rz(0); }, 90);
+      root.classList.add("cursor-live");
+    };
     const over = (e) => {
-      const media = e.target.closest("[data-cursor]");
-      const link = e.target.closest("a, button, input, textarea, select, label");
-      root.classList.toggle("cursor-link", !!link && !media);
+      const t = e.target;
+      const media = t.closest("[data-cursor]");
+      const text = t.closest("input:not([type=range]), textarea, select");
+      const link = t.closest("a, button, label, [role=button]");
+      root.classList.toggle("cursor-text", !!text);
+      root.classList.toggle("cursor-link", !!link && !media && !text);
       root.classList.toggle("cursor-media", !!media);
       if (media) label.current.textContent = media.getAttribute("data-cursor");
     };
+    const down = () => root.classList.add("cursor-down");
+    const up = () => root.classList.remove("cursor-down");
     const leave = () => root.classList.remove("cursor-live");
     window.addEventListener("pointermove", move, { passive: true });
     window.addEventListener("pointerover", over, { passive: true });
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointerup", up);
     document.addEventListener("pointerleave", leave);
     return () => {
+      clearTimeout(idle);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerover", over);
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointerup", up);
       document.removeEventListener("pointerleave", leave);
-      root.classList.remove("has-cursor", "cursor-live", "cursor-link", "cursor-media");
+      root.classList.remove("has-cursor", "cursor-live", "cursor-link", "cursor-media", "cursor-text", "cursor-down");
     };
   }, []);
   return (
     <>
-      <div className="cursor-dot" ref={dot} aria-hidden="true" />
-      <div className="cursor-pill" ref={pill} aria-hidden="true"><span><I.Play size={10} /><b ref={label}>Assistir</b></span></div>
+      <div className="cur-glow" ref={glow} aria-hidden="true" />
+      <div className="cur" ref={wrap} aria-hidden="true">
+        <div className="cur-tilt" ref={tilt}>
+          <svg className="cur-arrow" viewBox="0 0 28 28" width="28" height="28">
+            <defs>
+              <linearGradient id="cur-fill" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="var(--c1)" /><stop offset=".55" stopColor="var(--c2)" /><stop offset="1" stopColor="var(--c3)" />
+              </linearGradient>
+              <linearGradient id="cur-edge" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#fff" stopOpacity=".95" /><stop offset=".5" stopColor="#fff" stopOpacity=".15" /><stop offset="1" stopColor="#ff3b3b" stopOpacity=".9" />
+              </linearGradient>
+            </defs>
+            <path className="cur-shape" d="M5.1 3.2c-1.1-.5-2.3.6-1.8 1.7l8.5 20.1c.5 1.2 2.2 1.1 2.6-.1l2.4-7c.2-.4.5-.8 1-1l7-2.4c1.2-.4 1.3-2.1.1-2.6L5.1 3.2z" fill="url(#cur-fill)" stroke="url(#cur-edge)" strokeWidth="1.1" strokeLinejoin="round" />
+            <path className="cur-spec" d="M6.2 5.6 12.4 20" stroke="#fff" strokeOpacity=".75" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          </svg>
+          <span className="cur-shine" />
+        </div>
+        <div className="cur-label"><I.Play size={10} /><b ref={label}>Assistir</b></div>
+      </div>
     </>
   );
 }
@@ -136,7 +189,7 @@ function Preloader({ onDone: done }) {
   return (
     <div className="preloader" ref={ref} aria-hidden="true">
       <div className="pre-inner">
-        <Badge size={84} />
+        <Lockup height={46} className="pre-lockup" />
         <span className="pre-tc" ref={num}>00:00:00:00</span>
         <span className="pre-bar"><i ref={bar} /></span>
       </div>
@@ -165,8 +218,7 @@ function Nav() {
   return (
     <header className="nav">
       <a href="#top" className="nav-brand" aria-label="Alex Ascencio, início">
-        <Badge size={38} />
-        <span>Alex Ascencio<small>Editor & Filmmaker</small></span>
+        <Lockup height={22} />
       </a>
       <nav ref={linksRef} className={`nav-links ${open ? "is-open" : ""}`} aria-label="Principal">
         <span className="nav-pill" ref={pillRef} aria-hidden="true" />
@@ -194,7 +246,7 @@ function Player({ project, onClose }) {
     window.__lenis?.stop();
     return () => { window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
   }, []);
-  const watch = project.url.replace("/embed/", "/watch?v=");
+  const watch = project.url?.replace("/embed/", "/watch?v=");
   return (
     <dialog ref={ref} className="player" onCancel={onClose} onClick={(e) => e.target === e.currentTarget && onClose()} aria-labelledby="pl-title">
       <div className="player-card">
@@ -203,19 +255,23 @@ function Player({ project, onClose }) {
           <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
         </div>
         <div className="player-frame">
+          {project.video ? (
+            <video src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
+          ) : (
           <iframe
             title={project.title}
             src={`${project.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1`}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             referrerPolicy="strict-origin-when-cross-origin"
           />
+          )}
         </div>
         <div className="player-info">
           <div>
             <h2 id="pl-title">{short(project)}</h2>
             <p>{artistOf(project)} — {project.desc}</p>
           </div>
-          <Btn href={watch} target="_blank" rel="noreferrer" variant="glass">YouTube</Btn>
+          {!project.video && <Btn href={watch} target="_blank" rel="noreferrer" variant="glass">YouTube</Btn>}
         </div>
       </div>
     </dialog>
@@ -295,7 +351,7 @@ function Manifesto() {
   const words = "Eu corto pela cena, não pela fala. A imagem estabelece o lugar. A fala entra quando você já sabe onde está.".split(" ");
   const n4k = PROJECTS.filter((p) => p.q === "4K").length;
   const years = PROJECTS.map((p) => +p.date.slice(0, 4));
-  const stats = [[PROJECTS.length, "Filmes publicados"], [n4k, "Entregas em 4K"], [CATS.length - 1, "Formatos"], [`${Math.min(...years)}–${String(Math.max(...years)).slice(2)}`, "Em produção contínua"]];
+  const stats = [[PROJECTS.length, "Projetos selecionados"], [n4k, "Entregas em 4K"], [CATS.length - 1, "Formatos"], [`${Math.min(...years)}–${String(Math.max(...years)).slice(2)}`, "Em produção contínua"]];
   return (
     <section id="manifesto" className="manifesto">
       <div className="manifesto-pin">
@@ -341,7 +397,7 @@ function Featured({ open }) {
           ))}
           <a className="fcard fcard-more" href="#arquivo">
             <span className="more-n">{PROJECTS.length}</span>
-            <span className="more-l">trabalhos no arquivo</span>
+            <span className="more-l">projetos selecionados</span>
             <span className="more-a"><I.ArrowDown size={18} /></span>
           </a>
         </div>
@@ -444,7 +500,7 @@ function Method() {
           <div className="nle-top">
             <div className="monitor">
               {shot === "end" ? (
-                <div className="monitor-end"><Badge size={72} /></div>
+                <div className="monitor-end"><Lockup height={38} /></div>
               ) : (
                 <img key={shot} src={`/media/${shot}.webp`} alt="" />
               )}
@@ -528,8 +584,8 @@ function Archive({ open }) {
     <section id="arquivo" className="archive section">
       <div className="section-head">
         <div>
-          <Eyebrow n="05">Arquivo</Eyebrow>
-          <Title>Todos os <em>trabalhos.</em></Title>
+          <Eyebrow n="05">Seleção</Eyebrow>
+          <Title>Trabalhos <em>selecionados.</em></Title>
         </div>
         <label className="search reveal">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
@@ -586,7 +642,7 @@ function About() {
         <div className="about-photo-wrap" onPointerMove={move} onPointerLeave={leave}>
           <div className="about-photo js-photo" ref={card}>
             <img src="/media/alex-profile.webp" alt="Retrato de Alex Ascencio em fundo vermelho" loading="lazy" />
-            <div className="about-tag"><Badge size={32} /><span>Alex Ascencio<small>Editor & Filmmaker</small></span></div>
+            <div className="about-tag"><Mark className="about-mark" /><span>Editor & Filmmaker</span></div>
           </div>
         </div>
         <div className="about-copy">
@@ -698,8 +754,8 @@ function Footer() {
       </div>
       <div className="footer-cols">
         <div className="footer-brand">
-          <Badge size={52} />
-          <p>Alex Ascencio<span>Editor & Filmmaker · Criar. Contar. Impactar.</span></p>
+          <Lockup height={34} />
+          <p><span>Editor & Filmmaker · Criar. Contar. Impactar.</span></p>
         </div>
         <div><span className="mono">Navegação</span>{NAV.map(([h, t]) => <a key={h} href={h}>{t}</a>)}</div>
         <div><span className="mono">Contato</span><a href={`mailto:${EMAIL}`}>E-mail</a><a href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">WhatsApp</a><a href="/Alex_Ascencio_Curriculo.pdf" download>Currículo</a></div>
