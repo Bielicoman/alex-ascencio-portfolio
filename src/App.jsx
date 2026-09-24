@@ -12,6 +12,7 @@ import Cursor from "./components/Cursor";
 import Method from "./components/Method";
 import runDemo from "./components/Demo";
 import { sfx } from "./components/Sound";
+import Speedforce from "./components/Speedforce";
 import * as I from "./components/Icons";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -578,8 +579,9 @@ function Archive({ open }) {
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
+    gsap.set(".grid .card-media", { clearProps: "clipPath" }); gsap.set(".grid .card-media img", { clearProps: "transform" }); gsap.set(".grid .card-info", { clearProps: "transform,opacity" });
     ScrollTrigger.refresh();
-    if (!reducedMotion()) gsap.fromTo(".grid .card", { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.03, clearProps: "transform,opacity,visibility" });
+    if (!reducedMotion()) gsap.fromTo(".grid .card-media", { clipPath: "inset(100% 0% 0% 0% round 16px)" }, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 0.9, ease: "expo.inOut", stagger: 0.04, clearProps: "clipPath" });
   }, [cat, q]);
   return (
     <section id="arquivo" className="archive section">
@@ -1056,30 +1058,32 @@ export default function App() {
     // teletransporte: a tela ondula (turbulência + deslocamento + RGB split), salta no pico e se recompõe no destino
     const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
     let warping = false;
+    const speed = new Speedforce();
     const teleport = (el, x, y) => {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
       if (warping) return;
       warping = true;
       sfx.teleport(x);
+      speed.burst(x, y, 0.28);
       const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
       const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
       const o = { s: 0, t: 0 };
       const paint = () => {
-        turb.setAttribute("baseFrequency", `${(0.0016 + o.s * 0.00002).toFixed(5)} ${(0.018 + o.s * 0.00022).toFixed(5)}`);
+        turb.setAttribute("baseFrequency", `${(0.02 + o.s * 0.0004).toFixed(5)} ${(0.0008 + o.s * 0.000004).toFixed(5)}`); // faixas verticais: borrão de hipervelocidade
         turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
-        maps[0].setAttribute("scale", (o.s * 0.8).toFixed(1));
-        maps[1].setAttribute("scale", (o.s * 1.25).toFixed(1));
+        maps[0].setAttribute("scale", (o.s * 0.7).toFixed(1));
+        maps[1].setAttribute("scale", (o.s * 1.35).toFixed(1));
         if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
       };
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on", chromium ? "is-svg" : "is-blur");
       gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur"); veil.style.backdropFilter = ""; warping = false; } })
-        .to(o, { s: 120, t: 0.5, duration: 0.36, ease: "power2.in", onUpdate: paint })
+        .to(o, { s: 130, t: 0.5, duration: 0.28, ease: "power3.in", onUpdate: paint })
         .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
-        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.36, ease: "power2.in" }, 0)
-        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.36)
-        .to(o, { s: 0, t: 1, duration: 0.6, ease: "power3.out", onUpdate: paint }, 0.36)
-        .to(veil, { "--flash": 0, duration: 0.6, ease: "power3.out" }, 0.36);
+        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
+        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.28)
+        .to(o, { s: 0, t: 1, duration: 0.55, ease: "expo.out", onUpdate: paint }, 0.28)
+        .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
@@ -1144,7 +1148,7 @@ export default function App() {
         if (t) t.textContent = tc(o.p * 2);
         if (b) b.style.transform = `scaleX(${o.p})`;
       };
-      const intro = gsap.timeline();
+      const intro = gsap.timeline({ onStart: () => sfx.introPre(1.4) });
       intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 0.75, ease: "expo.inOut" })
         .to(".pre-meta", { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, "-=0.35")
         .to(o, { p: 0.82, duration: 0.8, ease: "power2.out", onUpdate: paint }, "<");
@@ -1179,7 +1183,7 @@ export default function App() {
       };
       // sem portão: a abertura roda sozinha. O navegador só libera áudio após um gesto,
       // então a trilha da abertura só toca se o áudio já estiver liberado.
-      loaded.then(() => { if (sfx.ok()) sfx.intro(0.93); reveal(); });
+      loaded.then(() => { sfx.introOpen(0.93); reveal(); });
 
       /* ── hero: saída por scroll (só transform/opacity: nada de filter na foto) ── */
       const mm = gsap.matchMedia();
@@ -1243,7 +1247,20 @@ export default function App() {
         gsap.from(el, { y: 28, opacity: 0, duration: 0.75, ease: "expo.out", delay: (+getComputedStyle(el).getPropertyValue("--d") || 0) * 0.05, scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
       // grade: cascata por linha (o tilt mora em .card-media, então não há briga de transform)
-      ScrollTrigger.batch(".grid .card", { start: "top 98%", once: true, onEnter: (els) => gsap.fromTo(els, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.04, clearProps: "transform,opacity,visibility" }) });
+      // grade: reveal cinematográfico por linha — máscara abre de baixo, imagem assenta do zoom, texto entra depois
+      gsap.set(".grid .card-media", { clipPath: "inset(100% 0% 0% 0% round 16px)" });
+      gsap.set(".grid .card-media img", { scale: 1.3 });
+      gsap.set(".grid .card-info", { y: 22, opacity: 0 });
+      ScrollTrigger.batch(".grid .card", {
+        start: "top 94%", once: true,
+        onEnter: (els) => {
+          const m = els.map((e) => e.querySelector(".card-media")), im = els.map((e) => e.querySelector(".card-media img")), inf = els.map((e) => e.querySelector(".card-info"));
+          gsap.to(m, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.25, ease: "expo.inOut", stagger: 0.09, clearProps: "clipPath" });
+          gsap.to(im, { scale: 1, duration: 1.8, ease: "expo.out", stagger: 0.09, delay: 0.15, clearProps: "transform" });
+          gsap.to(inf, { y: 0, opacity: 1, duration: 1, ease: "expo.out", stagger: 0.09, delay: 0.45, clearProps: "transform,opacity" });
+          sfx.whoosh(0.9, true, 0.03);
+        },
+      });
       // trilha: entra em "Filmes em destaque" e segue até o fim; some ao voltar para cima
       ScrollTrigger.create({ trigger: "#filmes", start: "top 65%", end: "max", onEnter: () => sfx.music(true), onLeaveBack: () => sfx.music(false) });
       // contato: folha clara sobe e arredonda
@@ -1256,6 +1273,7 @@ export default function App() {
     return () => {
       ctx.revert();
       document.removeEventListener("click", onAnchor);
+      speed.dispose();
       ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.removeEventListener(ev, unlock, true));
       document.removeEventListener("pointerover", onOver);
       document.removeEventListener("pointerdown", onDown);

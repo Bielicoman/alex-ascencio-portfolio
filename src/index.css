@@ -1117,3 +1117,8 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 :is(a, .hov):hover .ai-doc .p-fold { transform: translate(.8px, -.8px); }
 @media (max-width: 760px) { .ab-cv { gap: 12px; padding: 10px; } .cv-doc { width: 50px; height: 50px; } .cv-go { width: 42px; height: 42px; } }
 @media (max-width: 760px) { .snd-hint { bottom: 16px; font-size: 12.5px; padding: 10px 16px 10px 13px; } }
+
+/* speed force */
+.speedforce { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 395; pointer-events: none; }
+.warp::after { background: radial-gradient(60vmax circle at var(--x, 50%) var(--y, 50%), rgba(255,150,60,.24), rgba(227,34,16,.18) 40%, transparent 70%) !important; }
+.warp-ring { background: radial-gradient(closest-side, transparent 88%, rgba(255,42,16,0) 89%, rgba(255,90,30,.5) 95%, rgba(255,230,190,.75) 97.5%, transparent 100%) !important; }
