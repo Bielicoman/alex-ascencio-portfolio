@@ -15,7 +15,7 @@ const readBest = () => { try { return +localStorage.getItem(bestKey) || 0; } cat
 const saveBest = (v) => { try { localStorage.setItem(bestKey, v); } catch {} };
 
 export default {
-  id: "corte", name: "Jogo: Corte",
+  id: "corte", name: "Corte",
   hint: [["point", "Indicador = lâmina"], ["drag", "Movimento rápido corta"], ["grab", "Evite o glitch vermelho"], ["pinch", "Mouse: arraste segurando"]],
   mount(host) {
     const S = make2d(host), g = S.g;

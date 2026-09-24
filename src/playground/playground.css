@@ -33,9 +33,9 @@ html.pg-hands .pg-stage { cursor: none; }
 .pg-mark { width: 30px; color: var(--red-hi); }
 
 /* abas */
-.pg-tabs { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 4px; padding: 5px; border-radius: 99px; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none;
+.pg-tabs { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; width: max-content; gap: 4px; padding: 5px; border-radius: 99px; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none;
   background: var(--glass); border: 1px solid var(--line-2); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-.pg-tabs button { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 99px; font-size: 13px; font-weight: 520; color: var(--soft); transition: background .3s, color .3s; }
+.pg-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px; border-radius: 99px; font-size: 13px; font-weight: 520; color: var(--soft); transition: background .3s, color .3s; }
 .pg-tabs button i { font: 500 9.5px var(--mono); font-style: normal; color: var(--mute); }
 .pg-tabs button:hover { color: #fff; background: rgba(255,255,255,.06); }
 .pg-tabs button.on { background: #fff; color: #0a0a0b; }
@@ -98,3 +98,33 @@ html.pg-hands .pg-stage { cursor: none; }
   .pg-cam span { display: none; }
   .pg-cam { padding: 0 12px; }
 }
+
+/* ── jogo de sabres ── */
+.sb-hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.sb-hud button { pointer-events: auto; }
+.sb-menu > .mono { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); color: var(--red-hi); white-space: nowrap; }
+.sb-tracks span { position: absolute; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; text-align: center; white-space: nowrap; }
+.sb-tracks b { font-size: 17px; font-weight: 620; letter-spacing: -.01em; }
+.sb-tracks small { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.sb-diff { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: var(--glass); border: 1px solid var(--line-2); }
+.sb-diff button { height: 34px; padding: 0 18px; border-radius: 99px; font-size: 13px; font-weight: 520; color: var(--soft); }
+.sb-diff button[aria-pressed="true"] { background: #fff; color: #0a0a0b; }
+.sb-tip { position: absolute; left: 50%; bottom: 170px; transform: translateX(-50%); margin: 0; color: var(--soft); font-size: 14px; white-space: nowrap; }
+.sb-top { position: absolute; left: 24px; right: 24px; top: 140px; display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: start; gap: 16px; }
+.sb-top b { display: block; font-size: 38px; font-weight: 650; letter-spacing: -.03em; line-height: 1; }
+.sb-top small { color: var(--mute); }
+.sb-right { text-align: right; }
+.sb-mid { display: grid; gap: 8px; justify-items: center; }
+.sb-title { color: var(--soft); }
+.sb-prog, .sb-energy { display: block; width: min(420px, 100%); height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.sb-energy { height: 6px; }
+.sb-prog b, .sb-energy b { display: block; height: 100%; background: #fff; transition: width .2s linear; }
+.sb-energy b { background: var(--red-hi); }
+.sb-energy.low b { animation: pg-blink .5s steps(2) infinite; }
+.sb-end { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px; text-align: center; animation: pg-rise .6s var(--ease) both; }
+.sb-rank { font-size: 88px; font-weight: 700; line-height: 1; letter-spacing: -.04em; background: linear-gradient(180deg, #fff, #ff3b3b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sb-rank.f { background: linear-gradient(180deg, #8e8e98, #3a3a40); -webkit-background-clip: text; background-clip: text; }
+.sb-end b { font-size: 26px; font-weight: 620; }
+.sb-end small { color: var(--mute); }
+.sb-end .sb-tip { position: static; transform: none; margin-top: 6px; }
+@media (max-width: 760px) { .sb-top { top: 120px; left: 12px; right: 12px; } .sb-top b { font-size: 26px; } .sb-tracks b { font-size: 14px; } }
