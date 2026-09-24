@@ -61,3 +61,4 @@ export const Pause = make("pause", <path d="M8 5.5v13M16 5.5v13" strokeWidth="3"
 export const Prev = make("prev", <g className="p-mv"><path {...d} d="M15 5 8 12l7 7" /></g>);
 export const Next = make("next", <g className="p-mv"><path {...d} d="m9 5 7 7-7 7" /></g>);
 export const Expand = make("expand", <g className="p-mv"><path {...d} d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></g>);
+export const Doc = make("doc", <><path {...d} d="M6 3h8l4 4v14H6z" /><path className="p-fold" {...d} d="M14 3v4h4" /><g className="p-lines"><path className="l1" d="M9 11h6" /><path className="l2" d="M9 14h6" /><path className="l3" d="M9 17h4" /></g></>);

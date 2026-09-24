@@ -682,62 +682,178 @@ const TOOLS = [
   ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"], ["Pt", "Pro Tools", "au", "pt"],
   ["Cf", "ComfyUI", "ia", "cf"], ["Hf", "Higgsfield", "ia", "hf"], ["</>", "Plugins CEP/UXP", "dev", "dev"],
 ];
+// "Sobre" como apresentação: no desktop a seção fica fixa e o scroll conduz uma cena em capítulos;
+// no celular a mesma coreografia roda por tempo quando a seção entra. Som em cada marcação.
+const CHAPTERS = [["01", "Quem sou"], ["02", "Trajetória"], ["03", "Ferramentas"]];
 function About() {
-  const card = useRef(null);
+  const root = useRef(null), card = useRef(null), tlRef = useRef(null), stRef = useRef(null);
   const [hl, setHl] = useState(null);
+  const [ch, setCh] = useState(0);
   const move = (e) => {
     if (e.pointerType === "touch") return;
     const r = card.current.getBoundingClientRect();
-    gsap.to(card.current, { rotateY: ((e.clientX - r.left) / r.width - 0.5) * 10, rotateX: ((e.clientY - r.top) / r.height - 0.5) * -10, duration: 0.8, ease: "power3" });
+    gsap.to(card.current, { rotateY: ((e.clientX - r.left) / r.width - 0.5) * 8, rotateX: ((e.clientY - r.top) / r.height - 0.5) * -8, duration: 0.8, ease: "power3" });
     card.current.style.setProperty("--px", `${((e.clientX - r.left) / r.width) * 100}%`);
     card.current.style.setProperty("--py", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
   const leave = () => gsap.to(card.current, { rotateX: 0, rotateY: 0, duration: 1.2, ease: "elastic.out(1,0.5)" });
+
+  useEffect(() => {
+    const el = root.current;
+    if (reducedMotion()) { el.classList.add("is-static"); return; }
+    const q = (sel) => el.querySelectorAll(sel);
+    const cue = (fn) => () => { if (tlRef.current?.__live) fn(); };
+    const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
+      const build = (desk) => {
+        const photo = el.querySelector(".ab-photo"), words = q(".ab-title .w"), cats = q(".tcat"), tools = q(".tool");
+        const center = () => { const r = photo.getBoundingClientRect(); return innerWidth / 2 - (r.left + r.width / 2) - gsap.getProperty(photo, "x"); };
+        const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+        tlRef.current = tl;
+        // ── 1. íris: foto nasce no centro, nome gigante atravessa por trás
+        tl.set(".ab-kin", { xPercent: 12, opacity: 0 })
+          .set(photo, { x: desk ? center : 0, scale: desk ? 1.14 : 1, clipPath: "circle(0% at 50% 45%)" })
+          .set(".ab-photo img", { scale: 1.35 })
+          .set(".ab-head, .ab-chapters", { opacity: 0 })
+          .set(words, { yPercent: 115, opacity: 0 })
+          .set(".ab-slide", { autoAlpha: 0, y: 40 })
+          .set(".ab-light", { xPercent: -120 })
+          .to(".ab-kin", { opacity: 1, xPercent: -8, duration: 2.4, ease: "none" }, 0)
+          .call(cue(() => { sfx.whoosh(0.9, true, 0.07); }), null, 0.05)
+          .to(photo, { clipPath: "circle(75% at 50% 45%)", duration: 1.3, ease: "expo.inOut" }, 0.2)
+          .to(".ab-photo img", { scale: 1.12, duration: 1.6, ease: "power2.out" }, 0.2)
+          .call(cue(() => { if (!sfx.ok()) return; sfx.impact(sfx.ctx.currentTime, 0.25); sfx.shimmer(0.014); }), null, 0.75)
+          .to(".ab-light", { xPercent: 120, duration: 1.2, ease: "power2.inOut" }, 0.9)
+        // ── 2. assenta: foto vai para a coluna, título palavra por palavra
+          .to(photo, { x: 0, scale: 1, duration: 1.2, ease: "expo.inOut" }, 2)
+          .to(".ab-photo img", { scale: 1, duration: 1.4, ease: "expo.inOut" }, 2)
+          .to(".ab-kin", { opacity: 0, xPercent: -20, duration: 1, ease: "power2.in" }, 2)
+          .call(cue(() => sfx.whoosh(0.7, false, 0.06, innerWidth * 0.25)), null, 2)
+          .to(".ab-head", { opacity: 1, duration: 0.5 }, 2.7)
+          .to(words, { yPercent: 0, opacity: 1, duration: 1, stagger: 0.09 }, 2.8);
+        words.forEach((_, i) => tl.call(cue(() => sfx.tick(1318 + i * 110, innerWidth * 0.7, 0.02)), null, 2.8 + i * 0.09));
+        tl.to(".ab-chapters", { opacity: 1, duration: 0.6 }, 3.3);
+        // capítulos: no desktop trocam como slides; no celular empilham
+        const slide = (i, at) => {
+          const sel = `.ab-slide[data-i="${i}"]`;
+          if (!desk) tl.call(() => setCh(i), null, at - 0.01);
+          tl.call(cue(() => sfx.reveal()), null, at);
+          if (desk && i > 0) tl.to(`.ab-slide[data-i="${i - 1}"]`, { autoAlpha: 0, y: -30, filter: "blur(6px)", duration: 0.6, ease: "power2.in" }, at - 0.1);
+          tl.fromTo(sel, { autoAlpha: 0, y: 40, filter: "blur(8px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.9 }, at + (desk && i > 0 ? 0.45 : 0));
+          return at + (desk && i > 0 ? 0.45 : 0);
+        };
+        // ── 3. Quem sou
+        let t = slide(0, 3.5);
+        tl.fromTo(".ab-slide[data-i='0'] .ab-line", { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.12 }, t + 0.1);
+        // ── 4. Trajetória: REC abre, clipes entram, agulha varre até o presente
+        t = slide(1, desk ? 5.4 : 5.2);
+        tl.fromTo(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)" }, { clipPath: "inset(0 0% 0 0 round 22px)", duration: 1, ease: "expo.inOut" }, t + 0.15)
+          .call(cue(() => { sfx.tick(1000, innerWidth * 0.7, 0.04); setTimeout(() => sfx.tick(1000, innerWidth * 0.7, 0.04), 140); }), null, t + 0.55)
+          .fromTo(".traj-corner", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.06, ease: "back.out(3)" }, t + 0.8)
+          .fromTo(".traj-clip", { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, stagger: 0.18 }, t + 0.9)
+          .call(cue(() => sfx.splice(innerWidth * 0.6)), null, t + 0.95).call(cue(() => sfx.splice(innerWidth * 0.75)), null, t + 1.13)
+          .fromTo(".traj-ph", { left: 0, right: "auto" }, { left: "calc(100% - 2px)", duration: 1.4, ease: "power2.inOut" }, t + 1.1)
+          .call(cue(() => sfx.glitch(0.03, 2)), null, t + 2.4);
+        // ── 5. Ferramentas: categorias acendem, cartões viram em 3D, varredura por categoria
+        t = slide(2, desk ? 8.4 : 8);
+        tl.fromTo(cats, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.07 }, t + 0.1)
+          .fromTo(tools, { rotateX: -95, opacity: 0, y: 20, transformOrigin: "50% 0%" }, { rotateX: 0, opacity: 1, y: 0, duration: 0.9, stagger: 0.08, ease: "back.out(1.4)" }, t + 0.4);
+        tools.forEach((_, i) => tl.call(cue(() => sfx.glass(innerWidth * (0.55 + (i % 3) * 0.12))), null, t + 0.45 + i * 0.08));
+        TOOL_CATS.forEach(([k], i) => tl.call(() => setHl(k), null, t + 1.3 + i * 0.32).call(cue(() => sfx.navTick(i, innerWidth * 0.7)), null, t + 1.3 + i * 0.32));
+        tl.call(() => setHl(null), null, t + 1.3 + TOOL_CATS.length * 0.32)
+          .fromTo(".ab-cv", { y: 24, opacity: 0, clipPath: "inset(0 100% 0 0 round 22px)" }, { y: 0, opacity: 1, clipPath: "inset(0 0% 0 0 round 22px)", duration: 1, ease: "expo.inOut" }, t + 1.5 + TOOL_CATS.length * 0.32)
+          .call(cue(() => { sfx.shimmer(0.02); sfx.chime(); }), null, t + 1.6 + TOOL_CATS.length * 0.32)
+          .to({}, { duration: 0.8 });
+        if (desk) {
+          stRef.current = ScrollTrigger.create({
+            trigger: el, start: "top top", end: () => `+=${innerHeight * 4.5}`, pin: true, scrub: 0.6, animation: tl, refreshPriority: -1, invalidateOnRefresh: true,
+            onToggle: (st) => { tl.__live = st.isActive; },
+            onUpdate: (st) => { const tt = tl.time(); setCh(tt >= 8.7 ? 2 : tt >= 5.7 ? 1 : 0); },
+          });
+        } else {
+          tl.pause();
+          ScrollTrigger.create({ trigger: el, start: "top 70%", once: true, onEnter: () => { tl.__live = true; tl.timeScale(1.15).play(); } });
+        }
+        return () => { tl.kill(); stRef.current = null; };
+      };
+      mm.add("(min-width: 900px)", () => build(true));
+      mm.add("(max-width: 899px)", () => build(false));
+    }, el);
+    return () => ctx.revert();
+  }, []);
+
+  const jump = (i) => { // capítulos clicáveis: rola até o ponto da cena
+    const st = stRef.current, tl = tlRef.current;
+    if (!st || !tl) return;
+    const at = [3.6, 5.6, 8.9][i] / tl.duration();
+    window.__lenis?.scrollTo(st.start + (st.end - st.start) * at, { duration: 1.4 });
+  };
+  const title = "A pessoa por trás da timeline.".split(" ");
   return (
-    <section id="sobre" className="about section">
-      <div className="about-grid">
-        <div className="about-photo-wrap" onPointerMove={move} onPointerLeave={leave}>
-          <a className="about-photo js-photo" ref={card} href={IG} target="_blank" rel="noreferrer" aria-label="Abrir o Instagram de Alex Ascencio (@alexascencioai)">
-            <img src="/media/alex-profile.webp" alt="Retrato de Alex Ascencio em fundo vermelho" loading="lazy" />
-            <span className="ig-light" aria-hidden="true" />
-            <span className="ig-cta" aria-hidden="true">
-              <span className="ig-badge"><span className="ig-ring" /><I.Instagram size={30} /></span>
-              <span className="ig-text"><b>@alexascencioai</b><small>Ver no Instagram</small></span>
-              <span className="ig-arrow"><I.Arrow size={16} /></span>
-            </span>
-            <span className="about-tag"><Mark className="about-mark" /><span>Editor & Filmmaker</span></span>
-          </a>
+    <section id="sobre" className="about" ref={root}>
+      <div className="ab-kin" aria-hidden="true">ALEX ASCENCIO · EDITOR · FILMMAKER ·</div>
+      <div className="ab-grid">
+        <div className="ab-photo-wrap" onPointerMove={move} onPointerLeave={leave}>
+          <div className="ab-photo">
+            <a className="about-photo" ref={card} href={IG} target="_blank" rel="noreferrer" aria-label="Abrir o Instagram de Alex Ascencio (@alexascencioai)">
+              <img src="/media/alex-profile.webp" alt="Retrato de Alex Ascencio em fundo vermelho" loading="lazy" />
+              <span className="ab-light" aria-hidden="true" />
+              <span className="ig-light" aria-hidden="true" />
+              <span className="ig-cta" aria-hidden="true">
+                <span className="ig-badge"><svg className="ig-ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28.5" pathLength="1" /></svg><I.Instagram size={24} /></span>
+                <span className="ig-text"><b>@alexascencioai</b><small>Ver no Instagram</small></span>
+                <span className="ig-arrow"><I.Arrow size={16} /></span>
+              </span>
+              <span className="about-tag"><Mark className="about-mark" /><span>Editor & Filmmaker</span></span>
+            </a>
+          </div>
         </div>
-        <div className="about-copy">
-          <Eyebrow n="06">Sobre</Eyebrow>
-          <Title>A pessoa por trás <em>da timeline.</em></Title>
-          <p className="reveal lead">Sou Alex Ascencio, editor de vídeo e filmmaker. Trabalho entre videoclipes, documentários, cinema e transmissões, do set à finalização.</p>
-          <p className="reveal">Uso IA generativa como ferramenta de produção, com o mesmo critério de um plano filmado: se não passa como real, não entra. Também desenvolvo plugins para Premiere e After Effects que aceleram o meu fluxo.</p>
-
-          <div className="about-block reveal">
-            <span className="mono about-lab">Trajetória</span>
-            <Trajectory />
+        <div className="ab-copy">
+          <div className="ab-head">
+            <Eyebrow n="06">Sobre</Eyebrow>
+            <h2 className="display ab-title">{title.map((w, i) => <span key={i} className="wm"><span className={`w${i >= 3 ? " em" : ""}`}>{w}</span></span>)}</h2>
           </div>
-
-          <div className="about-block reveal">
-            <span className="mono about-lab">Categorias & softwares</span>
-            <div className="tcats" role="list" onPointerLeave={() => setHl(null)}>
-              {TOOL_CATS.map(([k, n, Icon]) => (
-                <span role="listitem" key={k} className={`tcat${hl === k ? " on" : ""}`} onPointerEnter={() => setHl(k)}>
-                  <Icon size={16} loop={hl === k} />{n}
-                </span>
-              ))}
+          <div className="ab-chapters" role="tablist" aria-label="Capítulos">
+            {CHAPTERS.map(([n, l], i) => (
+              <button key={n} role="tab" aria-selected={ch === i} className={ch === i ? "on" : ch > i ? "done" : ""} onClick={() => jump(i)}>
+                <span className="mono">{n}</span>{l}<i><b /></i>
+              </button>
+            ))}
+            <span className="ab-tc mono" aria-hidden="true">SEQ_Sobre · <span>{tc(ch * 20 + 4.5)}</span></span>
+          </div>
+          <div className="ab-stage">
+            <div className="ab-slide" data-i="0">
+              <p className="lead ab-line">Sou Alex Ascencio, editor de vídeo e filmmaker. Trabalho entre videoclipes, documentários, cinema e transmissões, do set à finalização.</p>
+              <p className="ab-line">Uso IA generativa como ferramenta de produção, com o mesmo critério de um plano filmado: se não passa como real, não entra.</p>
+              <p className="ab-line">Também desenvolvo plugins para Premiere e After Effects que aceleram o meu fluxo.</p>
             </div>
-            <div className={`tools${hl ? " has-hl" : ""}`} onPointerLeave={() => setHl(null)}>
-              {TOOLS.map(([m, n, c, cls], i) => (
-                <span key={n} className={`tool${hl === c ? " on" : ""}`} style={{ "--d": i }} onPointerEnter={() => setHl(c)}>
-                  <span className={`tool-m tm-${cls}`}><b>{m}</b></span>
-                  <span className="tool-t">{n}<small className="mono">{TOOL_CATS.find(([k]) => k === c)[1]}</small></span>
-                </span>
-              ))}
+            <div className="ab-slide" data-i="1">
+              <Trajectory />
+            </div>
+            <div className="ab-slide" data-i="2">
+              <div className="tcats" role="list" onPointerLeave={() => setHl(null)}>
+                {TOOL_CATS.map(([k, n, Icon]) => (
+                  <span role="listitem" key={k} className={`tcat${hl === k ? " on" : ""}`} onPointerEnter={() => setHl(k)}>
+                    <Icon size={16} loop={hl === k} />{n}
+                  </span>
+                ))}
+              </div>
+              <div className={`tools${hl ? " has-hl" : ""}`} onPointerLeave={() => setHl(null)}>
+                {TOOLS.map(([m, n, c, cls], i) => (
+                  <span key={n} className={`tool${hl === c ? " on" : ""}`} style={{ "--d": i }} onPointerEnter={() => setHl(c)}>
+                    <span className={`tool-m tm-${cls}`}><b>{m}</b></span>
+                    <span className="tool-t">{n}<small className="mono">{TOOL_CATS.find(([k]) => k === c)[1]}</small></span>
+                  </span>
+                ))}
+              </div>
+              <a className="ab-cv" href="/Alex_Ascencio_Curriculo.pdf" target="_blank" rel="noreferrer" aria-label="Currículo digital de Alex Ascencio (PDF, abre no navegador)">
+                <span className="cv-doc"><I.Doc size={26} /></span>
+                <span className="cv-t"><b>CURRÍCULO DIGITAL</b><small className="mono">PDF · abre no navegador</small></span>
+                <span className="cv-go"><I.Arrow size={18} /></span>
+                <span className="cv-sheen" aria-hidden="true" />
+              </a>
             </div>
           </div>
-          <div className="reveal"><Btn href="/Alex_Ascencio_Curriculo.pdf" download variant="glass" icon={<I.Download size={15} />}>Baixar currículo</Btn></div>
         </div>
       </div>
     </section>
@@ -886,7 +1002,7 @@ function Footer() {
           <RollLink href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">{PHONE}</RollLink>
           <RollLink href={IG} target="_blank" rel="noreferrer">Instagram</RollLink>
           <RollLink href={LI} target="_blank" rel="noreferrer">LinkedIn</RollLink>
-          <RollLink href="/Alex_Ascencio_Curriculo.pdf" download>Currículo (PDF)</RollLink>
+          <RollLink href="/Alex_Ascencio_Curriculo.pdf" target="_blank" rel="noreferrer">Currículo digital</RollLink>
         </div>
         <div className="footer-info">
           <span className="mono">Atendimento</span>
@@ -1120,7 +1236,7 @@ export default function App() {
       gsap.utils.toArray(".js-title .title-inner").forEach((el) => {
         gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 0.95, ease: "expo.out", onStart: () => sfx.reveal(), scrollTrigger: { trigger: el.parentElement, start: "top 95%", once: true } });
       });
-      gsap.utils.toArray(".eyebrow").forEach((el) => {
+      gsap.utils.toArray(".eyebrow").filter((el) => !el.closest(".about")).forEach((el) => {
         gsap.from(el, { opacity: 0, x: -16, duration: 0.7, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
       gsap.utils.toArray(".reveal").forEach((el) => {
@@ -1128,12 +1244,6 @@ export default function App() {
       });
       // grade: cascata por linha (o tilt mora em .card-media, então não há briga de transform)
       ScrollTrigger.batch(".grid .card", { start: "top 98%", once: true, onEnter: (els) => gsap.fromTo(els, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.04, clearProps: "transform,opacity,visibility" }) });
-      // sobre
-      gsap.fromTo(".js-photo", { clipPath: "inset(100% 0 0 0 round 32px)" }, { clipPath: "inset(0% 0 0 0 round 32px)", duration: 1.6, ease: "expo.inOut", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
-      gsap.fromTo(".js-photo img", { scale: 1.25 }, { scale: 1, duration: 2, ease: "expo.out", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
-      gsap.from(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
-      gsap.from(".traj-clip", { y: 24, opacity: 0, duration: 1.1, ease: "expo.out", stagger: 0.12, delay: 0.5, scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
-      gsap.from(".tcat, .tool", { y: 16, opacity: 0, duration: 0.6, ease: "expo.out", stagger: 0.03, scrollTrigger: { trigger: ".tcats", start: "top 96%", once: true } });
       // trilha: entra em "Filmes em destaque" e segue até o fim; some ao voltar para cima
       ScrollTrigger.create({ trigger: "#filmes", start: "top 65%", end: "max", onEnter: () => sfx.music(true), onLeaveBack: () => sfx.music(false) });
       // contato: folha clara sobe e arredonda
