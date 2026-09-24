@@ -11,10 +11,11 @@ import piano from "./modes/piano";
 import drums from "./modes/drums";
 import theremin from "./modes/theremin";
 import slice from "./modes/slice";
+import body from "./modes/body";
 
 // Playground: laboratório de gestos independente do site. Tutorial de entrada, câmera opcional
 // (mouse e toque sempre funcionam), 6 modos trocados por abas ou por #hash.
-const MODES = [particles, objects, piano, drums, theremin, slice];
+const MODES = [particles, objects, body, piano, drums, theremin, slice];
 const GLYPH = {
   hand: '<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.8V4.5a1.5 1.5 0 0 1 3 0V12m0-6a1.5 1.5 0 0 1 3 0v6m0-3.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L3.6 15a1.5 1.5 0 0 1 2.3-2L8 15"/>',
   point: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
@@ -67,7 +68,7 @@ let cur = null, curI = -1, camOn = false, last = performance.now();
 function mount(i) {
   if (i === curI) return;
   cur?.dispose(); stage.innerHTML = "";
-  curI = i; cur = MODES[i].mount(stage);
+  curI = i; cur = MODES[i].mount(stage, { input });
   $("tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.i === i));
   $("hint").innerHTML = MODES[i].hint.map(([k, t]) => `<span>${svg(k, 16)}${t}</span>`).join("");
   stage.dataset.mode = MODES[i].id;
@@ -151,7 +152,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const hands = input.frame(dt);
   cur?.frame(dt, hands);
-  drawSkel(hands);
+  if (stage.dataset.mode !== "corpo") drawSkel(hands); else sg.clearRect(0, 0, innerWidth, innerHeight);
   if (camOn) drawHud(hands);
   document.documentElement.classList.toggle("pg-hands", hands.some((h) => h.src === "cam"));
   requestAnimationFrame(loop);
