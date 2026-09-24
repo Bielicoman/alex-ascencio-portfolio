@@ -53,7 +53,7 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
   </div>`);
   document.body.appendChild(root);
   const $ = (s) => root.querySelector(s);
-  const rets = [...root.querySelectorAll(".gx-ret")].map((el) => ({ el, lab: el.querySelector(".gx-lab"), x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2, on: false }));
+  const rets = [...root.querySelectorAll(".gx-ret")].map((el) => ({ el, lab: el.querySelector(".gx-lab"), x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2, mx: -1, my: -1, on: false }));
   const cam = $(".gx-cam"), cv = $(".gx-cam canvas"), cx = cv.getContext("2d");
   const status = $(".gx-status span"), tut = $(".gx-tut");
   const say = (t) => { status.textContent = t; };
@@ -86,7 +86,14 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
 
   const host = () => document.querySelector("dialog[open]") || document.body;
   const pe = (type, x, y, extra = {}) => new PointerEvent(type, { clientX: x, clientY: y, pointerId: PID, pointerType: "mouse", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : act.mode === "grab" || type === "pointerdown" ? 1 : 0, bubbles: true, cancelable: true, composed: true, ...extra });
-  const under = (x, y) => { root.style.visibility = "hidden"; const el = document.elementFromPoint(x, y); root.style.visibility = ""; return el; };
+  // sem esconder a camada para testar (isso forçava recálculo de estilo a cada quadro);
+  // e os painéis (HUD/tutorial) só capturam a mão quando ela mira um botão deles
+  const under = (x, y) => {
+    const els = document.elementsFromPoint(x, y);
+    if (els[0] && root.contains(els[0]) && els[0].closest("button, a")) return els[0];
+    return els.find((e) => !root.contains(e)) || null;
+  };
+  let hx = -99, hy = -99;
   const scrollable = () => lenis && !document.querySelector("dialog[open]");
 
   const hover = (x, y) => {
@@ -234,7 +241,7 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
       const isP = hands[i]?.key === primaryKey;
       r.lab.textContent = zoom.on ? `${zoom.s.toFixed(1)}×` : isP ? ({ grab: "pegar", scroll: "rolar", press: "" }[act.mode] ?? "") : "";
       if (isP && !zoom.on) {
-        if (!act.mode || act.mode === "press") { window.dispatchEvent(pe("pointermove", r.x, r.y, { buttons: 0 })); hover(r.x, r.y); }
+        if ((!act.mode || act.mode === "press") && Math.abs(r.x - r.mx) + Math.abs(r.y - r.my) > 0.6) { r.mx = r.x; r.my = r.y; window.dispatchEvent(pe("pointermove", r.x, r.y, { buttons: 0 })); if (Math.abs(r.x - hx) + Math.abs(r.y - hy) > 6) { hx = r.x; hy = r.y; hover(r.x, r.y); } }
       }
     });
     // seção ampliada que saiu da tela volta ao normal
@@ -244,10 +251,11 @@ export default function startGestures({ onEnd = () => {}, tutorial = true } = {}
   let fake = false;
   const tracker = new HandTracker({
     onFrame: (hs, v) => { if (!fake) onFrame(hs, v); },
-    onStatus: (s) => {
+    onStatus: (s, pct) => {
       root.dataset.phase = s;
       if (s === "camera") say("Pedindo acesso à câmera…");
-      if (s === "model") say("Carregando o modelo de mãos…");
+      if (s === "model") say(`Baixando o modelo · ${Math.round((pct || 0) * 100)}%`);
+      if (s === "init") say("Iniciando o rastreador…");
       if (s === "live") { say("Mostre a mão"); cam.classList.add("is-live"); sfx.chime?.(); if (tutorial) openTut(); }
     },
   });

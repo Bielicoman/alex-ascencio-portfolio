@@ -328,6 +328,8 @@ function NowPlaying({ open }) {
     </div>
   );
 }
+// passar o mouse no botão de gestos já começa a baixar modelo e WASM (≈19 MB) antes do clique
+const preloadGest = () => import("./gesture/hands").then((m) => m.preloadHands().catch(() => {}));
 function Hero({ open, onDemo, demo, onGest, gest }) {
   const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
@@ -389,7 +391,7 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
           <div className="hero-ctas">
             <Btn href="#filmes" size="lg" icon={<I.Play size={14} />}>Ver filmes</Btn>
             <Btn href="#contato" size="lg" variant="glass">Falar comigo</Btn>
-            <Btn as="button" type="button" size="lg" variant="glass" className="btn-gest" onClick={onGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
+            <Btn as="button" type="button" size="lg" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
         <div className="hero-scroll" aria-hidden="true">

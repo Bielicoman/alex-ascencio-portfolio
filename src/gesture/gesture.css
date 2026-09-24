@@ -24,7 +24,7 @@
 
 /* HUD: preview espelhado com esqueleto */
 .gx-hud { position: absolute; right: 20px; bottom: 20px; width: 260px; padding: 10px; border-radius: 20px; pointer-events: auto;
-  background: rgba(12,12,14,.86); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  background: rgba(12,12,14,.94); border: 1px solid rgba(255,255,255,.12); 
   box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); animation: gx-rise .6s cubic-bezier(.22,1,.36,1) both; }
 .gx-cam { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #000; }
 .gx-cam canvas { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .5s; }
@@ -48,7 +48,7 @@
 
 /* tutorial: cada passo confirma sozinho quando o gesto é reconhecido */
 .gx-tut { position: absolute; left: 20px; bottom: 20px; width: min(360px, calc(100vw - 320px)); padding: 16px; border-radius: 22px; pointer-events: auto;
-  background: rgba(12,12,14,.88); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  background: rgba(12,12,14,.94); border: 1px solid rgba(255,255,255,.12); 
   box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); animation: gx-rise .6s cubic-bezier(.22,1,.36,1) both; }
 .gx-tut[hidden] { display: none; }
 @keyframes gx-rise { from { opacity: 0; transform: translateY(16px); } }

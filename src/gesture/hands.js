@@ -1,8 +1,40 @@
 // Rastreamento de mãos (MediaPipe HandLandmarker, 21 pontos por mão, até 2 mãos) com filtro One Euro.
-// Coordenadas já espelhadas (selfie): x = 0 à esquerda da tela. O WASM é servido pelo próprio site
-// (/media/hand/wasm, copiado de node_modules no build); o modelo vem do CDN oficial do MediaPipe.
-const WASM = "/media/hand/wasm";
+// Coordenadas já espelhadas (selfie): x = 0 à esquerda da tela. A inferência roda num Web Worker
+// (a thread do site não trava); o WASM é servido pelo próprio site numa pasta versionada com cache
+// imutável, e o modelo vem do CDN oficial do MediaPipe. Download com progresso e pré-carga no hover.
+/* global __HAND_V__ */
+export const WASM = `/media/hand/${__HAND_V__}`;
 const MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const BYTES = 7819105 + 11756972; // modelo + WASM (tamanhos descomprimidos)
+
+let pre = null, got = 0;
+const subs = new Set();
+// baixa modelo e WASM em paralelo (o WASM só aquece o cache HTTP; o worker o lê de lá)
+export function preloadHands() {
+  if (!pre) {
+    got = 0;
+    const pull = async (url) => {
+      const r = await fetch(url);
+      if (!r.ok || !r.body) throw new Error(`${r.status} ${url}`);
+      const rd = r.body.getReader(), parts = [];
+      let n = 0;
+      for (;;) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        parts.push(value); n += value.length; got += value.length;
+        const p = Math.min(0.99, got / BYTES); subs.forEach((f) => f(p));
+      }
+      const out = new Uint8Array(n); let o = 0;
+      for (const c of parts) { out.set(c, o); o += c.length; }
+      return out;
+    };
+    pre = Promise.all([pull(MODEL), pull(`${WASM}/vision_wasm_module_internal.wasm`).catch(() => null)])
+      .then(([model]) => model)
+      .catch((e) => { pre = null; throw Object.assign(e, { code: "model" }); });
+  }
+  return pre;
+}
+const onProgress = (f) => { subs.add(f); return () => subs.delete(f); };
 
 export const CONNECTIONS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
 export const TIPS = [4, 8, 12, 16, 20];
@@ -40,23 +72,54 @@ export class HandTracker {
   async start() {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error("insecure"), { code: "insecure" });
     this.onStatus("camera");
+    const model = preloadHands(); model.catch(() => {}); // em paralelo com o pedido de permissão
+    let camOk = false;
+    const off = onProgress((p) => camOk && this.onStatus("model", p));
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 }, facingMode: "user" }, audio: false });
     } catch (e) {
+      off();
       throw Object.assign(e, { code: e.name === "NotAllowedError" || e.name === "SecurityError" ? "denied" : e.name === "NotFoundError" || e.name === "OverconstrainedError" ? "nocam" : "camera" });
     }
+    camOk = true;
     this.video.srcObject = this.stream;
     await this.video.play().catch(() => {});
-    this.onStatus("model");
-    const { FilesetResolver, HandLandmarker } = await import("@mediapipe/tasks-vision");
-    const files = await FilesetResolver.forVisionTasks(WASM);
-    const opts = (delegate) => ({ baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: "VIDEO", numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 });
-    try { this.lm = await HandLandmarker.createFromOptions(files, opts("GPU")); }
-    catch { this.lm = await HandLandmarker.createFromOptions(files, opts("CPU")); }
-    if (this.disposed) { this.lm.close(); return; }
+    this.onStatus("model", 0);
+    let buf;
+    try { buf = await model; } finally { off(); }
+    this.onStatus("init");
+    await this.engine(buf);
+    if (this.disposed) { this.close(); return; }
     this.running = true;
     this.onStatus("live");
     this.loop();
+  }
+
+  // worker + CPU (XNNPACK): não disputa a GPU com os efeitos WebGL do site nem bloqueia a thread da página.
+  // Medido: com GPU no worker a página caía a 2 fps; com CPU no worker, 11,75 fps contra 16 sem gestos (Chromium sem GPU).
+  // Sem suporte a worker de módulo: thread principal, GPU com recuo para CPU.
+  async engine(buf) {
+    try {
+      const w = new Worker(new URL("./hands.worker.js", import.meta.url), { type: "module" });
+      await new Promise((res, rej) => {
+        w.onmessage = ({ data }) => (data.type === "ready" ? res() : data.type === "error" ? rej(new Error(data.message)) : null);
+        w.onerror = (e) => rej(e);
+        w.postMessage({ type: "init", wasm: new URL(WASM, location.href).href, model: buf });
+      });
+      w.onmessage = ({ data }) => {
+        this.busy = false;
+        if (data.type === "result" && this.running) this.onFrame(this.parse(data, data.t / 1000), this.video);
+      };
+      this.worker = w;
+    } catch (err) {
+      console.warn("[mãos] worker indisponível, usando a thread principal", err);
+      this.worker?.terminate(); this.worker = null;
+      const { FilesetResolver, HandLandmarker } = await import("@mediapipe/tasks-vision");
+      const files = await FilesetResolver.forVisionTasks(WASM, true);
+      const opts = (delegate) => ({ baseOptions: { modelAssetBuffer: buf, delegate }, runningMode: "VIDEO", numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 });
+      try { this.lm = await HandLandmarker.createFromOptions(files, opts("GPU")); }
+      catch { this.lm = await HandLandmarker.createFromOptions(files, opts("CPU")); }
+    }
   }
 
   loop() {
@@ -65,9 +128,19 @@ export class HandTracker {
     const next = () => (v.requestVideoFrameCallback ? v.requestVideoFrameCallback(() => this.loop()) : requestAnimationFrame(() => this.loop()));
     if (v.readyState >= 2 && !document.hidden) {
       const now = performance.now();
-      let res;
-      try { res = this.lm.detectForVideo(v, now); } catch { res = null; }
-      if (res) this.onFrame(this.parse(res, now / 1000), v);
+      if (this.worker) {
+        // um quadro por vez: se o modelo atrasar, descarta quadros em vez de acumular fila
+        if (!this.busy || now - this.sent > 500) {
+          this.busy = true; this.sent = now;
+          createImageBitmap(v, { resizeWidth: 480, resizeHeight: 360, resizeQuality: "low" })
+            .then((bitmap) => (this.running ? this.worker.postMessage({ type: "frame", bitmap, t: now }, [bitmap]) : bitmap.close()))
+            .catch(() => { this.busy = false; });
+        }
+      } else if (this.lm) {
+        let res;
+        try { res = this.lm.detectForVideo(v, now); } catch { res = null; }
+        if (res) this.onFrame(this.parse(res, now / 1000), v);
+      }
     }
     next();
   }
@@ -105,12 +178,17 @@ export class HandTracker {
     return hands.sort((a, b) => a.x - b.x);
   }
 
+  close() {
+    this.worker?.postMessage({ type: "close" }); this.worker = null;
+    try { this.lm?.close(); } catch {}
+    this.lm = null;
+  }
   stop() {
     this.disposed = true;
     this.running = false;
     this.stream?.getTracks().forEach((tr) => tr.stop());
     this.video.srcObject = null;
-    try { this.lm?.close(); } catch {}
+    this.close();
   }
 }
 

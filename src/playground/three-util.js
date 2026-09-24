@@ -6,7 +6,7 @@ export function makeStage(host, { fov = 50, z = 10, alpha = false, bg = 0x060607
   canvas.className = "pg-canvas";
   host.appendChild(canvas);
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
   if (!alpha) renderer.setClearColor(bg, 1);
   const scene = new Scene();
   const camera = new PerspectiveCamera(fov, 1, 0.1, 100);
