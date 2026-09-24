@@ -396,7 +396,8 @@ function Hero({ open, onDemo, demo, onGest, gest, onEdth }) {
             <Btn href="#contato" size="lg" variant="glass">Falar comigo</Btn>
           </div>
           <div className="hero-modes">
-            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}>Controlar por voz · EDTH</Btn>
+            <Btn as="button" type="button" variant="glass" className="btn-tour-m" onClick={onDemo} aria-pressed={demo} icon={<I.Play size={13} />}>{demo ? "Parar tour" : "Assistir o site"}</Btn>
+            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}><span className="lbl-d">Controlar por voz · EDTH</span><span className="lbl-m">Falar com a EDTH</span></Btn>
             <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
@@ -940,15 +941,24 @@ function DatePick({ value, onChange }) {
 // balão da EDTH no canto inferior direito (lugar clássico do botão de WhatsApp)
 function EdthBubble({ onOpen, hidden }) {
   const [tip, setTip] = useState(false);
+  // mobile: o hero já tem o botão da EDTH; o balão só aparece depois de sair do hero e sem o aviso automático
+  const [inHero, setInHero] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 760px)"), hero = document.getElementById("top");
+    if (!hero) return;
+    const io = new IntersectionObserver(([e]) => setInHero(mq.matches && e.intersectionRatio > 0.25), { threshold: [0, 0.25, 0.5] });
+    io.observe(hero);
+    return () => io.disconnect();
+  }, []);
   useEffect(() => {
     let seen = false; try { seen = sessionStorage.getItem("edth-tip") === "1"; } catch {}
-    if (seen) return;
+    if (seen || window.matchMedia("(max-width: 760px)").matches) return;
     const a = setTimeout(() => setTip(true), 7000), b = setTimeout(() => { setTip(false); try { sessionStorage.setItem("edth-tip", "1"); } catch {} }, 16000);
     return () => { clearTimeout(a); clearTimeout(b); };
   }, []);
   if (hidden) return null;
   return (
-    <div className="edth-bubble">
+    <div className={"edth-bubble" + (inHero ? " is-away" : "")}>
       {tip && (
         <div className="edth-tip" role="status">
           <b>Oi, eu sou a EDTH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
