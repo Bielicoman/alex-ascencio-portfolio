@@ -6,6 +6,10 @@
 export const WASM = `/media/hand/${__HAND_V__}`;
 const MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const BYTES = 7819105 + 11756972; // modelo + WASM (tamanhos descomprimidos)
+export const EXTRA_MODELS = {
+  face: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+  pose: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+};
 
 let pre = null, got = 0;
 const subs = new Set();
@@ -98,14 +102,30 @@ export class HandTracker {
   // Web Worker: a inferência nunca bloqueia a thread da página. Começa na GPU (≈5–10 ms por quadro numa
   // placa real); se a média passar de 40 ms (GPU fraca/integrada disputando com o WebGL do site), troca
   // sozinho para CPU (XNNPACK). Sem suporte a worker de módulo: thread principal, GPU com recuo para CPU.
-  spawn(buf, delegate) {
+  spawn(buf, delegate, task = "hand") {
     return new Promise((res, rej) => {
       const w = new Worker(new URL("./hands.worker.js", import.meta.url), { type: "module" });
       w.onmessage = ({ data }) => (data.type === "ready" ? res(w) : data.type === "error" ? (w.terminate(), rej(new Error(data.message))) : null);
       w.onerror = (e) => { w.terminate(); rej(e); };
-      w.postMessage({ type: "init", wasm: new URL(WASM, location.href).href, model: buf, delegate });
+      w.postMessage({ type: "init", wasm: new URL(WASM, location.href).href, model: buf, delegate, task });
     });
   }
+  // rosto / corpo: modelo baixado sob demanda, worker próprio (roda em paralelo com o das mãos)
+  async enable(task) {
+    this.aux = this.aux || {};
+    if (this.aux[task]) return;
+    this.aux[task] = { pending: true };
+    try {
+      const r = await fetch(EXTRA_MODELS[task]);
+      if (!r.ok) throw new Error(r.status);
+      const buf = new Uint8Array(await r.arrayBuffer());
+      const w = await this.spawn(buf, this.delegate === "CPU" ? "CPU" : "GPU", task);
+      if (this.disposed || !this.aux[task]) { w.terminate(); return; }
+      const a = (this.aux[task] = { w, busy: false });
+      w.onmessage = ({ data }) => { if (data.type !== "result") return; a.busy = false; a.ms = data.ms; if (this.running) this.onAux?.(task, data[task], data.t / 1000); };
+    } catch (e) { delete this.aux[task]; throw e; }
+  }
+  disable(task) { const a = this.aux?.[task]; if (!a) return; a.w?.postMessage({ type: "close" }); delete this.aux[task]; this.onAux?.(task, null, 0); }
   attach(w) {
     const pf = (this.perf = { n: 0, sum: 0, slow: 0 });
     w.onmessage = ({ data }) => {
@@ -161,6 +181,13 @@ export class HandTracker {
             .then((bitmap) => (this.running ? this.worker.postMessage({ type: "frame", bitmap, t: now }, [bitmap]) : bitmap.close()))
             .catch(() => { this.busy = false; });
         }
+        for (const a of Object.values(this.aux || {})) {
+          if (!a.w || (a.busy && now - a.sent < 4000)) continue;
+          a.busy = true; a.sent = now;
+          createImageBitmap(v, { resizeWidth: 320, resizeHeight: 240, resizeQuality: "medium" })
+            .then((bitmap) => (this.running && a.w ? a.w.postMessage({ type: "frame", bitmap, t: now }, [bitmap]) : bitmap.close()))
+            .catch(() => { a.busy = false; });
+        }
       } else if (this.lm) {
         let res;
         try { res = this.lm.detectForVideo(v, now); } catch { res = null; }
@@ -188,13 +215,34 @@ export class HandTracker {
       const ax = (lm[4].x + lm[8].x) * 0.3 + lm[5].x * 0.4, ay = (lm[4].y + lm[8].y) * 0.3 + lm[5].y * 0.4;
       const r = this.region;
       const x = s.fx.f(map(ax, r.x0, r.x1), t), y = s.fy.f(map(ay, r.y0, r.y1), t);
-      const ext = [8, 12, 16, 20].map((tip) => d(0, tip) > d(0, tip - 2) * 1.08);
-      const n = ext.filter(Boolean).length;
+      // dedos: reto = ângulo pequeno entre (base→meio) e (meio→ponta), em 3D, com histerese
+      const v = (a, b) => [(lm[b].x - lm[a].x) * aspect, lm[b].y - lm[a].y, (lm[b].z - lm[a].z) * aspect];
+      const cos = (u, w) => (u[0] * w[0] + u[1] * w[1] + u[2] * w[2]) / (Math.hypot(...u) * Math.hypot(...w) + 1e-6);
+      s.f = s.f || [false, false, false, false, false];
+      s.f = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]].map(([m, p, q, tip], k) => {
+        const c = k === 0 ? cos(v(p, q), v(q, tip)) : cos(v(m, p), v(p, tip));
+        const away = k === 0 ? d(4, 5) / palm > (s.f[0] ? 0.5 : 0.62) : d(0, tip) > d(0, p) * 1.05; // polegar afastado do indicador
+        return away && c > (s.f[k] ? 0.55 : 0.72);
+      });
+      const [th, ix, md, rg, pk] = s.f;
+      const four = ix + md + rg + pk;
+      let g = "other";
+      if (s.pinch) g = "pinch";
+      else if (four === 4) g = "open";
+      else if (four === 0) g = th ? (lm[4].y < lm[3].y && lm[4].y < lm[5].y - palm * 0.25 ? "thumbs_up" : lm[4].y > lm[3].y && lm[4].y > lm[17].y + palm * 0.25 ? "thumbs_down" : "fist") : "fist";
+      else if (ix && !md && !rg && !pk) g = "point";
+      else if (ix && md && !rg && !pk) g = "victory";
+      else if (ix && pk && !md && !rg) g = "rock";
+      // estável só depois de 4 quadros iguais (~130 ms): evita disparo em transição de pose
+      if (g === s.cand) s.candN++; else { s.cand = g; s.candN = 1; }
+      if (s.candN >= 4 || g === "pinch") s.gesture = g;
+      const n = four;
       hands.push({
         key, lm, x, y, pinch: s.pinch, pinchD: pd,
         vx: s.fx.dx, vy: s.fy.dx, t, // velocidade filtrada (tela/s) e instante da captura (s): previsão entre quadros
         scale: s.fs.f(palm, t), // tamanho da palma: cresce quando a mão se aproxima da câmera
         open: n === 4 && !s.pinch, fist: n === 0 && !s.pinch,
+        fingers: s.f, gesture: s.gesture || "other",
         tips: TIPS.map((k) => ({ x: map(lm[k].x, r.x0, r.x1), y: map(lm[k].y, r.y0, r.y1) })),
         angle: Math.atan2(lm[9].y - lm[0].y, (lm[9].x - lm[0].x) * aspect),
       });
@@ -206,6 +254,8 @@ export class HandTracker {
 
   close() {
     this.worker?.postMessage({ type: "close" }); this.worker = null;
+    for (const a of Object.values(this.aux || {})) a.w?.postMessage({ type: "close" });
+    this.aux = {};
     try { this.lm?.close(); } catch {}
     this.lm = null;
   }

@@ -27,9 +27,15 @@ export class Input {
 
   async startCamera(onStatus) {
     this.cam = new HandTracker({ onFrame: (hs) => { this.camHands = hs; this.camT = performance.now(); }, onStatus });
+    this.cam.onAux = (task, d) => { this[task] = d; };
+    const want = [...(this.want || [])];
     try { await this.cam.start(); }
     catch (e) { this.cam.stop(); this.cam = null; throw e; }
+    want.forEach((t) => this.cam.enable(t).catch((e) => console.warn("[" + t + "]", e)));
   }
+  // corpo/rosto sob demanda (o modo pede; se a câmera ainda não ligou, liga junto com ela)
+  enable(task) { this.want = new Set([...(this.want || []), task]); return this.cam ? this.cam.enable(task) : Promise.resolve(); }
+  disable(task) { this.want?.delete(task); this[task] = null; this.cam?.disable(task); }
   stopCamera() { this.cam?.stop(); this.cam = null; this.camHands = []; }
   get video() { return this.cam?.video; }
   get region() { return this.cam?.region; }

@@ -74,3 +74,44 @@
   .gx-hud { width: 180px; right: 12px; bottom: 12px; }
   .gx-tut { left: 12px; right: 12px; bottom: auto; top: 12px; width: auto; }
 }
+
+/* anel de progresso das poses seguradas */
+.gx-hold { position: absolute; left: -36px; top: -36px; width: 72px; height: 72px; border-radius: 50%; opacity: calc(var(--hold, 0) * 4);
+  background: conic-gradient(#ff3b3b calc(var(--hold, 0) * 360deg), rgba(255,255,255,.12) 0); -webkit-mask: radial-gradient(closest-side, transparent 88%, #000 90%); mask: radial-gradient(closest-side, transparent 88%, #000 90%); }
+.gx.is-paused .gx-ring { border-color: rgba(255,255,255,.3); box-shadow: none; }
+.gx.is-paused .gx-ring::before, .gx.is-paused .gx-ring::after { animation-play-state: paused; opacity: .2; }
+
+/* confirmação de comando: selo central */
+.gx-flash { position: absolute; left: 50%; top: 18%; transform: translate(-50%, 8px); display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 99px;
+  background: rgba(12,12,14,.92); border: 1px solid rgba(255,59,59,.45); color: #fff; font-size: 12px; opacity: 0; transition: opacity .25s, transform .45s cubic-bezier(.22,1,.36,1); box-shadow: 0 20px 50px -20px rgba(227,34,44,.8); }
+.gx-flash.on { opacity: 1; transform: translate(-50%, 0); }
+.gx-flash svg { color: #ff3b3b; }
+
+/* voz: o que foi ouvido */
+.gx-said { position: absolute; right: 292px; bottom: 20px; max-width: 260px; padding: 10px 14px; border-radius: 16px; background: rgba(12,12,14,.94); border: 1px solid rgba(255,255,255,.12);
+  display: grid; gap: 3px; animation: gx-rise .35s cubic-bezier(.22,1,.36,1) both; }
+.gx-said[hidden] { display: none; }
+.gx-said span { color: #85858f; }
+.gx-said b { font-size: 14px; font-weight: 520; color: #c9c9d0; }
+.gx-said.final b { color: #fff; }
+.gx-said.hit { border-color: rgba(255,59,59,.6); }
+.gx-said.hit span::after { content: " · comando"; color: #ff3b3b; }
+
+/* botões voz / rosto */
+.gx-mods { display: flex; gap: 4px; width: 100%; }
+.gx-mod { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04);
+  font: 500 12px var(--sans, system-ui); color: #c9c9d0; cursor: pointer; transition: background .25s, color .25s, border-color .25s; }
+.gx-mod:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.gx-mod[aria-pressed="true"] { color: #fff; border-color: rgba(255,59,59,.6); background: rgba(255,59,59,.14); }
+.gx-mod[aria-pressed="true"] svg { color: #ff3b3b; }
+.gx-mod[data-state="loading"] { opacity: .6; pointer-events: none; }
+.gx-voice[aria-pressed="true"] svg { animation: gx-blink 1.2s steps(2) infinite; }
+
+/* lista de gestos avançados */
+.gx-more { margin-top: 10px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 8px; }
+.gx-more summary { cursor: pointer; color: #ff3b3b; list-style: none; padding: 4px 2px; }
+.gx-more summary::-webkit-details-marker { display: none; }
+.gx-more summary::after { content: " +"; } .gx-more[open] summary::after { content: " −"; }
+.gx-more ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; max-height: 38vh; overflow-y: auto; }
+.gx-more li { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: center; padding: 6px; }
+.gx-more .gx-g { width: 32px; height: 32px; border-radius: 10px; }

@@ -211,6 +211,7 @@ function Player({ project, onClose, onHost, onNav }) {
     const d = ref.current;
     const prev = document.activeElement;
     d.showModal();
+    d.querySelector(".player-card")?.focus({ preventScroll: true }); // foco no cartão: sem anel no primeiro botão
     onHost(d);
     sfx.whoosh(0.45, true, 0.09); setTimeout(() => sfx.boom(0.12), 280);
     sfx.musicHold(true);
@@ -220,14 +221,16 @@ function Player({ project, onClose, onHost, onNav }) {
   const watch = project.url?.replace("/embed/", "/watch?v=");
   return (
     <dialog ref={ref} className="player" onCancel={onClose} onClick={(e) => e.target === e.currentTarget && onClose()} aria-labelledby="pl-title">
-      <div className="player-card">
+      <div className="player-card" tabIndex={-1}>
         <div className="player-bar">
           <span className="mono">{project.cat} · {project.date.slice(0, 4)} · {project.q}</span>
-          <div className="player-nav">
-            <button className="icon-btn" onClick={() => onNav(-1)} aria-label="Vídeo anterior"><I.Prev size={18} /></button>
-            <span className="mono">{String(PROJECTS.indexOf(project) + 1).padStart(2, "0")} / {PROJECTS.length}</span>
-            <button className="icon-btn" onClick={() => onNav(1)} aria-label="Próximo vídeo"><I.Next size={18} /></button>
-            <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
+          <div className="player-ctl">
+            <div className="player-nav">
+              <button onClick={() => onNav(-1)} aria-label="Vídeo anterior"><I.Prev size={16} /></button>
+              <span className="mono"><b>{String(PROJECTS.indexOf(project) + 1).padStart(2, "0")}</b> / {PROJECTS.length}</span>
+              <button onClick={() => onNav(1)} aria-label="Próximo vídeo"><I.Next size={16} /></button>
+            </div>
+            <button className="icon-btn player-x" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
           </div>
         </div>
         <div className="player-frame">
@@ -1114,7 +1117,16 @@ export default function App() {
     setGest(true); sfx.unlock();
     stopGest.current = () => {};
     const { default: start } = await import("./gesture/GestureControl");
-    stopGest.current = start({ onEnd: () => { stopGest.current = null; setGest(false); } });
+    stopGest.current = start({
+      onEnd: () => { stopGest.current = null; setGest(false); },
+      // o que os gestos e a voz podem acionar no site
+      actions: {
+        tour: () => { if (!stopDemo.current) toggleDemo(); },
+        stopTour: () => stopDemo.current?.(),
+        sound: (on) => sfx.set(on),
+        closePlayer: () => setProject(null),
+      },
+    });
   };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
