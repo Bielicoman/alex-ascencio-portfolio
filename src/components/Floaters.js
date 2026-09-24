@@ -1,3 +1,5 @@
+import { sfx } from "./Sound";
+
 // Gravidade zero para os elementos da hero: flutuação idle, inclinação 3D que olha para o cursor,
 // arrasto com inércia e retorno lento por mola (k 5, c 3,1 — levemente subamortecido).
 const K = 5, C = 3.1;
@@ -43,7 +45,7 @@ export default class Floaters {
       const g = it.drag;
       if (!g || g.id !== e.pointerId) return;
       const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
-      if (!it.moved && Math.hypot(dx, dy) > 6) { it.moved = true; el.classList.add("is-drag"); this.root.classList.add("has-drag"); }
+      if (!it.moved && Math.hypot(dx, dy) > 6) { it.moved = true; sfx.pickup(e.clientX); el.classList.add("is-drag"); this.root.classList.add("has-drag"); }
       if (!it.moved) return;
       e.preventDefault();
       const t = performance.now(), dt = Math.max(1, t - g.lt) / 1000;
@@ -60,6 +62,7 @@ export default class Floaters {
       window.removeEventListener("pointercancel", it.up);
       // arremesso limitado: flutua um pouco antes de voltar
       const sp = Math.hypot(it.vx, it.vy), max = 1400;
+      if (it.moved) sfx.release(sp, e.clientX);
       if (sp > max) { it.vx *= max / sp; it.vy *= max / sp; }
       el.classList.remove("is-drag");
       this.root.classList.remove("has-drag");

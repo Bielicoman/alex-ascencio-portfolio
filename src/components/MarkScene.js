@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { MARK_PATH, MARK_W, MARK_H } from "../brand";
+import { sfx } from "./Sound";
 
 // Marca AA extrudada em laca vermelha sobre fundo claro. Luz pontual segue o cursor,
 // arrasto gira com inércia e a peça volta a flutuar sozinha.
@@ -65,7 +66,7 @@ export default class MarkScene {
       }
     };
     this.onDown = (e) => { this.drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); canvas.classList.add("is-drag"); };
-    this.onUp = () => { this.drag = null; canvas.classList.remove("is-drag"); };
+    this.onUp = () => { if (this.drag) sfx.bell(0.03 + Math.min(0.04, Math.abs(this.rot.vy) * 0.004)); this.drag = null; canvas.classList.remove("is-drag"); };
     this.onResize = () => this.resize();
     window.addEventListener("pointermove", this.onMove, { passive: true });
     canvas.addEventListener("pointerdown", this.onDown);
@@ -100,6 +101,7 @@ export default class MarkScene {
         this.rot.y += this.rot.vy * dt; this.rot.x += this.rot.vx * dt;
       }
       this.group.rotation.set(this.rot.x, this.rot.y, Math.sin(t * 0.3) * 0.03);
+      sfx.spin(this.drag ? Math.hypot(this.rot.vx, this.rot.vy) * 0.08 : Math.abs(this.rot.vy) * 0.6);
       this.group.position.y = Math.sin(t * 0.8) * 0.08;
       this.spot.position.x += (this.aim.x * 4.2 - this.spot.position.x) * 0.12;
       this.spot.position.y += (this.aim.y * 2.6 - this.spot.position.y) * 0.12;
@@ -108,7 +110,7 @@ export default class MarkScene {
     };
     this.raf = requestAnimationFrame(loop);
   }
-  stop() { this.running = false; cancelAnimationFrame(this.raf); }
+  stop() { this.running = false; cancelAnimationFrame(this.raf); sfx.spin(0); }
   dispose() {
     this.stop();
     window.removeEventListener("pointermove", this.onMove);

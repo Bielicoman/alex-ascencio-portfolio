@@ -11,6 +11,7 @@ import Floaters from "./components/Floaters";
 import Cursor from "./components/Cursor";
 import Method from "./components/Method";
 import runDemo from "./components/Demo";
+import { sfx } from "./components/Sound";
 import * as I from "./components/Icons";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -138,6 +139,18 @@ function Preloader() {
   );
 }
 
+/* ───────── som ───────── */
+function SoundToggle() {
+  const [on, setOn] = useState(sfx.enabled);
+  useEffect(() => sfx.onChange(setOn), []);
+  return (
+    <button className={`snd${on ? " on" : ""}`} onClick={() => sfx.set(!on)} aria-pressed={on} aria-label={on ? "Desligar o som" : "Ligar o som"}>
+      <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
+      <span className="snd-l mono">Som</span>
+    </button>
+  );
+}
+
 /* ───────── navegação ───────── */
 function Nav() {
   const [open, setOpen] = useState(false);
@@ -179,6 +192,7 @@ function Nav() {
         </div>
       </nav>
       <div className="nav-right">
+        <SoundToggle />
         <Btn href="#contato" variant="primary" size="sm">Vamos conversar</Btn>
         <button className="nav-menu" aria-label={open ? "Fechar menu" : "Abrir menu"} aria-expanded={open} onClick={() => setOpen(!open)}>
           <span /><span />
@@ -196,8 +210,9 @@ function Player({ project, onClose, onHost, onNav }) {
     const prev = document.activeElement;
     d.showModal();
     onHost(d);
+    sfx.whoosh(0.45, true, 0.09); setTimeout(() => sfx.boom(0.12), 280);
     window.__lenis?.stop();
-    return () => { onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
+    return () => { sfx.whoosh(0.35, false, 0.06); onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
   }, [onHost]);
   const watch = project.url?.replace("/embed/", "/watch?v=");
   return (
@@ -727,7 +742,7 @@ function Contact() {
   const kinds = ["Videoclipe", "Documentário", "Curta / cinema", "Motion design", "IA generativa", "Evento / ao vivo", "Outro"];
   const body = `Olá, Alex! Sou ${form.name || "—"}.\nProjeto: ${kind}\nPrazo: ${form.when}\n\n${form.msg}`;
   const valid = form.name.trim() && form.msg.trim();
-  const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
+  const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); sfx.chime(); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
   const channels = [
     [I.Whatsapp, "WhatsApp", PHONE, `https://wa.me/${WHATS}`],
     [I.Instagram, "Instagram", "@alexascencioai", IG],
@@ -871,6 +886,7 @@ export default function App() {
   const toggleDemo = () => {
     if (stopDemo.current) { stopDemo.current(); return; }
     setDemo(true);
+    sfx.unlock(); sfx.riser(1.1);
     stopDemo.current = runDemo({ onEnd: () => { stopDemo.current = null; setDemo(false); } });
   };
   const fieldCanvas = useRef(null);
@@ -884,6 +900,8 @@ export default function App() {
       window.__lenis = lenis;
       lenis.on("scroll", ScrollTrigger.update);
       lenis.on("scroll", ({ direction, scroll }) => document.documentElement.classList.toggle("nav-hidden", direction === 1 && scroll > innerHeight * 0.9));
+      let calm;
+      lenis.on("scroll", ({ velocity }) => { sfx.scrollAir(velocity); clearTimeout(calm); calm = setTimeout(() => sfx.scrollAir(0), 140); });
       tick = (t) => lenis.raf(t * 1000);
       gsap.ticker.add(tick);
       // lagSmoothing padrão (500 ms / 33 ms): com 0, uma travada no carregamento (shader, decode)
@@ -898,6 +916,7 @@ export default function App() {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
       if (warping) return;
       warping = true;
+      sfx.teleport(x);
       const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
       const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
       const o = { s: 0, t: 0 };
@@ -928,7 +947,33 @@ export default function App() {
     };
     document.addEventListener("click", onAnchor);
 
-    let field, live = reduced;
+    /* ── som: desbloqueio no primeiro gesto, hover/clique delegados, faíscas nas partículas ── */
+    const unlock = () => sfx.unlock();
+    ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+    let hov = null, px = 0, py = 0, pt = 0;
+    const onOver = (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      const el = t?.closest("a, button, [data-cursor], .floater, .tcat, .tool, .traj-clip, .traj-now, .process li");
+      if (el === hov) return;
+      hov = el;
+      if (!el) return;
+      const x = e.clientX;
+      if (el.closest(".nav-links")) sfx.navTick([...el.parentElement.querySelectorAll("a")].indexOf(el), x);
+      else if (el.hasAttribute("data-cursor")) sfx.projector(x);
+      else if (el.closest(".floater") && !el.closest("button")) sfx.glass(x);
+      else sfx.tick(el.matches(".tcat, .tool, .traj-clip, .process li") ? 1760 : 2350, x, 0.022);
+    };
+    const onDown = (e) => { const a = e.target instanceof Element && e.target.closest("a, button"); if (a && !a.matches('a[href^="#"]')) sfx.thock(e.clientX); };
+    const onPMove = (e) => {
+      const now = performance.now(), sp = Math.hypot(e.clientX - px, e.clientY - py) / Math.max(1, now - pt);
+      px = e.clientX; py = e.clientY; pt = now;
+      if (sp > 1.1 && (window.__lenis?.scroll ?? scrollY) < innerHeight * 0.9 && Math.random() < 0.55) sfx.sparkle(e.clientX, e.clientY);
+    };
+    document.addEventListener("pointerover", onOver, { passive: true });
+    document.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointermove", onPMove, { passive: true });
+
+    let field, live = reduced, morph = 0, fade = 1;
     try {
       field = new ParticleField(fieldCanvas.current);
       if (reduced) field.renderOnce(); // sem movimento: um quadro; com movimento, liga quando a cortina abre
@@ -1011,10 +1056,10 @@ export default function App() {
         }),
       });
       // partículas → marca → somem
-      ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => field?.setMorph(s.progress) });
+      ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => { field?.setMorph(s.progress); morph = s.progress; sfx.padLevel(morph * fade); } });
       ScrollTrigger.create({
         trigger: "#manifesto", start: "bottom bottom", end: "bottom 35%", scrub: true,
-        onUpdate: (s) => { gsap.set(fieldCanvas.current, { opacity: 1 - s.progress }); if (live) (s.progress >= 0.999 ? field?.stop() : field?.start()); },
+        onUpdate: (s) => { gsap.set(fieldCanvas.current, { opacity: 1 - s.progress }); fade = 1 - s.progress; sfx.padLevel(morph * fade); if (live) (s.progress >= 0.999 ? field?.stop() : field?.start()); },
       });
       // filmes: horizontal
       mm.add("(min-width: 900px)", () => {
@@ -1043,7 +1088,7 @@ export default function App() {
       gsap.fromTo(".lab-canvas", { scale: 1.18 }, { scale: 1, ease: "none", scrollTrigger: { trigger: ".lab", start: "top bottom", end: "top top", scrub: true } });
       // títulos: máscara por linha
       gsap.utils.toArray(".js-title .title-inner").forEach((el) => {
-        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 0.95, ease: "expo.out", scrollTrigger: { trigger: el.parentElement, start: "top 95%", once: true } });
+        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 0.95, ease: "expo.out", onStart: () => sfx.reveal(), scrollTrigger: { trigger: el.parentElement, start: "top 95%", once: true } });
       });
       gsap.utils.toArray(".eyebrow").forEach((el) => {
         gsap.from(el, { opacity: 0, x: -16, duration: 0.7, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 96%", once: true } });
@@ -1069,6 +1114,10 @@ export default function App() {
     return () => {
       ctx.revert();
       document.removeEventListener("click", onAnchor);
+      ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.removeEventListener(ev, unlock, true));
+      document.removeEventListener("pointerover", onOver);
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onPMove);
       field?.dispose();
       if (tick) gsap.ticker.remove(tick);
       lenis?.destroy();

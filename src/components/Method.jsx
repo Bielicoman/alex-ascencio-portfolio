@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { tc, mmss, reducedMotion, useMedia } from "../util";
+import { sfx } from "./Sound";
 
 // Sequência de 60 s usada nas duas simulações (Premiere no desktop, CapCut no celular).
 const V1 = [[0, 1, 24], [1, 2, 14], [2, 3, 7], [3, 4, 16], [4, 10, 1], [10, 17, 21], [17, 23, 12], [23, 30, 18], [30, 37, 13], [37, 44, 23], [44, 50, 2], [50, 56, 9]];
@@ -72,7 +73,7 @@ export default function Method() {
     const reduced = reducedMotion();
     const el = root.current;
     const q = (s) => el.querySelectorAll(s);
-    let clipIdx = -1;
+    let clipIdx = -1, glitching = false;
     const st = ScrollTrigger.create({
       trigger: el, start: "top top", end: () => `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: reduced ? false : el.querySelector(".method-pin"), invalidateOnRefresh: true,
       onUpdate: (s) => {
@@ -85,8 +86,11 @@ export default function Method() {
         setRule(Math.max(0, RULES.findIndex(([a, b]) => t >= a && t < b)));
         const ci = V1.findIndex(([a, b]) => t >= a && t < b);
         setShot(t >= 56 ? "end" : (V1[ci] || V1[V1.length - 1])[2]);
-        if (ci !== clipIdx) { q(".js-v1 > .is-sel").forEach((n) => n.classList.remove("is-sel")); q(".js-v1").forEach((n) => n.children[ci]?.classList.add("is-sel")); clipIdx = ci; }
-        el.classList.toggle("is-glitch", FX.some((f) => Math.abs(t - f) < 0.25));
+        if (ci !== clipIdx) { if (clipIdx !== -1) sfx.splice(innerWidth * (0.25 + (t / DUR) * 0.5)); q(".js-v1 > .is-sel").forEach((n) => n.classList.remove("is-sel")); q(".js-v1").forEach((n) => n.children[ci]?.classList.add("is-sel")); clipIdx = ci; }
+        const g = FX.some((f) => Math.abs(t - f) < 0.25);
+        if (g && !glitching) sfx.glitch(0.05, 4);
+        glitching = g;
+        el.classList.toggle("is-glitch", g);
       },
     });
     ScrollTrigger.sort();
