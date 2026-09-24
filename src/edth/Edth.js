@@ -79,9 +79,10 @@ function create({ actions: app = {}, onClose = () => {} }) {
 
   // ── voz: fala (feminina pt-BR) ──
   // voz feminina pt-BR: ranking por nome, masculinas fora; escolha manual fica salva
-  const FEM = ["francisca", "thalita", "google portugu", "luciana", "maria", "vitoria", "vitória", "camila", "fernanda", "helena", "leila", "raquel", "yara", "elza", "manuela", "brenda", "giovanna", "leticia", "female", "feminin"];
+  // ordem = timbre mais jovem primeiro; "Maria" (Windows) e "Luciana" (Apple) soam maduras e ficam por último
+  const FEM = ["francisca", "thalita", "google portugu", "brenda", "giovanna", "leticia", "yara", "manuela", "camila", "fernanda", "vitoria", "vitória", "leila", "raquel", "helena", "elza", "female", "feminin", "luciana", "maria"];
   const MALE = /(daniel|ant[oô]nio|felipe|ricardo|heitor|donato|fabio|f[aá]bio|humberto|julio|j[uú]lio|nicolau|valerio|val[eé]rio|male\b|masculin)/i;
-  const VKEY = "edth-voice";
+  const VKEY = "edth-voice-v2"; // v2: descarta escolha antiga salva com timbre maduro
   let serverTTS = null; // voz neural do site: null = ainda não testada
   const vbox = root.querySelector(".edth-voices"), vlist = root.querySelector(".edth-vlist"), vhint = root.querySelector(".edth-vhint");
   let voice = null, voices = [];
@@ -153,8 +154,8 @@ function create({ actions: app = {}, onClose = () => {} }) {
     if (!("speechSynthesis" in window) || id !== speakId) { end(); return; }
     await new Promise((res) => {
       const u = new SpeechSynthesisUtterance(t);
-      // sem voz feminina disponível, sobe o tom para aproximar (paliativo); com voz feminina, tom natural
-      u.lang = "pt-BR"; if (voice) u.voice = voice; u.rate = 1.03; u.pitch = voice && rank(voice) < 99 ? 1.05 : 1.35; u.volume = 1;
+      // timbre jovem: tom e andamento um pouco acima do padrão; sem voz feminina, sobe mais (paliativo)
+      u.lang = "pt-BR"; if (voice) u.voice = voice; u.rate = 1.07; u.pitch = voice && rank(voice) < 99 ? 1.18 : 1.4; u.volume = 1;
       begin();
       u.onend = u.onerror = () => { end(); res(); };
       speechSynthesis.speak(u);
