@@ -54,3 +54,15 @@ Medido no Chromium sem GPU (8 s de scroll + mouse): 2,8–4,1 → 4,8 fps em rel
 `preview` em `src/projects.js` é o caminho sem extensão de um loop curto em `public/media/previews/` (.webm VP9 para Chrome/Firefox, .mp4 H.264 para Safari), tocado no hover (grade, Filmes, card da hero) e no tour.
 Sem `preview`, o tour cai no embed do YouTube (lento: carrega o player inteiro).
 Encode: 6 s, 960×540, 24 fps, sem áudio — `ffmpeg -ss <in> -t 6 -i master.mp4 -an -vf "scale=960:540:flags=lanczos,fps=24" -c:v libx264 -profile:v high -preset slow -crf 27 -pix_fmt yuv420p -movflags +faststart AAAA-MM-DD_projeto_preview_v01.mp4` (~300 KB). WebM: `-c:v libvpx-vp9 -b:v 0 -crf 38 -row-mt 1` (~250 KB).
+
+## Currículo digital
+`/curriculo/` (`curriculo/index.html` + `src/curriculo/`): página na identidade do site, abre instantânea (sem depender de visualizador de PDF).
+O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm run preview`, abrir `/curriculo/` no Chromium e imprimir com
+`page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })`. Salvar como `public/media/cv/AAAA-MM-DD_alexascencio_curriculo_vNN.pdf`
+(nunca sobrescrever) e atualizar `PDF` em `src/curriculo/main.jsx`. Imagens do currículo em `public/media/cv/img/` (foto 520 px, miniaturas 400 px).
+
+## Controle por gestos e Playground
+- **Hero → "Controlar com as mãos"** (só desktop): liga a webcam e controla a página. Apontar move o cursor; pinça rápida = clique; pinça + arrasto no vazio = rolar (soltar em movimento arremessa); pinça num flutuante = pegar e jogar; duas pinças = zoom na seção. Esc desliga. Tutorial com checagem ao vivo de cada gesto.
+- **/playground/**: página independente com Partículas (marca AA em 26 mil pontos), Objetos 3D em gravidade zero, Piano, Bateria, Teremim e o jogo "Corte". Funciona com câmera, mouse ou toque.
+- Rastreamento: MediaPipe HandLandmarker (21 pontos, 2 mãos) + filtro One Euro, tudo no navegador. O WASM é copiado de `node_modules/@mediapipe/tasks-vision/wasm` para `dist/media/hand/wasm` no build; o modelo (7,8 MB) vem do CDN oficial do MediaPipe e só baixa quando a câmera é ligada.
+- Código: `src/gesture/` (rastreador + controle da home), `src/playground/` (página, áudio sintetizado e modos).

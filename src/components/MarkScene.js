@@ -5,7 +5,7 @@ import { sfx } from "./Sound";
 
 // Marca AA extrudada em laca vermelha sobre fundo claro. Luz pontual segue o cursor,
 // arrasto gira com inércia e a peça volta a flutuar sozinha.
-function markShapes() {
+export function markShapes() {
   const shapes = [];
   let cur = null;
   for (const [, cmd, args] of MARK_PATH.matchAll(/([MLZ])\s*([^MLZ]*)/g)) {
@@ -65,7 +65,7 @@ export default class MarkScene {
         this.drag.x = e.clientX; this.drag.y = e.clientY;
       }
     };
-    this.onDown = (e) => { this.drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); canvas.classList.add("is-drag"); };
+    this.onDown = (e) => { this.drag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} canvas.classList.add("is-drag"); };
     this.onUp = () => { if (this.drag) sfx.bell(0.03 + Math.min(0.04, Math.abs(this.rot.vy) * 0.004)); this.drag = null; canvas.classList.remove("is-drag"); };
     this.onResize = () => this.resize();
     window.addEventListener("pointermove", this.onMove, { passive: true });

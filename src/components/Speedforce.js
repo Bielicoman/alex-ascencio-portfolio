@@ -34,7 +34,9 @@ export default class Speedforce {
     this.running = false; this.px = -1; this.py = -1; this.pt = 0; this.lastArc = 0;
     this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.fine = matchMedia("(pointer: fine)").matches;
-    this.resize = () => { const d = Math.min(devicePixelRatio, 1.5); c.width = innerWidth * d; c.height = innerHeight * d; this.g.setTransform(d, 0, 0, d, 0, 0); };
+    // modo leve (celular/tablet): metade dos filamentos, DPR 1, brasas sem gradiente, menos faíscas
+    this.lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+    this.resize = () => { const d = this.lite ? 1 : Math.min(devicePixelRatio, 1.5); c.width = innerWidth * d; c.height = innerHeight * d; this.g.setTransform(d, 0, 0, d, 0, 0); };
     this.resize(); window.addEventListener("resize", this.resize);
     this.onMove = (e) => {
       const now = performance.now(), dt = Math.max(1, now - this.pt), vx = (e.clientX - this.px) / dt, vy = (e.clientY - this.py) / dt, sp = Math.hypot(vx, vy);
@@ -76,7 +78,7 @@ export default class Speedforce {
   }
   embersAt(n) { // brasas flutuando; algumas grandes e desfocadas (bokeh)
     for (let i = 0; i < n; i++) {
-      const big = Math.random() < 0.18;
+      const big = !this.lite && Math.random() < 0.18;
       this.embers.push({ x: rnd(0, innerWidth), y: rnd(0, innerHeight), vx: rnd(-40, 40), vy: rnd(-90, -15), r: big ? rnd(6, 16) : rnd(0.8, 2.2), big, age: 0, life: rnd(0.8, 1.8), ph: rnd(0, 6.28) });
     }
     this.start();
@@ -93,19 +95,20 @@ export default class Speedforce {
   // teleporte: carga no clique → salto (clarão + filamentos cruzando a tela) → rescaldo com brasas
   burst(x, y, jumpAt = 0.28) {
     if (this.reduced) return;
+    const L = this.lite;
     this.haze = 0.6;
-    this.spray(x, y, 50, 800);
-    for (let i = 0; i < 2; i++) { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: 1.1, travel: 0.14 }); }
-    this.every(0.1, jumpAt, () => { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: rnd(0.6, 1), strands: 2 }); this.coil(x, y); });
+    this.spray(x, y, L ? 18 : 50, 800);
+    for (let i = 0; i < (L ? 1 : 2); i++) { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: 1.1, travel: 0.14 }); }
+    if (!L) this.every(0.1, jumpAt, () => { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: rnd(0.6, 1), strands: 2 }); this.coil(x, y); });
     this.after(jumpAt, () => {
       this.flash = 1; this.haze = 1;
       const cx = innerWidth / 2, cy = innerHeight / 2;
-      this.tunnel(cx, cy, 130);
-      for (let i = 0; i < 4; i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(1, 1.6), life: rnd(0.6, 1) }); }
-      for (let i = 0; i < 2; i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: 3, blur: true, strands: 1, life: 1.1, travel: 0.3 }); } // desfocados, em primeiro plano
-      this.spray(cx, cy, 90, 1200);
-      this.embersAt(70);
-      this.every(0.15, 0.55, () => { const [ax, ay] = this.edge(), [bx, by] = this.edge(); if (Math.random() < 0.7) this.tendril(ax, ay, bx, by, { w: rnd(0.5, 1.1), strands: 2 }); });
+      this.tunnel(cx, cy, L ? 50 : 130);
+      for (let i = 0; i < (L ? 2 : 4); i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(1, 1.6), life: rnd(0.6, 1), strands: L ? 2 : 3 }); }
+      if (!L) for (let i = 0; i < 2; i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: 3, blur: true, strands: 1, life: 1.1, travel: 0.3 }); } // desfocados, em primeiro plano
+      this.spray(cx, cy, L ? 36 : 90, 1200);
+      this.embersAt(L ? 24 : 70);
+      if (!L) this.every(0.15, 0.55, () => { const [ax, ay] = this.edge(), [bx, by] = this.edge(); if (Math.random() < 0.7) this.tendril(ax, ay, bx, by, { w: rnd(0.5, 1.1), strands: 2 }); });
       this.charge = 1.4;
     });
   }
