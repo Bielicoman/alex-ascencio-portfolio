@@ -10,6 +10,7 @@ import LensField from "./components/LensField";
 import Floaters from "./components/Floaters";
 import Cursor from "./components/Cursor";
 import Method from "./components/Method";
+import runDemo from "./components/Demo";
 import * as I from "./components/Icons";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -95,6 +96,16 @@ function Btn({ as = "a", variant = "primary", size = "", children, icon = <I.Arr
     </Magnetic>
   );
 }
+// botão de play: núcleo de vidro + anel que se desenha no hover
+function PlayBtn({ playing = false, className = "" }) {
+  return (
+    <span className={`pbtn ${className}`} aria-hidden="true">
+      <svg className="pbtn-ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28.5" pathLength="1" /></svg>
+      <span className="pbtn-core">{playing ? <I.Pause size={16} /> : <I.Play size={17} />}</span>
+    </span>
+  );
+}
+const yt = (p) => `${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
 function Roll({ children }) {
   return <span className="roll"><span>{children}</span><span aria-hidden="true">{children}</span></span>;
 }
@@ -178,7 +189,7 @@ function Nav() {
 }
 
 /* ───────── player ───────── */
-function Player({ project, onClose, onHost }) {
+function Player({ project, onClose, onHost, onNav }) {
   const ref = useRef(null);
   useEffect(() => {
     const d = ref.current;
@@ -194,15 +205,21 @@ function Player({ project, onClose, onHost }) {
       <div className="player-card">
         <div className="player-bar">
           <span className="mono">{project.cat} · {project.date.slice(0, 4)} · {project.q}</span>
-          <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
+          <div className="player-nav">
+            <button className="icon-btn" onClick={() => onNav(-1)} aria-label="Vídeo anterior"><I.Prev size={18} /></button>
+            <span className="mono">{String(PROJECTS.indexOf(project) + 1).padStart(2, "0")} / {PROJECTS.length}</span>
+            <button className="icon-btn" onClick={() => onNav(1)} aria-label="Próximo vídeo"><I.Next size={18} /></button>
+            <button className="icon-btn" onClick={onClose} aria-label="Fechar"><I.Close size={18} /></button>
+          </div>
         </div>
         <div className="player-frame">
           {project.video ? (
-            <video src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
+            <video key={project.id} src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
           ) : (
             <iframe
+              key={project.id}
               title={project.title}
-              src={`${project.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1`}
+              src={yt(project)}
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
               referrerPolicy="strict-origin-when-cross-origin"
             />
@@ -234,9 +251,63 @@ function Chip({ cls, icon: Icon, red, title, sub, depth, amp, speed }) {
     </div>
   );
 }
-function Hero({ open }) {
-  const latest = PROJECTS[0];
-  const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null), vidRef = useRef(null);
+// mini-player do card da hero: toca ali mesmo (vídeo do site ou YouTube), anterior/próximo e tela cheia
+function NowPlaying({ open }) {
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const vid = useRef(null), prev = useRef(null);
+  const cur = PROJECTS[idx];
+  const coarse = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+  const go = (d) => { setPlaying(false); setIdx((i) => (i + d + PROJECTS.length) % PROJECTS.length); };
+  const toggle = () => {
+    if (coarse()) { open(cur); return; } // no celular o card é pequeno demais: abre o player
+    if (playing && cur.video && vid.current) { vid.current.paused ? vid.current.play() : vid.current.pause(); return; }
+    setPlaying(!playing);
+  };
+  const [paused, setPaused] = useState(false);
+  const preview = (on) => {
+    const v = prev.current;
+    if (!v || playing || coarse()) return;
+    if (on) { v.play().catch(() => {}); v.parentElement.classList.add("is-preview"); } else { v.pause(); v.parentElement.classList.remove("is-preview"); }
+  };
+  useEffect(() => {
+    const f = (e) => { if (e.detail.on) setIdx(0); requestAnimationFrame(() => preview(e.detail.on)); };
+    window.addEventListener("demo:np", f);
+    return () => window.removeEventListener("demo:np", f);
+  });
+  const label = idx === 0 ? "Último lançamento" : "Lançamentos";
+  const n = `${String(idx + 1).padStart(2, "0")} / ${PROJECTS.length}`;
+  return (
+    <div className={`np${playing ? " is-playing" : ""}`}>
+      <div className="np-media" onPointerEnter={() => preview(true)} onPointerLeave={() => preview(false)}>
+        <img key={cur.id} src={thumb(cur)} alt="" draggable="false" />
+        {!playing && cur.video && <video ref={prev} key={`p${cur.id}`} src={cur.video} muted loop playsInline preload="none" aria-hidden="true" />}
+        {playing && (cur.video
+          ? <video ref={vid} key={`v${cur.id}`} src={cur.video} autoPlay playsInline onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onEnded={() => go(1)} />
+          : <iframe key={`y${cur.id}`} title={cur.title} src={yt(cur)} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />)}
+        {!playing && <button className="np-hit" onClick={toggle} data-cursor="Assistir" aria-label={`Assistir ${cur.title} aqui`} />}
+        <span className="np-live mono"><span className="rec" /> {label}</span>
+        <span className="np-q mono">{cur.q}</span>
+        <button className="np-arrow l" onClick={() => go(-1)} aria-label="Vídeo anterior"><I.Prev size={16} /></button>
+        <button className="np-arrow r" onClick={() => go(1)} aria-label="Próximo vídeo"><I.Next size={16} /></button>
+      </div>
+      <div className="np-body">
+        <span className="np-text" key={cur.id}>
+          <small className="mono">{cur.cat} · {cur.date.slice(0, 4)}<span className="np-idx"> · {n}</span></small>
+          <b>{short(cur)}</b>
+          <span>{artistOf(cur)}</span>
+        </span>
+        <span className="np-ctrl">
+          <button className="np-exp" onClick={() => { setPlaying(false); open(cur); }} aria-label="Abrir em tela cheia"><I.Expand size={15} /></button>
+          <button className="np-main" onClick={toggle} aria-label={playing && !paused ? "Pausar" : "Assistir aqui"}><PlayBtn playing={playing && !paused && !!cur.video} /></button>
+        </span>
+      </div>
+      <span className="fl-glare" aria-hidden="true" />
+    </div>
+  );
+}
+function Hero({ open, onDemo, demo }) {
+  const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
     const fl = new Floaters(floatRef.current);
     const io = new IntersectionObserver(([e]) => (e.isIntersecting ? fl.start() : fl.stop()));
@@ -252,11 +323,6 @@ function Hero({ open }) {
     window.addEventListener("pointermove", move, { passive: true });
     return () => { io.disconnect(); fl.dispose(); window.removeEventListener("pointermove", move); };
   }, []);
-  const preview = (on) => {
-    const v = vidRef.current;
-    if (!v || matchMedia("(pointer: coarse)").matches) return;
-    if (on) { v.play().catch(() => {}); v.parentElement.classList.add("is-playing"); } else { v.pause(); v.parentElement.classList.remove("is-playing"); }
-  };
   return (
     <section id="top" className="hero">
       <div className="hero-haze" aria-hidden="true" />
@@ -279,26 +345,17 @@ function Hero({ open }) {
         <Chip cls="fl-c" icon={I.Wave} title="Cor & som medidos" sub="Look por cena · LUFS por clipe" depth={0.8} amp={9} speed={0.45} />
         <Chip cls="fl-b" icon={I.Spark} red title="IA com critério" sub="Só entra se passar como filmado" depth={1.1} amp={12} speed={0.5} />
         <Chip cls="fl-d" icon={I.Film} title={`${N4K} entregas em 4K`} sub="Da captação ao master" depth={0.7} amp={8} speed={0.62} />
-        <div className="floater fl-np" data-float data-depth="0.9" data-amp="9" data-speed="0.42">
+        <div className="floater fl-tour" data-float data-depth="0.5" data-amp="7" data-speed="0.6">
           <div className="fl-in">
-            <button className="np" onClick={() => open(latest)} onPointerEnter={() => preview(true)} onPointerLeave={() => preview(false)} data-cursor="Assistir" aria-label={`Assistir ${latest.title}`}>
-              <span className="np-media">
-                <img src={thumb(latest)} alt="" draggable="false" />
-                {latest.video && <video ref={vidRef} src={latest.video} muted loop playsInline preload="none" aria-hidden="true" />}
-                <span className="np-live mono"><span className="rec" /> Último lançamento</span>
-                <span className="np-q mono">{latest.q}</span>
-              </span>
-              <span className="np-body">
-                <span className="np-text">
-                  <small className="mono">{latest.cat} · {latest.date.slice(0, 4)}</small>
-                  <b>{short(latest)}</b>
-                  <span>{artistOf(latest)}</span>
-                </span>
-                <span className="np-play"><I.Play size={14} /></span>
-              </span>
+            <button className="tour" onClick={onDemo} aria-pressed={demo} aria-label="Assistir o site: tour guiado automático">
+              <PlayBtn playing={demo} />
+              <span className="tour-t">{demo ? "Tour em andamento" : "Assistir o site"}<small>{demo ? "Mexa o mouse para assumir" : "Tour guiado · 1 min"}</small></span>
               <span className="fl-glare" aria-hidden="true" />
             </button>
           </div>
+        </div>
+        <div className="floater fl-np" data-float data-depth="0.9" data-amp="9" data-speed="0.42">
+          <div className="fl-in"><NowPlaying open={open} /></div>
         </div>
       </div>
 
@@ -365,7 +422,7 @@ function Featured({ open }) {
                 <div className="fcard-top"><span className="mono">{String(i + 1).padStart(2, "0")}</span><span className="mono">{p.cat} · {p.date.slice(0, 4)} · {p.q}</span></div>
                 <div className="fcard-meta">
                   <div><h3>{short(p)}</h3><p>{artistOf(p)}</p></div>
-                  <span className="fcard-play"><I.Play size={14} /></span>
+                  <PlayBtn className="fcard-play" />
                 </div>
               </button>
             </article>
@@ -410,7 +467,7 @@ function Lab() {
           <div className="services">
             {SERVICES.map(([Icon, t, d, tools], i) => (
               <article className="service reveal" key={t} style={{ "--d": i }}>
-                <div className="service-top"><span className="service-icon"><Icon size={22} draw /></span><span className="mono">0{i + 1}</span></div>
+                <div className="service-top"><span className="service-icon"><Icon size={22} /></span><span className="mono">0{i + 1}</span></div>
                 <h3>{t}</h3>
                 <p>{d}</p>
                 <small className="mono">{tools}</small>
@@ -448,8 +505,23 @@ function Clients() {
 }
 
 /* ───────── arquivo ───────── */
+function CardPreview({ p }) {
+  return (
+    <span className="card-prev" aria-hidden="true">
+      {p.video
+        ? <video src={p.video} muted autoPlay playsInline loop />
+        : <iframe title="" tabIndex={-1} src={`${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&start=15`} allow="autoplay; encrypted-media" />}
+    </span>
+  );
+}
 function Archive({ open }) {
   const [cat, setCat] = useState("Todos");
+  const [prev, setPrev] = useState(null);
+  useEffect(() => {
+    const f = (e) => setPrev(e.detail.id);
+    window.addEventListener("demo:card", f);
+    return () => window.removeEventListener("demo:card", f);
+  }, []);
   const [q, setQ] = useState("");
   const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const list = useMemo(() => PROJECTS.filter((p) => (cat === "Todos" || p.cat === cat) && norm(`${p.title} ${p.cat} ${artistOf(p)}`).includes(norm(q))), [cat, q]);
@@ -493,12 +565,13 @@ function Archive({ open }) {
       </div>
       <div className="grid">
         {list.map((p) => (
-          <button key={p.id} className="card" onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
+          <button key={p.id} data-id={p.id} className="card" onClick={() => open(p)} data-cursor="Assistir" aria-label={`Assistir ${p.title}`}>
             <span className="card-media" onPointerMove={tilt} onPointerLeave={reset}>
               <img src={thumb(p)} alt="" loading="lazy" width="640" height="360" />
+              {prev === p.id && <CardPreview p={p} />}
               <span className="card-glare" />
               <span className="card-q mono">{p.q}</span>
-              <span className="card-play"><I.Play size={16} /></span>
+              <PlayBtn className="card-play" />
             </span>
             <span className="card-info">
               <span className="card-t"><b>{short(p)}</b><span>{artistOf(p)}</span></span>
@@ -518,11 +591,51 @@ function Archive({ open }) {
 }
 
 /* ───────── sobre ───────── */
-const PATH = [
-  ["UNIÃO NOROESTE BRASILEIRA", "Editor de mídia e conteúdo", "UNoB"],
+const PATH_BEFORE = [
   ["PRISMA BRASIL", "Edição e captação", "2024–2026"],
-  ["UNASP", "Comunicação Social · Rádio e TV", ""],
+  ["UNASP", "Comunicação Social · Rádio e TV", "Rádio e TV"],
 ];
+// trajetória como timeline: o cargo atual é o take gravando (REC + timecode correndo), o resto são clipes na trilha
+function Trajectory() {
+  const tcRef = useRef(null);
+  useEffect(() => {
+    let raf, t0 = performance.now();
+    const f = (now) => { if (tcRef.current) tcRef.current.textContent = tc((now - t0) / 1000); raf = requestAnimationFrame(f); };
+    const io = new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting && !reducedMotion()) raf = requestAnimationFrame(f); });
+    io.observe(tcRef.current);
+    return () => { io.disconnect(); cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div className="traj">
+      <article className="traj-now">
+        <span className="traj-scan" aria-hidden="true" />
+        <div className="traj-top">
+          <span className="traj-rec mono"><span className="rec" /> REC · Atual</span>
+          <span className="traj-tc mono" ref={tcRef}>00:00:00:00</span>
+        </div>
+        <b className="traj-name">UNIÃO NOROESTE BRASILEIRA</b>
+        <div className="traj-foot">
+          <span>Editor de mídia e conteúdo</span>
+          <span className="traj-eq" aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ "--i": i }} />)}</span>
+        </div>
+        <span className="traj-corner tl" /><span className="traj-corner tr" /><span className="traj-corner bl" /><span className="traj-corner br" />
+      </article>
+      <div className="traj-track" aria-label="Antes">
+        <span className="traj-lab mono">Antes</span>
+        <div className="traj-clips">
+          {PATH_BEFORE.map(([a, b, c], i) => (
+            <div className="traj-clip" key={a} style={{ "--d": i }}>
+              <small className="mono">{c}</small>
+              <b>{a}</b>
+              <span>{b}</span>
+            </div>
+          ))}
+          <span className="traj-ph" aria-hidden="true"><i /></span>
+        </div>
+      </div>
+    </div>
+  );
+}
 const TOOL_CATS = [["ed", "Edição", I.Scissors], ["cor", "Cor", I.Palette], ["mo", "Motion", I.Layers], ["au", "Áudio", I.Wave], ["ia", "IA", I.Spark], ["dev", "Dev", I.Code]];
 const TOOLS = [
   ["Pr", "Premiere Pro", "ed", "pr"], ["DR", "DaVinci Resolve", "cor", "dr"], ["Ae", "After Effects", "mo", "ae"], ["Pt", "Pro Tools", "au", "pt"],
@@ -562,15 +675,7 @@ function About() {
 
           <div className="about-block reveal">
             <span className="mono about-lab">Trajetória</span>
-            <ol className="path">
-              {PATH.map(([a, b, c], i) => (
-                <li key={a} style={{ "--d": i }}>
-                  <span className="path-n mono">0{i + 1}</span>
-                  <span className="path-t"><b>{a}</b><span>{b}</span></span>
-                  <span className="path-y mono">{c}</span>
-                </li>
-              ))}
-            </ol>
+            <Trajectory />
           </div>
 
           <div className="about-block reveal">
@@ -644,7 +749,7 @@ function Contact() {
           </div>
           <div className="mark3d">
             <span className="mark3d-floor" aria-hidden="true" />
-            <canvas ref={canvas} aria-label="Marca Alex Ascencio em 3D. Arraste para girar." role="img" />
+            <canvas ref={canvas} data-grab aria-label="Marca Alex Ascencio em 3D. Arraste para girar." role="img" />
             <span className="mark3d-hint mono" aria-hidden="true"><span className="mark3d-dot" /> Arraste para girar</span>
           </div>
         </div>
@@ -656,7 +761,7 @@ function Contact() {
                 <span className="ch-icon"><I.Mail size={19} /></span>
                 <span className="ch-text"><b>E-mail</b><span>{EMAIL}</span></span>
               </a>
-              <button type="button" className="ch-copy" onClick={copy} aria-label="Copiar e-mail">{copied ? <I.Check size={15} draw /> : <I.Copy size={15} />}<span>{copied ? "Copiado" : "Copiar"}</span></button>
+              <button type="button" className="ch-copy" onClick={copy} aria-label="Copiar e-mail">{copied ? <I.Check size={15} /> : <I.Copy size={15} />}<span>{copied ? "Copiado" : "Copiar"}</span></button>
             </div>
             {channels.map(([Icon, n, h, url], i) => (
               <a key={n} href={url} target="_blank" rel="noreferrer" className="channel reveal" style={{ "--d": i + 1 }}>
@@ -665,6 +770,14 @@ function Contact() {
                 <span className="ch-arrow"><I.Arrow size={14} /></span>
               </a>
             ))}
+            <div className="process reveal" style={{ "--d": 4 }}>
+              <div className="process-head"><span className="mono">Como o projeto anda</span><I.Film size={17} loop /></div>
+              <ol>
+                {[["Briefing", "Você conta a ideia, o formato e o prazo."], ["Caminho de produção", "Eu devolvo etapas, entregas e cronograma."], ["Rascunho aprovado", "O corte é validado antes do render final e do 4K."], ["Master", "Entrega por destino: 16:9, 9:16 e áudio no LUFS certo."]].map(([t, d], i) => (
+                  <li key={t} style={{ "--i": i }}><span className="process-n mono">0{i + 1}</span><span><b>{t}</b><small>{d}</small></span></li>
+                ))}
+              </ol>
+            </div>
           </div>
 
           <form className="brief reveal" onSubmit={(e) => { e.preventDefault(); if (valid) window.open(`https://wa.me/${WHATS}?text=${encodeURIComponent(body)}`, "_blank", "noopener"); }}>
@@ -753,6 +866,13 @@ function Footer() {
 export default function App() {
   const [project, setProject] = useState(null);
   const [host, setHost] = useState(null);
+  const [demo, setDemo] = useState(false);
+  const stopDemo = useRef(null);
+  const toggleDemo = () => {
+    if (stopDemo.current) { stopDemo.current(); return; }
+    setDemo(true);
+    stopDemo.current = runDemo({ onEnd: () => { stopDemo.current = null; setDemo(false); } });
+  };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
 
@@ -760,7 +880,7 @@ export default function App() {
     const reduced = reducedMotion();
     let lenis, tick;
     if (!reduced) {
-      lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.95 });
+      lenis = new Lenis({ lerp: 0.12, wheelMultiplier: 1 });
       window.__lenis = lenis;
       lenis.on("scroll", ScrollTrigger.update);
       lenis.on("scroll", ({ direction, scroll }) => document.documentElement.classList.toggle("nav-hidden", direction === 1 && scroll > innerHeight * 0.9));
@@ -771,13 +891,40 @@ export default function App() {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.stop();
     }
+    // teletransporte: a tela ondula (turbulência + deslocamento + RGB split), salta no pico e se recompõe no destino
+    const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
+    let warping = false;
+    const teleport = (el, x, y) => {
+      if (!lenis || reduced) { el.scrollIntoView(); return; }
+      if (warping) return;
+      warping = true;
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
+      const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
+      const o = { s: 0, t: 0 };
+      const paint = () => {
+        turb.setAttribute("baseFrequency", `${(0.0016 + o.s * 0.00002).toFixed(5)} ${(0.018 + o.s * 0.00022).toFixed(5)}`);
+        turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
+        maps[0].setAttribute("scale", (o.s * 0.8).toFixed(1));
+        maps[1].setAttribute("scale", (o.s * 1.25).toFixed(1));
+        if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
+      };
+      veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
+      veil.classList.add("on", chromium ? "is-svg" : "is-blur");
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur"); veil.style.backdropFilter = ""; warping = false; } })
+        .to(o, { s: 120, t: 0.5, duration: 0.36, ease: "power2.in", onUpdate: paint })
+        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
+        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.36, ease: "power2.in" }, 0)
+        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.36)
+        .to(o, { s: 0, t: 1, duration: 0.6, ease: "power3.out", onUpdate: paint }, 0.36)
+        .to(veil, { "--flash": 0, duration: 0.6, ease: "power3.out" }, 0.36);
+    };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
       if (!a) return;
       const el = document.querySelector(a.getAttribute("href"));
       if (!el) return;
       e.preventDefault();
-      lenis ? lenis.scrollTo(el, { offset: 0, duration: 1.6 }) : el.scrollIntoView();
+      teleport(el, e.clientX || innerWidth / 2, e.clientY || innerHeight / 2);
     };
     document.addEventListener("click", onAnchor);
 
@@ -809,9 +956,9 @@ export default function App() {
         if (b) b.style.transform = `scaleX(${o.p})`;
       };
       const intro = gsap.timeline();
-      intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 1, ease: "expo.inOut" })
+      intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 0.75, ease: "expo.inOut" })
         .to(".pre-meta", { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, "-=0.35")
-        .to(o, { p: 0.82, duration: 1.1, ease: "power2.out", onUpdate: paint }, "<");
+        .to(o, { p: 0.82, duration: 0.8, ease: "power2.out", onUpdate: paint }, "<");
 
       const img = document.querySelector(".hero-person img");
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -819,7 +966,7 @@ export default function App() {
         document.fonts?.ready,
         img?.decode ? img.decode().catch(() => {}) : null,
         new Promise((r) => intro.eventCallback("onComplete", r)),
-        wait(900),
+        wait(700),
       ]);
       const reveal = () => {
         gsap.timeline()
@@ -854,7 +1001,7 @@ export default function App() {
       ScrollTrigger.create({ trigger: ".hero", start: "top top", end: "bottom top", onUpdate: (s) => { const el = document.querySelector(".js-tc"); if (el) el.textContent = tc(s.progress * 12); } });
       // manifesto (pin primeiro para as posições seguintes considerarem o espaçador)
       gsap.timeline({ scrollTrigger: { trigger: "#manifesto", start: "top top", end: () => `+=${innerHeight * 1.6}`, scrub: true, pin: ".manifesto-pin" } })
-        .fromTo(".manifesto .w", { opacity: 0.1, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", stagger: 0.08, ease: "none" })
+        .fromTo(".manifesto .w", { opacity: 0.1 }, { opacity: 1, stagger: 0.08, ease: "none" })
         .from(".stats > div", { y: 30, opacity: 0, stagger: 0.1 }, ">-0.3");
       ScrollTrigger.create({
         trigger: ".stats", start: "top 85%", once: true,
@@ -896,22 +1043,22 @@ export default function App() {
       gsap.fromTo(".lab-canvas", { scale: 1.18 }, { scale: 1, ease: "none", scrollTrigger: { trigger: ".lab", start: "top bottom", end: "top top", scrub: true } });
       // títulos: máscara por linha
       gsap.utils.toArray(".js-title .title-inner").forEach((el) => {
-        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 1.3, ease: "expo.out", scrollTrigger: { trigger: el.parentElement, start: "top 90%", once: true } });
+        gsap.fromTo(el, { yPercent: 105, rotate: 2.5 }, { yPercent: 0, rotate: 0, duration: 0.95, ease: "expo.out", scrollTrigger: { trigger: el.parentElement, start: "top 95%", once: true } });
       });
       gsap.utils.toArray(".eyebrow").forEach((el) => {
-        gsap.from(el, { opacity: 0, x: -16, duration: 1, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 92%", once: true } });
+        gsap.from(el, { opacity: 0, x: -16, duration: 0.7, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
       gsap.utils.toArray(".reveal").forEach((el) => {
-        gsap.from(el, { y: 40, opacity: 0, duration: 1.1, ease: "expo.out", delay: (+getComputedStyle(el).getPropertyValue("--d") || 0) * 0.08, scrollTrigger: { trigger: el, start: "top 90%", once: true } });
+        gsap.from(el, { y: 28, opacity: 0, duration: 0.75, ease: "expo.out", delay: (+getComputedStyle(el).getPropertyValue("--d") || 0) * 0.05, scrollTrigger: { trigger: el, start: "top 96%", once: true } });
       });
       // grade: cascata por linha (o tilt mora em .card-media, então não há briga de transform)
-      ScrollTrigger.batch(".grid .card", { start: "top 92%", once: true, onEnter: (els) => gsap.fromTo(els, { y: 46, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1, ease: "expo.out", stagger: 0.07, clearProps: "transform,opacity,visibility" }) });
+      ScrollTrigger.batch(".grid .card", { start: "top 98%", once: true, onEnter: (els) => gsap.fromTo(els, { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "expo.out", stagger: 0.04, clearProps: "transform,opacity,visibility" }) });
       // sobre
       gsap.fromTo(".js-photo", { clipPath: "inset(100% 0 0 0 round 32px)" }, { clipPath: "inset(0% 0 0 0 round 32px)", duration: 1.6, ease: "expo.inOut", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
       gsap.fromTo(".js-photo img", { scale: 1.25 }, { scale: 1, duration: 2, ease: "expo.out", scrollTrigger: { trigger: ".about", start: "top 70%", once: true } });
-      gsap.from(".path li", { x: -24, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.1, scrollTrigger: { trigger: ".path", start: "top 88%", once: true } });
-      gsap.from(".path", { "--line": 0, duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: ".path", start: "top 88%", once: true } });
-      gsap.from(".tcat, .tool", { y: 22, opacity: 0, duration: 0.9, ease: "expo.out", stagger: 0.045, scrollTrigger: { trigger: ".tcats", start: "top 90%", once: true } });
+      gsap.from(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
+      gsap.from(".traj-clip", { y: 24, opacity: 0, duration: 1.1, ease: "expo.out", stagger: 0.12, delay: 0.5, scrollTrigger: { trigger: ".traj", start: "top 88%", once: true } });
+      gsap.from(".tcat, .tool", { y: 16, opacity: 0, duration: 0.6, ease: "expo.out", stagger: 0.03, scrollTrigger: { trigger: ".tcats", start: "top 96%", once: true } });
       // contato: folha clara sobe e arredonda
       gsap.fromTo(".contact-sheet", { scale: 0.94, borderRadius: 64 }, { scale: 1, borderRadius: 40, ease: "none", scrollTrigger: { trigger: ".contact", start: "top bottom", end: "top 20%", scrub: true } });
       ScrollTrigger.create({ trigger: ".contact-sheet", start: "top 44px", end: "bottom 44px", toggleClass: { targets: document.documentElement, className: "nav-light" } });
@@ -930,7 +1077,18 @@ export default function App() {
 
   return (
     <div ref={root}>
-      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true"><symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol></svg>
+      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+        <symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol>
+        <filter id="warp" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.018" numOctaves="2" seed="1" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d1" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d2" />
+          <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
+          <feBlend in="r" in2="gb" mode="screen" />
+        </filter>
+      </svg>
+      <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />
@@ -938,7 +1096,7 @@ export default function App() {
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />
@@ -949,7 +1107,8 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
-      {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} />}
+      {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
+      {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>
   );
 }

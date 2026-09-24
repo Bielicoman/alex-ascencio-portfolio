@@ -51,10 +51,13 @@ export default function Cursor({ host }) {
       if (!(t instanceof Element)) return;
       const media = t.closest("[data-cursor]");
       const text = t.closest("input:not([type=range]), textarea, select");
-      const link = t.closest("a, button, label, [role=button], .floater");
+      const link = t.closest("a, button, label, [role=button]");
+      // mão: sobre o que pode ser arrastado (flutuantes da hero, marca 3D), fora dos botões internos
+      const grab = !!t.closest(".floater, [data-grab]") && !link && !media;
       root.classList.toggle("cursor-frame", t.tagName === "IFRAME");
       root.classList.toggle("cursor-text", !!text);
       root.classList.toggle("cursor-link", !!link && !media && !text);
+      root.classList.toggle("cursor-grab", grab);
       root.classList.toggle("cursor-media", !!media);
       root.classList.toggle("cursor-light", !!t.closest("[data-theme=light]"));
       if (media && label.current) label.current.textContent = media.getAttribute("data-cursor");
@@ -74,7 +77,7 @@ export default function Cursor({ host }) {
       window.removeEventListener("pointerdown", down);
       window.removeEventListener("pointerup", up);
       document.removeEventListener("pointerleave", leave);
-      root.classList.remove("has-cursor", "cursor-live", "cursor-link", "cursor-media", "cursor-text", "cursor-down", "cursor-frame", "cursor-light");
+      root.classList.remove("has-cursor", "cursor-live", "cursor-link", "cursor-media", "cursor-text", "cursor-down", "cursor-frame", "cursor-light", "cursor-grab");
     };
   }, []);
 
@@ -101,6 +104,17 @@ export default function Cursor({ host }) {
             </defs>
             <path className="cur-shape" d="M5.1 3.2c-1.1-.5-2.3.6-1.8 1.7l8.5 20.1c.5 1.2 2.2 1.1 2.6-.1l2.4-7c.2-.4.5-.8 1-1l7-2.4c1.2-.4 1.3-2.1.1-2.6L5.1 3.2z" fill="url(#cur-fill)" stroke="url(#cur-edge)" strokeWidth="1.1" strokeLinejoin="round" />
             <path className="cur-spec" d="M6.2 5.6 12.4 20" stroke="var(--e1)" strokeOpacity=".75" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          </svg>
+          <svg className="cur-hand" viewBox="0 0 28 28" width="28" height="28">
+            <g className="hand-open">
+              <g className="hand-edge"><rect x="8.2" y="4" width="3" height="11" rx="1.5" /><rect x="11.6" y="2.6" width="3" height="12" rx="1.5" /><rect x="15" y="3.4" width="3" height="11.5" rx="1.5" /><rect x="18.4" y="5.8" width="2.8" height="9.6" rx="1.4" /><rect x="8.2" y="10.8" width="13" height="12.6" rx="5" /><rect x="4.2" y="11.6" width="3" height="8.4" rx="1.5" transform="rotate(-32 5.7 15.8)" /></g>
+              <g fill="url(#cur-fill)"><rect x="8.2" y="4" width="3" height="11" rx="1.5" /><rect x="11.6" y="2.6" width="3" height="12" rx="1.5" /><rect x="15" y="3.4" width="3" height="11.5" rx="1.5" /><rect x="18.4" y="5.8" width="2.8" height="9.6" rx="1.4" /><rect x="8.2" y="10.8" width="13" height="12.6" rx="5" /><rect x="4.2" y="11.6" width="3" height="8.4" rx="1.5" transform="rotate(-32 5.7 15.8)" /></g>
+            </g>
+            <g className="hand-closed">
+              <g className="hand-edge"><rect x="8.2" y="8.6" width="3" height="6" rx="1.5" /><rect x="11.6" y="7.8" width="3" height="6.6" rx="1.5" /><rect x="15" y="8.2" width="3" height="6.4" rx="1.5" /><rect x="18.4" y="9.4" width="2.8" height="5.6" rx="1.4" /><rect x="8.2" y="11" width="13" height="12.4" rx="5" /><rect x="6" y="12.6" width="3" height="6" rx="1.5" transform="rotate(-20 7.5 15.6)" /></g>
+              <g fill="url(#cur-fill)"><rect x="8.2" y="8.6" width="3" height="6" rx="1.5" /><rect x="11.6" y="7.8" width="3" height="6.6" rx="1.5" /><rect x="15" y="8.2" width="3" height="6.4" rx="1.5" /><rect x="18.4" y="9.4" width="2.8" height="5.6" rx="1.4" /><rect x="8.2" y="11" width="13" height="12.4" rx="5" /><rect x="6" y="12.6" width="3" height="6" rx="1.5" transform="rotate(-20 7.5 15.6)" /></g>
+            </g>
+            <path className="hand-spec" d="M12.4 4.2v6.4M9.6 5.6v5" stroke="var(--e1)" strokeOpacity=".7" strokeWidth="1" strokeLinecap="round" fill="none" />
           </svg>
           <span className="cur-shine" />
         </div>

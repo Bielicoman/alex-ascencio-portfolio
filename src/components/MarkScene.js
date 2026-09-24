@@ -77,7 +77,7 @@ export default class MarkScene {
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (!w || !h) return;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // enquadra a largura da marca em telas estreitas

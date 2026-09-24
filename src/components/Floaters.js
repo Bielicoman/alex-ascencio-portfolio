@@ -22,6 +22,8 @@ export default class Floaters {
 
     this.onMove = (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.on = e.pointerType !== "touch"; };
     window.addEventListener("pointermove", this.onMove, { passive: true });
+    this.onResize = () => this.measure();
+    window.addEventListener("resize", this.onResize);
     this.items.forEach((it) => this.bind(it));
   }
 
@@ -69,8 +71,17 @@ export default class Floaters {
     el.addEventListener("dragstart", (e) => e.preventDefault());
   }
 
+  // centro de cada elemento sem o transform (lido só no start e no resize)
+  measure() {
+    for (const it of this.items) {
+      const r = it.el.getBoundingClientRect();
+      it.bx = r.left + r.width / 2 - it.x; it.by = r.top + r.height / 2 - it.y;
+    }
+  }
+
   start() {
     if (this.running) return;
+    this.measure();
     this.running = true;
     this.last = performance.now();
     const loop = (now) => {
@@ -86,20 +97,20 @@ export default class Floaters {
 
   step(dt) {
     const mx = this.mouse.x / innerWidth - 0.5, my = this.mouse.y / innerHeight - 0.5;
-    const rects = this.items.map((it) => it.el.getBoundingClientRect()); // lê tudo antes de escrever
-    this.items.forEach((it, i) => {
+    // tela estreita: sem paralaxe e com deriva horizontal curta, para nada sair pela borda
+    const narrow = innerWidth <= 760, px = narrow ? 0 : 1, ax = narrow ? 0.25 : 0.6;
+    this.items.forEach((it) => {
       const f = this.enabled ? 1 : 0;
       // alvo = flutuação + paralaxe de profundidade
-      const fx = f * (Math.sin(this.t * it.speed + it.phase) * it.amp * 0.6 + (this.mouse.on ? mx * -26 * it.depth : 0));
-      const fy = f * (Math.cos(this.t * it.speed * 0.8 + it.phase) * it.amp + (this.mouse.on ? my * -18 * it.depth : 0));
+      const fx = f * (Math.sin(this.t * it.speed + it.phase) * it.amp * ax + (this.mouse.on ? mx * -26 * it.depth * px : 0));
+      const fy = f * (Math.cos(this.t * it.speed * 0.8 + it.phase) * it.amp + (this.mouse.on ? my * -18 * it.depth * px : 0));
       if (!it.drag) {
         const ax = K * (fx - it.x) - C * it.vx, ay = K * (fy - it.y) - C * it.vy;
         it.vx += ax * dt; it.vy += ay * dt;
         it.x += it.vx * dt; it.y += it.vy * dt;
       }
       // inclinação: olha para o cursor quando perto, segue a velocidade quando arrastado/solto
-      const r = rects[i];
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const cx = it.bx + it.x, cy = it.by + it.y;
       const dx = this.mouse.x - cx, dy = this.mouse.y - cy, dist = Math.hypot(dx, dy);
       const near = this.mouse.on ? Math.max(0, 1 - dist / 520) : 0;
       let trx = (-dy / 520) * 16 * near + Math.sin(this.t * it.speed * 1.3 + it.phase) * 3 * f;
@@ -118,6 +129,7 @@ export default class Floaters {
   dispose() {
     this.stop();
     window.removeEventListener("pointermove", this.onMove);
+    window.removeEventListener("resize", this.onResize);
     for (const it of this.items) {
       it.el.removeEventListener("pointerdown", it.down);
       window.removeEventListener("pointermove", it.move);

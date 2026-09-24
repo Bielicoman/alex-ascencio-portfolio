@@ -14,7 +14,8 @@ Reconstrução completa do site. React 19 + Vite 7, three.js (partículas e lent
 - `src/components/Floaters.js` — elementos da hero em gravidade zero (flutuação, tilt 3D, arrasto com inércia, retorno por mola).
 - `src/components/Cursor.jsx` — seta 3D + luz sem interpolação; entra no `<dialog>` do player via portal (top layer).
 - `src/components/MarkScene.js` — marca AA extrudada em three.js no contato (tema claro).
-- `src/components/Icons.jsx` — ícones animados (hover, loop e desenho do traço ao entrar na tela).
+- `src/components/Icons.jsx` — ícones animados (hover e loop).
+- `src/components/Demo.js` — tour "Assistir o site": rola o site, guia o cursor por eventos sintéticos, toca o preview do último lançamento e dos 4 primeiros projetos e para no contato. Qualquer entrada real (`isTrusted`) devolve o controle.
 - `src/projects.js` — trabalhos (mesmo arquivo da v01; miniaturas em `public/media/{id}.webp`).
 - `src/components/ParticleField.js` — campo de partículas que reage ao cursor e vira a marca AA no scroll.
 - `src/components/LensField.js` — vídeo da lente como fundo reativo (bulge, aberração cromática, spot).
@@ -43,3 +44,8 @@ Projetos sem YouTube usam `video: "/media/videos/arquivo.mp4"` em `src/projects.
 
 ## Logotipo
 `Lockup` e `Wordmark` em `src/App.jsx` usam `WM_PATH` (src/brand.js): "Alex Ascencio" em Geist 640 com os dois A substituídos pelo A triangular da marca (86% de largura). Arquivos finais em `G:\Meu Drive\01 PESSOAL\IDENTIDADE VISUAL\LOGOTIPO`.
+
+## Desempenho
+Partículas: 6000 pontos (2600 no celular), DPR máx. 1,25. Lente: DPR 1. Marca 3D: DPR 1,5, só renderiza visível.
+Grão estático; flutuantes com `backdrop-filter` de 10 px; nenhum `filter` animado por scroll.
+Medido no Chromium sem GPU (8 s de scroll + mouse): 2,8–4,1 → 4,8 fps em relação à primeira v05.
