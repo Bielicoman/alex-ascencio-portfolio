@@ -1148,7 +1148,8 @@ export default function App() {
         if (t) t.textContent = tc(o.p * 2);
         if (b) b.style.transform = `scaleX(${o.p})`;
       };
-      const intro = gsap.timeline({ onStart: () => sfx.introPre(1.4) });
+      sfx.tryAutoplay(); // com permissão de som no site, abertura e trilha tocam sem clique
+      const intro = gsap.timeline({ onStart: () => setTimeout(() => sfx.introPre(1.4), 60) });
       intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 0.75, ease: "expo.inOut" })
         .to(".pre-meta", { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, "-=0.35")
         .to(o, { p: 0.82, duration: 0.8, ease: "power2.out", onUpdate: paint }, "<");

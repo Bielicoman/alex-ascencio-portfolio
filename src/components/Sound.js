@@ -35,6 +35,14 @@ class Sound {
     if (this.musicWant && !this.mus?.timer) this.music(true);
   }
   ok() { return this.enabled && this.ctx && this.ctx.state === "running"; }
+  // tenta começar sem gesto: o navegador libera quando o site tem permissão de som
+  // (Chrome "Som: Permitir"/alto engajamento de mídia, Firefox "Permitir áudio e vídeo"); senão fica suspenso até o 1º clique
+  tryAutoplay() {
+    if (!this.enabled) return Promise.resolve(false);
+    if (!this.ctx) this.build();
+    const done = () => { const on = this.ctx.state === "running"; if (on) { this.unlocked = true; if (this.musicWant && !this.mus?.timer) this.music(true); } this.hint(); return on; };
+    return Promise.race([this.ctx.resume().then(done, done), new Promise((r) => setTimeout(() => r(done()), 400))]);
+  }
   // limita a taxa de disparo por tipo (ms)
   rate(k, ms) { const n = performance.now(); if (n - (this.last[k] || 0) < ms) return false; this.last[k] = n; return true; }
 
