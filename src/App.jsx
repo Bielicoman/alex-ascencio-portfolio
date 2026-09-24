@@ -333,7 +333,7 @@ function NowPlaying({ open }) {
 }
 // passar o mouse no botão de gestos já começa a baixar modelo e WASM (≈19 MB) antes do clique
 const preloadGest = () => import("./gesture/hands").then((m) => m.preloadHands().catch(() => {}));
-function Hero({ open, onDemo, demo, onGest, gest }) {
+function Hero({ open, onDemo, demo, onGest, gest, onEdth }) {
   const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
     const fl = new Floaters(floatRef.current);
@@ -394,7 +394,10 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
           <div className="hero-ctas">
             <Btn href="#filmes" size="lg" icon={<I.Play size={14} />}>Ver filmes</Btn>
             <Btn href="#contato" size="lg" variant="glass">Falar comigo</Btn>
-            <Btn as="button" type="button" size="lg" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
+          </div>
+          <div className="hero-modes">
+            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}>Controlar por voz · EDTH</Btn>
+            <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
         <div className="hero-scroll" aria-hidden="true">
@@ -955,6 +958,28 @@ function Contact() {
     return () => { alive = false; io?.disconnect(); scene?.dispose(); el.removeEventListener("pointermove", light); };
   }, []);
   const kinds = ["Videoclipe", "Documentário", "Curta / cinema", "Motion design", "IA generativa", "Evento / ao vivo", "Outro"];
+  // EDTH preenche o formulário por voz e pede o envio
+  const formRef = useRef(form); formRef.current = form;
+  const kindRef = useRef(kind); kindRef.current = kind;
+  useEffect(() => {
+    const onForm = (e) => {
+      const { kind: k, ...rest } = e.detail || {};
+      if (k && kinds.includes(k)) setKind(k);
+      const patch = {};
+      if ("name" in rest) patch.name = String(rest.name).slice(0, 120);
+      if ("msg" in rest) patch.msg = String(rest.msg).slice(0, 2500);
+      if ("when" in rest) patch.when = rest.when ? new Date(rest.when) : null;
+      if (Object.keys(patch).length) setForm((f) => ({ ...f, ...patch }));
+    };
+    const onSend = (e) => {
+      const f = formRef.current, k = kindRef.current;
+      const b = `Olá, Alex! Sou ${f.name || "—"}.\nProjeto: ${k}\nPrazo: ${whenText(f.when)}\n\n${f.msg}`;
+      e.detail.href = e.detail.via === "email" ? `mailto:${EMAIL}?subject=${encodeURIComponent(`Projeto: ${k}`)}&body=${encodeURIComponent(b)}` : `https://wa.me/${WHATS}?text=${encodeURIComponent(b)}`;
+      const btn = document.querySelector(".brief-actions .btn"); btn?.classList.add("edth-pulse"); setTimeout(() => btn?.classList.remove("edth-pulse"), 2400);
+    };
+    window.addEventListener("edth:form", onForm); window.addEventListener("edth:send", onSend);
+    return () => { window.removeEventListener("edth:form", onForm); window.removeEventListener("edth:send", onSend); };
+  }, []);
   const body = `Olá, Alex! Sou ${form.name || "—"}.\nProjeto: ${kind}\nPrazo: ${whenText(form.when)}\n\n${form.msg}`;
   const valid = form.name.trim() && form.msg.trim();
   const copy = async () => { try { await navigator.clipboard.writeText(EMAIL); setCopied(true); sfx.chime(); setTimeout(() => setCopied(false), 1800); } catch { location.href = `mailto:${EMAIL}`; } };
@@ -1128,6 +1153,12 @@ export default function App() {
       },
     });
   };
+  // EDTH (assistente por voz): carrega sob demanda; mesmas ações que os gestos
+  const openEdthNow = async () => {
+    sfx.unlock();
+    const { default: openEdth } = await import("./edth/Edth");
+    openEdth({ actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on) } });
+  };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
 
@@ -1240,7 +1271,7 @@ export default function App() {
       gsap.set(".fl-in", { opacity: 0, scale: 0.72, y: 40 });
       gsap.set(".nav > *", { y: -26, opacity: 0 });
       gsap.set(".hero-intro .line > span", { yPercent: 115 });
-      gsap.set(".hero-ctas .magnetic, .hero-scroll", { y: 24, opacity: 0 });
+      gsap.set(".hero-ctas .magnetic, .hero-modes .magnetic, .hero-scroll", { y: 24, opacity: 0 });
       gsap.set(".pre-lockup", { clipPath: "inset(0 100% 0 0)" });
       gsap.set(".pre-meta", { opacity: 0, y: 10 });
 
@@ -1281,7 +1312,7 @@ export default function App() {
           .to(".nav > *", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=0.7")
           .to(".hero-intro .line > span", { yPercent: 0, duration: 1.3, ease: "expo.out", stagger: 0.08 }, "open+=0.75")
           .to(".fl-in", { opacity: 1, scale: 1, y: 0, duration: 1.6, ease: "elastic.out(1, 0.75)", stagger: 0.09, clearProps: "transform" }, "open+=0.85")
-          .to(".hero-ctas .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1")
+          .to(".hero-ctas .magnetic, .hero-modes .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1")
           .set(".preloader", { display: "none" });
       };
       // sem portão: a abertura roda sozinha. O navegador só libera áudio após um gesto,
@@ -1408,7 +1439,7 @@ export default function App() {
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} onEdth={openEdthNow} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />
