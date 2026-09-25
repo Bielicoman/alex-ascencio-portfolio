@@ -836,7 +836,7 @@ function About() {
   const jump = (i) => { // capítulos clicáveis: rola até o ponto da cena
     const st = stRef.current, tl = tlRef.current;
     if (!st || !tl) return;
-    const at = [3.6, 5.6, 8.9][i] / tl.duration();
+    const at = [4.8, 8.2, 12.5][i] / tl.duration();
     window.__lenis?.scrollTo(st.start + (st.end - st.start) * at, { duration: 1.4 });
   };
   const title = "A pessoa por trás da timeline.".split(" ");
@@ -1530,3 +1530,4 @@ export default function App() {
     </div>
   );
 }
+

@@ -1002,7 +1002,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
   .method-pin { height: 100svh; padding: 76px 12px 12px; gap: 12px; }
   .method-head { padding: 0 calc(var(--pad) - 12px); }
   .method-head .display { font-size: 30px; margin-top: 10px; }
-  .grid { grid-template-columns: 1fr; gap: 30px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 10px; }
   .card-t b { font-size: 18px; }
   .section-head .search { width: 100%; }
   .filters { display: flex; flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; border-radius: 99px; }
@@ -1378,6 +1378,7 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
     display: none !important;
   }
 }
+
 
 
 
