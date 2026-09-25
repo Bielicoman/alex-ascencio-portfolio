@@ -33,6 +33,7 @@ Para atualizações e notícias recentes da Igreja, sinta-se livre para usar sua
 FATOS:
 ${KNOWLEDGE()}
 
+REGRA DE FORMATAÇÃO: nunca use markdown (nada de **, ##, ```, \n\n, listas numeradas). Escreva como fala natural, com frases corridas. Se precisar separar tópicos, use vírgulas ou ponto e vírgula.
 Você pode acionar o site devolvendo ações. Responda SEMPRE e SOMENTE com um objeto JSON: {"say": "...", "actions": [...]}.
 Ações permitidas:
 - {"type":"nav","id":"top|filmes|lab|metodo|arquivo|sobre|contato"}
@@ -130,7 +131,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
         const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, temperature: 0.6, max_tokens: 300, ...(json ? { response_format: { type: "json_object" } } : {}), messages }),
+          body: JSON.stringify({ model, temperature: 0.6, max_tokens: 800, ...(json ? { response_format: { type: "json_object" } } : {}), messages }),
         });
         if (r.status === 429) { console.error("[edth] 429", model); break; }
         if (!r.ok) { console.error("[edth]", model, json ? "json" : "text", r.status, (await r.text()).slice(0, 300)); continue; }
@@ -142,7 +143,7 @@ Responda somente JSON: {"brief": "linha1\nlinha2"}`;
           return res.status(200).json({ say: (w?.say || "Não consegui pesquisar agora. Tenta de novo daqui a pouco?").slice(0, 400), actions: [], model: w?.model || model, searched: !!w });
         }
         if (!out.say) continue;
-        return res.status(200).json({ say: String(out.say).slice(0, 400), actions: Array.isArray(out.actions) ? out.actions.slice(0, 2) : [], model });
+        return res.status(200).json({ say: String(out.say).slice(0, 1200), actions: Array.isArray(out.actions) ? out.actions.slice(0, 2) : [], model });
       } catch (e) { console.error("[edth]", model, e.message); }
     }
   }

@@ -1226,8 +1226,8 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .edth-tip button:hover { background: rgba(255,255,255,.08); color: #fff; }
 @keyframes edth-tip { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 @media (max-width: 760px) { 
-  .edth-bubble { right: auto !important; left: 50% !important; bottom: 20px !important; transform: translateX(-50%) !important; margin-left: 0 !important; z-index: 105; } 
-  .edth-launch { width: 54px; height: 54px; } 
+  .edth-bubble { right: auto !important; left: 50% !important; bottom: 14px !important; transform: translateX(-50%) !important; margin-left: 0 !important; z-index: 105; } 
+  .edth-launch { width: 56px; height: 56px; } 
   .edth-tip { max-width: 210px; display: none; }
   html.nav-hidden:not(.menu-open) .edth-bubble { transform: translateX(-50%) translateY(150px) scale(0.9) !important; opacity: 0; pointer-events: none; }
 }
@@ -1285,20 +1285,20 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
   /* ── floating pill ── */
   .nav {
     top: auto !important;
-    bottom: 20px !important;
+    bottom: 22px !important;
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
     width: auto !important;
-    height: 54px !important;
+    height: 48px !important;
     min-height: 0 !important;
     min-width: 0 !important;
     border-radius: 99px !important;
-    padding: 0 18px !important;
-    background: rgba(20, 20, 24, 0.72) !important;
-    backdrop-filter: blur(20px) saturate(1.4) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    padding: 0 20px !important;
+    background: rgba(18, 18, 22, 0.82) !important;
+    backdrop-filter: blur(24px) saturate(1.5) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 8px 32px -8px rgba(0,0,0,0.6) !important;
     display: flex !important;
     align-items: center !important;
@@ -1334,7 +1334,7 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
   }
 
   /* gap for EDITH orb between 3rd and 4th icon */
-  .nav-links a:nth-of-type(3) { margin-right: 52px !important; }
+  .nav-links a:nth-of-type(3) { margin-right: 60px !important; }
 
   /* ── each icon link ── */
   .nav-links a {
