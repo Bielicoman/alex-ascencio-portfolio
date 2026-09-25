@@ -1317,8 +1317,7 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
     flex-direction: row !important;
     gap: 14px !important;
   
-  .nav-links::before { content: ""; display: block !important; width: 24px !important; height: 24px !important; }
-  .nav-links a:nth-child(2) { margin-right: 56px !important; }
+  .nav-links a:nth-of-type(3) { margin-right: 56px !important; }
 
     padding: 0 !important;
     margin: 0 auto !important;
@@ -1379,6 +1378,8 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
     display: none !important;
   }
 }
+
+
 
 
 
