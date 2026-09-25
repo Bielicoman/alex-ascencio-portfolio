@@ -1239,7 +1239,8 @@ export default function App() {
     }
     // Teleporte: a distorção RGB atua apenas no portal, mantendo o resto da tela composto pela GPU.
     let warping = false;
-    const speed = new Speedforce();
+    const isTouch = matchMedia("(pointer: coarse)").matches;
+    const speed = isTouch ? null : new Speedforce();
     // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
     // (currículo). Qualquer rolagem/toque/tecla do usuário assume o controle na hora (o Lenis cede).
     const autoplay = (el) => {
@@ -1255,7 +1256,7 @@ export default function App() {
       if (warping) return;
       warping = true;
       sfx.teleport(x);
-      speed.burst(x, y, 0.28);
+      speed?.burst(x, y, 0.28);
       const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
       const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
       const o = { s: 0, t: 0 };
@@ -1475,7 +1476,7 @@ export default function App() {
       disposed = true;
       ctx.revert();
       document.removeEventListener("click", onAnchor);
-      speed.dispose();
+      speed?.dispose();
       ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.removeEventListener(ev, unlock, true));
       document.removeEventListener("pointerover", onOver);
       document.removeEventListener("pointerdown", onDown);
@@ -1530,4 +1531,6 @@ export default function App() {
     </div>
   );
 }
+
+
 
