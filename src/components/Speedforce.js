@@ -1,26 +1,102 @@
-// "Speed force" no padrão da abertura de The Flash: filamentos orgânicos (curvas longas com 2–3 fios
-// que se torcem e tremem), que viajam com cabeça quente e cauda que apaga; halo vermelho, corpo laranja,
-// núcleo branco-dourado; brasas com bokeh e névoa vermelha. Canvas 2D que só roda enquanto há algo vivo.
-const RED = "255,42,16", ORANGE = "255,118,28", GOLD = "255,200,70", HOT = "255,246,222";
+const RED = "255,42,16", ORANGE = "255,118,28", GOLD = "255,200,70", HOT = "255,255,255";
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-// curva suave (Catmull-Rom) por pontos de controle com desvio perpendicular aleatório
-function flowPath(x1, y1, x2, y2, bend = 0.35, ctrl = 6, samples = 52) {
-  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
-  const cp = [];
-  for (let i = 0; i <= ctrl; i++) {
-    const t = i / ctrl, off = (i === 0 || i === ctrl) ? 0 : (Math.random() - 0.5) * L * bend * Math.sin(Math.PI * t) * 1.6;
-    cp.push([x1 + dx * t + nx * off, y1 + dy * t + ny * off]);
+function generateLightning(x1, y1, x2, y2, displace = 80, detail = 5) {
+  let segments = [{ x1, y1, x2, y2 }];
+  for (let i = 0; i < detail; i++) {
+    const next = [];
+    for (const s of segments) {
+      const mx = (s.x1 + s.x2) / 2;
+      const my = (s.y1 + s.y2) / 2;
+      const dx = s.x2 - s.x1;
+      const dy = s.y2 - s.y1;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) {
+        next.push(s);
+        continue;
+      }
+      const nx = -dy / len;
+      const ny = dx / len;
+      const offset = (Math.random() - 0.5) * displace;
+      const cx = mx + nx * offset;
+      const cy = my + ny * offset;
+      next.push({ x1: s.x1, y1: s.y1, x2: cx, y2: cy });
+      next.push({ x1: cx, y1: cy, x2: s.x2, y2: s.y2 });
+    }
+    segments = next;
+    displace *= 0.55;
   }
-  const P = (i) => cp[Math.max(0, Math.min(cp.length - 1, i))], pts = [];
-  for (let s = 0; s < samples; s++) {
-    const u = (s / (samples - 1)) * ctrl, i = Math.floor(Math.min(u, ctrl - 1e-6)), t = u - i;
-    const [p0, p1, p2, p3] = [P(i - 1), P(i), P(i + 1), P(i + 2)], t2 = t * t, t3 = t2 * t;
-    const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-    pts.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+  const pts = [{ x: segments[0].x1, y: segments[0].y1 }];
+  for (const s of segments) pts.push({ x: s.x2, y: s.y2 });
+  return pts;
+}
+
+class LightningBolt {
+  constructor(x1, y1, x2, y2, width, life, displace = 80, branchProb = 0.7) {
+    this.pts = generateLightning(x1, y1, x2, y2, displace, 5);
+    this.width = width;
+    this.life = rnd(life * 0.8, life * 1.2);
+    this.age = 0;
+    this.branches = [];
+    
+    if (width > 0.5 && branchProb > 0.1) {
+      const branchCount = Math.floor(rnd(0, 4) * branchProb);
+      for (let i = 0; i < branchCount; i++) {
+        const startIdx = Math.floor(rnd(1, this.pts.length - 2));
+        const p1 = this.pts[startIdx];
+        const p2 = this.pts[startIdx + 1];
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const baseAngle = Math.atan2(dy, dx);
+        const angle = baseAngle + (Math.random() < 0.5 ? 1 : -1) * rnd(0.5, 1.2);
+        const len = rnd(40, 150) * width;
+        const bx = p1.x + Math.cos(angle) * len;
+        const by = p1.y + Math.sin(angle) * len;
+        
+        const branchDetail = this.width < 1 ? 3 : 4;
+        const subBolt = new LightningBolt(p1.x, p1.y, bx, by, width * 0.5, life * 0.7, displace * 0.5, branchProb * 0.4);
+        subBolt.pts = generateLightning(p1.x, p1.y, bx, by, displace * 0.5, branchDetail);
+        this.branches.push(subBolt);
+      }
+    }
   }
-  const nor = pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [-(b[1] - a[1]) / l, (b[0] - a[0]) / l]; });
-  return { pts, nor, L };
+  update(dt) {
+    this.age += dt;
+    for (const b of this.branches) b.update(dt);
+  }
+  draw(g, dt) {
+    if (this.age > this.life) return;
+    const fade = Math.max(0, 1 - this.age / this.life);
+    const flicker = 0.5 + Math.random() * 0.5;
+    const a = fade * flicker;
+
+    g.beginPath();
+    g.moveTo(this.pts[0].x, this.pts[0].y);
+    for (let i = 1; i < this.pts.length; i++) g.lineTo(this.pts[i].x, this.pts[i].y);
+    
+    g.lineCap = "round";
+    g.lineJoin = "miter";
+    g.miterLimit = 2;
+
+    // Glow layers
+    if (this.width > 1.2) {
+      g.strokeStyle = `rgba(${ORANGE}, ${(a * 0.25).toFixed(3)})`;
+      g.lineWidth = this.width * 8;
+      g.stroke();
+    }
+
+    if (this.width > 0.6) {
+      g.strokeStyle = `rgba(${GOLD}, ${(a * 0.6).toFixed(3)})`;
+      g.lineWidth = this.width * 3.5;
+      g.stroke();
+    }
+
+    g.strokeStyle = `rgba(${HOT}, ${a.toFixed(3)})`;
+    g.lineWidth = this.width * 1.5;
+    g.stroke();
+
+    for (const b of this.branches) b.draw(g, dt);
+  }
 }
 
 export default class Speedforce {
@@ -30,13 +106,11 @@ export default class Speedforce {
     c.style.visibility = "hidden";
     document.body.appendChild(c);
     this.g = c.getContext("2d");
-    this.tendrils = []; this.embers = []; this.sparks = []; this.lines = []; this.spawners = [];
-    this.flash = 0; this.haze = 0; this.charge = 0; this.t = 0;
+    this.bolts = []; this.sparks = []; this.embers = []; this.spawners = [];
+    this.flash = 0; this.haze = 0; this.charge = 0;
     this.running = false; this.px = -1; this.py = -1; this.pt = 0; this.lastArc = 0;
     this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.fine = matchMedia("(pointer: fine)").matches;
-    // modo leve (celular/tablet): metade dos filamentos, DPR 1, brasas sem gradiente, menos faíscas
-    this.lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+    this.lite = false;
     this.resize = () => {
       const d = Math.max(0.5, Math.min(this.lite ? 1 : 1.25, devicePixelRatio, Math.sqrt(1800000 / (innerWidth * innerHeight))));
       c.width = Math.round(innerWidth * d); c.height = Math.round(innerHeight * d);
@@ -45,106 +119,99 @@ export default class Speedforce {
     this.resize(); window.addEventListener("resize", this.resize);
     this.onMove = (e) => {
       const now = performance.now(), dt = Math.max(1, now - this.pt), vx = (e.clientX - this.px) / dt, vy = (e.clientY - this.py) / dt, sp = Math.hypot(vx, vy);
-      if (this.px >= 0 && this.fine && !this.reduced) {
-        if (this.charge > 0) { // cursor carregado: filamentos curtos enroscando + faíscas no rastro
-          if (now - this.lastArc > 45) { this.lastArc = now; this.coil(e.clientX, e.clientY); }
-          if (this.sparks.length < 90) this.spray(e.clientX, e.clientY, 2, 240, -vx * 110, -vy * 110);
-        } else if (sp > 3.2 && this.sparks.length < 60) this.spray(e.clientX, e.clientY, 1, 150, -vx * 60, -vy * 60, 0.6);
+      if (this.px >= 0 && !this.reduced) {
+        if (this.charge > 0) {
+          if (now - this.lastArc > 80) { this.lastArc = now; this.arc(e.clientX, e.clientY); }
+          if (this.sparks.length < 50) this.spray(e.clientX, e.clientY, 1, 150, -vx * 100, -vy * 100);
+        } else if (sp > 3.2 && this.sparks.length < 30) {
+          this.spray(e.clientX, e.clientY, 1, 100, -vx * 50, -vy * 50, 0.6);
+        }
       }
       this.px = e.clientX; this.py = e.clientY; this.pt = now;
     };
     window.addEventListener("pointermove", this.onMove, { passive: true });
   }
 
-  /* ── emissores ── */
-  // filamento principal: viaja de A a B em `travel` s, com 2–3 fios torcidos
-  tendril(x1, y1, x2, y2, { w = 1, travel = rnd(0.14, 0.28), life = rnd(0.45, 0.8), bend = rnd(0.12, 0.3), strands = 3, tail = rnd(0.45, 0.8), blur = false } = {}) {
-    const p = flowPath(x1, y1, x2, y2, bend);
-    const st = Array.from({ length: strands }, (_, i) => ({ amp: i === 0 ? 0 : rnd(3, 9) * w, freq: rnd(0.012, 0.03), ph: rnd(0, 6.28), sp: rnd(6, 14) }));
-    // ramificações: filamentos finos nascendo ao longo do caminho
-    const branches = [];
-    for (let k = 0; k < Math.round(p.L / 260); k++) {
-      const at = rnd(0.15, 0.85), i = Math.floor(at * (p.pts.length - 1)), [bx, by] = p.pts[i], [nx, ny] = p.nor[i], s = Math.random() < 0.5 ? 1 : -1, len = rnd(40, 150);
-      branches.push({ at, path: flowPath(bx, by, bx + nx * s * len + rnd(-40, 40), by + ny * s * len + rnd(-40, 40), 0.6, 3, 16) });
-    }
-    this.tendrils.push({ ...p, st, branches, w, travel, life, tail, blur, age: 0 });
+  arc(x, y) {
+    const angle = rnd(0, Math.PI * 2);
+    const len = rnd(40, 100);
+    this.bolts.push(new LightningBolt(x, y, x + Math.cos(angle) * len, y + Math.sin(angle) * len, rnd(0.5, 1.2), 0.2, 40, 0.4));
     this.start();
   }
-  coil(x, y) { // filamento curto em volta do cursor
-    const a = rnd(0, 6.28), r = rnd(22, 48), b = a + rnd(1.2, 2.6);
-    this.tendril(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4, x + Math.cos(b) * r, y + Math.sin(b) * r, { w: 0.55, travel: 0.06, life: 0.2, bend: 0.9, strands: 2, tail: 1 });
+
+  bolt(x1, y1, x2, y2, w = 1.5, life = 0.3) {
+    this.bolts.push(new LightningBolt(x1, y1, x2, y2, w, life, Math.hypot(x2 - x1, y2 - y1) * 0.15, 1.0));
+    this.start();
   }
+
   spray(x, y, n, speed, bx = 0, by = 0, life = 1) {
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2, v = speed * (0.3 + Math.random());
-      this.sparks.push({ x, y, vx: Math.cos(a) * v + bx, vy: Math.sin(a) * v + by, age: 0, life: (0.25 + Math.random() * 0.45) * life, hot: Math.random() < 0.35 });
+      // If x,y is center, scatter them across the screen instead for a global effect
+      const isCenter = (Math.abs(x - innerWidth/2) < 50 && Math.abs(y - innerHeight/2) < 50);
+      const px = isCenter ? rnd(0, innerWidth) : x;
+      const py = isCenter ? rnd(0, innerHeight * 0.8) : y;
+      
+      const a = rnd(0, Math.PI * 2), v = speed * (0.3 + Math.random());
+      const vx = isCenter ? rnd(-speed, speed) * 0.6 : Math.cos(a) * v + bx;
+      const vy = isCenter ? rnd(-speed * 0.8, speed * 0.2) : Math.sin(a) * v + by;
+      
+      this.sparks.push({ x: px, y: py, vx, vy, age: 0, life: rnd(0.5, 1.8) * life, hot: Math.random() < 0.3 });
     }
     this.start();
   }
-  embersAt(n) { // brasas flutuando; algumas grandes e desfocadas (bokeh)
-    for (let i = 0; i < n; i++) {
-      const big = !this.lite && Math.random() < 0.18;
-      this.embers.push({ x: rnd(0, innerWidth), y: rnd(0, innerHeight), vx: rnd(-40, 40), vy: rnd(-90, -15), r: big ? rnd(6, 16) : rnd(0.8, 2.2), big, age: 0, life: rnd(0.8, 1.8), ph: rnd(0, 6.28) });
-    }
-    this.start();
-  }
-  tunnel(cx, cy, n = 60) {
-    const R = Math.hypot(innerWidth, innerHeight);
-    for (let i = 0; i < n; i++) this.lines.push({ cx, cy, a: Math.random() * Math.PI * 2, r: 30 + Math.random() * R * 0.2, v: R * (1.4 + Math.random() * 2.2), len: 10, age: 0, life: 0.3 + Math.random() * 0.3, w: 0.5 + Math.random() * 1.2 });
-    this.start();
-  }
+
+  embersAt(n) { /* Disabled: User wants sharp falling sparks, no blurry bokeh */ }
+
   edge() {
     const w = innerWidth, h = innerHeight, s = Math.floor(Math.random() * 4), m = 60;
     return s === 0 ? [rnd(0, w), -m] : s === 1 ? [w + m, rnd(0, h)] : s === 2 ? [rnd(0, w), h + m] : [-m, rnd(0, h)];
   }
-  // teleporte: carga no clique → salto (clarão + filamentos cruzando a tela) → rescaldo com brasas
+
   burst(x, y, jumpAt = 0.28) {
     if (this.reduced) return;
     const L = this.lite;
-    this.haze = 0.6;
-    this.spray(x, y, L ? 14 : 28, 800);
-    for (let i = 0; i < (L ? 1 : 2); i++) { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: 1.1, travel: 0.14 }); }
-    if (!L) this.every(0.1, jumpAt, () => { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: rnd(0.6, 1), strands: 2 }); this.coil(x, y); });
+    this.haze = 0.4;
+    this.spray(x, y, L ? 30 : 100, 900);
+    
+    // Initial striking bolts
+    for (let i = 0; i < (L ? 2 : 4); i++) {
+      const [ex, ey] = this.edge();
+      this.bolt(x, y, ex, ey, rnd(1.0, 1.8), 0.25);
+    }
+    
     this.after(jumpAt, () => {
-      this.flash = 1; this.haze = 1;
-      const cx = innerWidth / 2, cy = innerHeight / 2;
-      this.tunnel(cx, cy, L ? 30 : 60);
-      for (let i = 0; i < (L ? 2 : 3); i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(1, 1.6), life: rnd(0.6, 1), strands: 2 }); }
-      if (!L) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: 3, blur: true, strands: 1, life: 1.1, travel: 0.3 }); }
-      this.spray(cx, cy, L ? 24 : 48, 1200);
-      this.embersAt(L ? 16 : 36);
-      if (!L) this.every(0.22, 0.44, () => { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(0.5, 1.1), strands: 2 }); });
-      this.charge = 1.4;
+      this.flash = 1.5; this.haze = 1.2;
+      
+      // Explosion of cinematic lightning
+      for (let i = 0; i < (L ? 3 : 7); i++) {
+        const [ax, ay] = this.edge(), [bx, by] = this.edge();
+        this.bolt(ax, ay, bx, by, rnd(1.5, 3.5), rnd(0.3, 0.6));
+      }
+      
+      this.spray(innerWidth / 2, innerHeight / 2, L ? 40 : 150, 1800);
+      
+      this.charge = 1.0;
     });
   }
-  every(step, dur, fn) { this.spawners.push({ step, dur, fn, t: 0, acc: 0 }); this.start(); }
+
   after(t, fn) { this.spawners.push({ step: Infinity, dur: t, fn: null, done: fn, t: 0, acc: 0 }); this.start(); }
 
-  /* ── laço ── */
   start() {
     if (this.running) return;
     this.running = true; this.last = performance.now();
     this.c.style.visibility = "visible";
     const loop = (now) => {
-      const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now; this.t += dt;
+      const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
       this.step(dt);
-      if (this.alive()) this.raf = requestAnimationFrame(loop);
-      else { this.running = false; this.g.clearRect(0, 0, innerWidth, innerHeight); this.c.style.visibility = "hidden"; }
+      if (this.bolts.length || this.sparks.length || this.embers.length || this.spawners.length || this.flash > 0.01 || this.haze > 0.01 || this.charge > 0) {
+        this.raf = requestAnimationFrame(loop);
+      } else {
+        this.running = false; this.g.clearRect(0, 0, innerWidth, innerHeight); this.c.style.visibility = "hidden";
+      }
     };
     this.raf = requestAnimationFrame(loop);
   }
-  alive() { return this.tendrils.length || this.sparks.length || this.embers.length || this.lines.length || this.spawners.length || this.flash > 0.01 || this.haze > 0.01 || this.charge > 0; }
 
-  drawPath(g, pts, nor, from, to, st, jitter) {
-    g.beginPath();
-    for (let i = from; i <= to; i += 3) {
-      const [x, y] = pts[i], [nx, ny] = nor[i];
-      const off = st.amp * Math.sin(i * st.freq * 60 + st.ph + this.t * st.sp) + (Math.random() - 0.5) * jitter;
-      i === from ? g.moveTo(x + nx * off, y + ny * off) : g.lineTo(x + nx * off, y + ny * off);
-    }
-    if ((to - from) % 3) { const [x, y] = pts[to]; g.lineTo(x, y); }
-    g.stroke();
-  }
   step(dt) {
     const g = this.g, W = innerWidth, H = innerHeight;
     g.clearRect(0, 0, W, H);
@@ -155,80 +222,57 @@ export default class Speedforce {
       if (s.t >= s.dur) { s.dead = true; s.done?.(); }
     }
     this.spawners = this.spawners.filter((s) => !s.dead);
-    // névoa vermelha atmosférica (normal, por baixo dos brilhos)
+
     if (this.haze > 0.01) {
       const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.1, W / 2, H / 2, Math.hypot(W, H) * 0.6);
-      gr.addColorStop(0, `rgba(120,10,4,${(0.10 * this.haze).toFixed(3)})`); gr.addColorStop(1, `rgba(60,0,0,${(0.42 * this.haze).toFixed(3)})`);
+      gr.addColorStop(0, `rgba(120,10,4,${(0.15 * this.haze).toFixed(3)})`); gr.addColorStop(1, `rgba(60,0,0,0)`);
+      g.globalCompositeOperation = "source-over";
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
-      this.haze *= Math.pow(0.08, dt);
+      this.haze *= Math.pow(0.05, dt);
     }
+    
     g.globalCompositeOperation = "lighter";
-    g.lineCap = "round"; g.lineJoin = "round";
-    // linhas de hipervelocidade (laranja/vermelho)
-    for (const l of this.lines) {
-      l.age += dt; l.r += l.v * dt; l.len = Math.min(380, l.len + l.v * dt * 0.9);
-      const k = 1 - l.age / l.life, ca = Math.cos(l.a), sa = Math.sin(l.a);
-      g.strokeStyle = `rgba(${Math.random() < 0.4 ? GOLD : ORANGE},${(0.45 * k).toFixed(3)})`; g.lineWidth = l.w;
-      g.beginPath(); g.moveTo(l.cx + ca * l.r, l.cy + sa * l.r); g.lineTo(l.cx + ca * (l.r + l.len), l.cy + sa * (l.r + l.len)); g.stroke();
+    
+    // Bolts
+    for (const B of this.bolts) {
+      B.update(dt);
+      B.draw(g, dt);
     }
-    this.lines = this.lines.filter((l) => l.age < l.life);
-    // filamentos
-    for (const T of this.tendrils) {
-      T.age += dt;
-      const n = T.pts.length - 1, head = Math.min(1, T.age / T.travel), fade = Math.max(0, 1 - Math.max(0, T.age - T.travel) / (T.life - T.travel));
-      const to = Math.round(head * n), from = Math.max(0, Math.round((head - T.tail) * n) - (head >= 1 ? Math.round(((T.age - T.travel) / (T.life - T.travel)) * n * 0.6) : 0));
-      if (to - from < 2 || fade <= 0) continue;
-      const flick = 0.75 + Math.random() * 0.25, a = fade * flick;
-      const layers = T.blur
-        ? [[12 * T.w, RED, 0.07]]
-        : [[7 * T.w, ORANGE, 0.25], [1.4 * T.w, GOLD, 0.75], [0.7 * T.w, HOT, 1]];
-      for (const s of T.st) {
-        for (const [w, col, al] of layers) {
-          g.strokeStyle = `rgba(${col},${(al * a * (s.amp ? 0.7 : 1)).toFixed(3)})`; g.lineWidth = s.amp ? w * 0.6 : w;
-          this.drawPath(g, T.pts, T.nor, from, to, s, T.blur ? 0 : 2.4 * T.w);
-        }
-      }
-      // cabeça quente
-      if (head < 1 && !T.blur) {
-        const [hx, hy] = T.pts[to], rg = g.createRadialGradient(hx, hy, 0, hx, hy, 26 * T.w);
-        rg.addColorStop(0, `rgba(${HOT},${(0.9 * a).toFixed(3)})`); rg.addColorStop(0.3, `rgba(${GOLD},${(0.35 * a).toFixed(3)})`); rg.addColorStop(1, `rgba(${RED},0)`);
-        g.fillStyle = rg; g.fillRect(hx - 30 * T.w, hy - 30 * T.w, 60 * T.w, 60 * T.w);
-      }
-      // ramificações aparecem quando a cabeça passa por elas
-      for (const b of T.branches) {
-        if (head < b.at) continue;
-        for (const [w, col, al] of [[1.2, GOLD, 0.75]]) {
-          g.strokeStyle = `rgba(${col},${(al * a).toFixed(3)})`; g.lineWidth = w * T.w;
-          this.drawPath(g, b.path.pts, b.path.nor, 0, b.path.pts.length - 1, { amp: 0, freq: 0, ph: 0, sp: 0 }, 3);
-        }
-      }
-    }
-    this.tendrils = this.tendrils.filter((T) => T.age < T.life);
-    // faíscas
+    this.bolts = this.bolts.filter((B) => B.age < B.life);
+
+    // Sparks
     for (const p of this.sparks) {
-      p.age += dt; p.vx *= 1 - 2.2 * dt; p.vy = p.vy * (1 - 2.2 * dt) + 900 * dt;
-      const x0 = p.x, y0 = p.y; p.x += p.vx * dt; p.y += p.vy * dt;
+      p.age += dt; 
+      p.vx *= 1 - 0.5 * dt; // less drag
+      p.vy = p.vy * (1 - 0.5 * dt) + 1800 * dt; // Strong gravity (1800px/s^2)
+      
+      const x0 = p.x, y0 = p.y; 
+      p.x += p.vx * dt; 
+      p.y += p.vy * dt;
+      
       const k = 1 - p.age / p.life;
-      g.strokeStyle = `rgba(${p.hot ? HOT : Math.random() < 0.5 ? GOLD : ORANGE},${(0.95 * k).toFixed(3)})`; g.lineWidth = p.hot ? 1.5 : 1;
-      g.beginPath(); g.moveTo(x0 - p.vx * dt * 1.5, y0 - p.vy * dt * 1.5); g.lineTo(p.x, p.y); g.stroke();
+      // Sharp, crisp sparks (not blurry)
+      g.strokeStyle = `rgba(${p.hot ? HOT : (Math.random() < 0.5 ? GOLD : ORANGE)},${(k).toFixed(3)})`; 
+      g.lineWidth = p.hot ? 2 : 1;
+      
+      // Draw as a stretched line based on velocity (motion blur style)
+      g.beginPath(); 
+      g.moveTo(x0 - p.vx * dt * 0.8, y0 - p.vy * dt * 0.8); 
+      g.lineTo(p.x, p.y); 
+      g.stroke();
     }
     this.sparks = this.sparks.filter((p) => p.age < p.life);
-    // brasas e bokeh
-    for (const e of this.embers) {
-      e.age += dt; e.x += e.vx * dt; e.y += e.vy * dt;
-      const k = Math.sin(Math.PI * Math.min(1, e.age / e.life)) * (0.7 + 0.3 * Math.sin(this.t * 14 + e.ph));
-      if (e.big) { const rg = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r); rg.addColorStop(0, `rgba(${ORANGE},${(0.16 * k).toFixed(3)})`); rg.addColorStop(1, `rgba(${RED},0)`); g.fillStyle = rg; g.fillRect(e.x - e.r, e.y - e.r, e.r * 2, e.r * 2); }
-      else { g.fillStyle = `rgba(${Math.random() < 0.5 ? GOLD : ORANGE},${(0.85 * k).toFixed(3)})`; g.fillRect(e.x - e.r / 2, e.y - e.r / 2, e.r, e.r * 2.2); }
-    }
-    this.embers = this.embers.filter((e) => e.age < e.life);
-    // clarão do salto: núcleo quente → laranja → vermelho
+
+    // Embers removed
+
+    // Flash
     if (this.flash > 0.01) {
+      g.globalCompositeOperation = "lighter";
       const gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) / 2);
-      gr.addColorStop(0, `rgba(${HOT},${(0.5 * this.flash).toFixed(3)})`); gr.addColorStop(0.45, `rgba(${ORANGE},${(0.26 * this.flash).toFixed(3)})`); gr.addColorStop(1, `rgba(${RED},${(0.18 * this.flash).toFixed(3)})`);
+      gr.addColorStop(0, `rgba(${HOT},${(0.4 * this.flash).toFixed(3)})`); gr.addColorStop(0.3, `rgba(${ORANGE},${(0.2 * this.flash).toFixed(3)})`); gr.addColorStop(1, `rgba(${RED},0)`);
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
-      this.flash *= Math.pow(0.015, dt);
+      this.flash *= Math.pow(0.01, dt);
     }
-    g.globalCompositeOperation = "source-over";
   }
   dispose() { cancelAnimationFrame(this.raf); window.removeEventListener("resize", this.resize); window.removeEventListener("pointermove", this.onMove); this.c.remove(); }
 }

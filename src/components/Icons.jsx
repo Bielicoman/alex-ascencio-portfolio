@@ -63,3 +63,5 @@ export const Next = make("next", <g className="p-mv"><path {...d} d="m9 5 7 7-7 
 export const Expand = make("expand", <g className="p-mv"><path {...d} d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></g>);
 export const Hand = make("hand", <g className="p-wave"><path {...d} d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.8V4.5a1.5 1.5 0 0 1 3 0V12m0-6a1.5 1.5 0 0 1 3 0v6m0-3.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L3.6 15a1.5 1.5 0 0 1 2.3-2L8 15" /></g>);
 export const Doc = make("doc", <><path {...d} d="M6 3h8l4 4v14H6z" /><path className="p-fold" {...d} d="M14 3v4h4" /><g className="p-lines"><path className="l1" d="M9 11h6" /><path className="l2" d="M9 14h6" /><path className="l3" d="M9 17h4" /></g></>);
+
+export const Home = make("home", <g className="p-mv"><path {...d} d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path {...d} d="M9 22V12h6v10" /></g>);

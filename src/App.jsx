@@ -35,7 +35,7 @@ const CLIENTS = [
   ["Prisma Brasil", "prisma", 52], ["Dilson Castro", "dilson", 38.1], ["Via Global", "via-global", 33.6], ["Entre Aspas", "entre-aspas", 27.5],
 ];
 const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Communion", "Kati Carvalho", "Califórnia Dreams", "Willian Krusty", "Pedro Valença", "Prisminha", "Dunamis Studio", "Patrícia de Paiva", "CPB"];
-const NAV = [["#filmes", "Filmes"], ["#lab", "Lab"], ["#metodo", "Método"], ["#arquivo", "Seleção"], ["#sobre", "Sobre"]];
+const NAV = [["#top", "Início", I.Home], ["#filmes", "Filmes", I.Film], ["#lab", "Lab", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Seleção", I.Aperture], ["#sobre", "Sobre", I.Hand]];
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
   [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
@@ -156,7 +156,20 @@ function SoundToggle() {
 function Nav() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(null);
-  const pillRef = useRef(null), hovRef = useRef(null), linksRef = useRef(null);
+  const pillRef = useRef(null), hovRef = useRef(null), linksRef = useRef(null), navRef = useRef(null);
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth > 760 || !navRef.current) return;
+      const y = window.scrollY;
+      const dir = y > (navRef.current._lastY || 0) ? 1 : -1;
+      navRef.current._lastY = y;
+      const pastHero = y > window.innerHeight * 0.4;
+        if (pastHero) navRef.current.classList.add("is-visible");
+        else navRef.current.classList.remove("is-visible");
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
   useEffect(() => { document.documentElement.classList.toggle("menu-open", open); }, [open]);
   useEffect(() => {
     const sts = NAV.map(([h]) => ScrollTrigger.create({ trigger: h, start: "top 55%", end: "bottom 55%", onToggle: (s) => s.isActive && setActive(h), onLeaveBack: () => h === "#filmes" && setActive(null) }));
@@ -176,14 +189,14 @@ function Nav() {
   };
   const unhover = () => gsap.to(hovRef.current, { opacity: 0, duration: 0.4 });
   return (
-    <header className="nav">
+    <header ref={navRef} className="nav">
       <a href="#top" className="nav-brand" aria-label="Alex Ascencio, início"><Lockup h={22} /></a>
       <nav ref={linksRef} className={`nav-links ${open ? "is-open" : ""}`} aria-label="Principal" onPointerLeave={unhover}>
         <span className="nav-hover" ref={hovRef} aria-hidden="true" />
         <span className="nav-pill" ref={pillRef} aria-hidden="true" />
-        {NAV.map(([h, t], i) => (
+        {NAV.map(([h, t, Icon], i) => (
           <a key={h} href={h} onClick={() => setOpen(false)} onPointerEnter={hover} style={{ "--i": i }} aria-current={active === h ? "true" : undefined}>
-            <sup className="nav-n">0{i + 1}</sup><Roll>{t}</Roll>
+            <sup className="nav-n">0{i + 1}</sup><span className="nav-ic"><Icon size={18} /></span><Roll>{t}</Roll>
           </a>
         ))}
         <div className="nav-menu-foot">
@@ -258,15 +271,15 @@ function Player({ project, onClose, onHost, onNav }) {
 }
 
 /* ───────── hero ───────── */
-function Chip({ cls, icon: Icon, red, title, sub, depth, amp, speed }) {
+function Chip({ cls, icon: Icon, red, title, sub, depth, amp, speed, href }) { const Tag = href ? "a" : "div";
   return (
     <div className={`floater ${cls}`} data-float data-depth={depth} data-amp={amp} data-speed={speed}>
       <div className="fl-in">
-        <div className="chip">
+        <Tag href={href} className="chip">
           <span className={`chip-icon ${red ? "red" : ""}`}><Icon size={20} loop /></span>
           <span className="chip-text">{title}<small>{sub}</small></span>
           <span className="fl-glare" aria-hidden="true" />
-        </div>
+        </Tag>
       </div>
     </div>
   );
@@ -371,7 +384,12 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
         <Chip cls="fl-c" icon={I.Wave} title="Cor & som medidos" sub="Look por cena · LUFS por clipe" depth={0.8} amp={9} speed={0.45} />
         <Chip cls="fl-b" icon={I.Spark} red title="IA com critério" sub="Só entra se passar como filmado" depth={1.1} amp={12} speed={0.5} />
         <Chip cls="fl-d" icon={I.Film} title={`${N4K} entregas em 4K`} sub="Da captação ao master" depth={0.7} amp={8} speed={0.62} />
-        <div className="floater fl-tour" data-float data-depth="0.5" data-amp="7" data-speed="0.6">
+                  <Chip cls="fl-nav fl-nav-1" href="#filmes" icon={I.Film} title="Filmes" sub="01" depth={1.2} amp={10} speed={0.6} />
+          <Chip cls="fl-nav fl-nav-2" href="#lab" icon={I.Code} title="Lab" sub="02" depth={0.9} amp={8} speed={0.5} />
+          <Chip cls="fl-nav fl-nav-3" href="#metodo" icon={I.Layers} title="Método" sub="03" depth={1.1} amp={11} speed={0.55} />
+          <Chip cls="fl-nav fl-nav-4" href="#arquivo" icon={I.Aperture} title="Seleção" sub="04" depth={1.3} amp={12} speed={0.65} />
+          <Chip cls="fl-nav fl-nav-5" href="#sobre" icon={I.Hand} title="Sobre" sub="05" depth={1.0} amp={9} speed={0.45} />
+          <div className="floater fl-tour" data-float data-depth="0.5" data-amp="7" data-speed="0.6">
           <div className="fl-in">
             <button className="tour" onClick={onDemo} aria-pressed={demo} aria-label="Assistir o site: tour guiado automático">
               <PlayBtn playing={demo} />
@@ -387,7 +405,6 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
 
       <div className="hero-bottom">
         <div className="hero-intro">
-          <p className="hero-kicker mono"><Line><i className="live" /> Agenda aberta · Edição, cor, motion e IA</Line></p>
           <p className="hero-lead"><Line>Edição, cor e motion</Line><Line>com acabamento <em>de cinema.</em></Line></p>
           <p className="hero-sub"><Line>A imagem estabelece o lugar; a história entra no tempo certo.</Line></p>
           <div className="hero-ctas">
@@ -954,13 +971,7 @@ function EdthBubble({ onOpen, hidden }) {
   const [tip, setTip] = useState(false);
   // No celular, o balão aparece depois da hero para não cobrir o Playground.
   const [inHero, setInHero] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 760px)"), hero = document.getElementById("top");
-    if (!hero) return;
-    const io = new IntersectionObserver(([e]) => setInHero(mq.matches && e.intersectionRatio > 0.25), { threshold: [0, 0.25, 0.5] });
-    io.observe(hero);
-    return () => io.disconnect();
-  }, []);
+  // removed
   useEffect(() => {
     let seen = false; try { seen = sessionStorage.getItem("edth-tip") === "1"; } catch {}
     if (seen || window.matchMedia("(max-width: 760px)").matches) return;
@@ -969,7 +980,7 @@ function EdthBubble({ onOpen, hidden }) {
   }, []);
   if (hidden) return null;
   return (
-    <div className={"edth-bubble" + (inHero ? " is-away" : "")}>
+    <div className="edth-bubble">
       {tip && (
         <div className="edth-tip" role="status">
           <b>Oi, eu sou a EDITH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
@@ -1237,26 +1248,34 @@ export default function App() {
       const end = sp.getBoundingClientRect().top + lenis.scroll + sp.offsetHeight - innerHeight;
       lenis.scrollTo(end, { duration: 6.5, easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2, force: true, lock: false });
     };
+        const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
+    const lite = false;
     const teleport = (el, x, y) => {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
       if (warping) return;
       warping = true;
       sfx.teleport(x);
-      speed.burst(x, y, 0.38);
-      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash"), portal = veil.querySelector(".warp-portal"), screen = veil.querySelector(".warp-screen");
-      const distort = !matchMedia("(pointer: coarse), (max-width: 760px)").matches;
+      speed.burst(x, y, 0.28);
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
+      const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
+      const o = { s: 0, t: 0 };
+      const paint = () => {
+        turb.setAttribute("baseFrequency", `${(0.02 + o.s * 0.0004).toFixed(5)} ${(0.0008 + o.s * 0.000004).toFixed(5)}`); // faixas verticais: borrão de hipervelocidade
+        turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
+        maps[0].setAttribute("scale", (o.s * 0.7).toFixed(1));
+        maps[1].setAttribute("scale", (o.s * 1.35).toFixed(1));
+        if (!chromium && !lite) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
+      };
       field?.stop();
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
-      veil.classList.add("on");
-      gsap.timeline({ onComplete: () => { veil.classList.remove("on"); warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
-        .fromTo(ring, { scale: 0.15, opacity: 0.9 }, { scale: 1.15, opacity: 0, duration: 0.72, ease: "expo.out" }, 0)
-        .fromTo(screen, { opacity: 0 }, { opacity: distort ? 0.82 : 0, duration: 0.18, ease: "power2.in" }, 0.04)
-        .fromTo(portal, { opacity: 0, scale: 0.85 }, { opacity: distort ? 0.9 : 0, scale: 1.12, duration: 0.28, ease: "power2.in" }, 0)
-        .fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power2.in" }, 0)
-        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); }, 0.28)
-        .to(screen, { opacity: 0, duration: 0.42, ease: "power3.out" }, 0.28)
-        .to(portal, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28)
-        .to(flash, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28);
+      veil.classList.add("on", lite ? "is-lite" : chromium ? "is-svg" : "is-blur");
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
+        .to(o, { s: 130, t: 0.5, duration: 0.28, ease: "power3.in", onUpdate: paint })
+        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
+        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
+        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.28)
+        .to(o, { s: 0, t: 1, duration: 0.55, ease: "expo.out", onUpdate: paint }, 0.28)
+        .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
@@ -1481,7 +1500,7 @@ export default function App() {
           <feBlend in="r" in2="gb" mode="screen" />
         </filter>
       </svg>
-      <div className="warp" aria-hidden="true"><i className="warp-screen" /><i className="warp-portal" /><i className="warp-flash" /><i className="warp-ring" /></div>
+      <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />
@@ -1504,7 +1523,8 @@ export default function App() {
         <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
         Toque para ouvir a trilha
       </button>
-      <EdthBubble onOpen={openEdthNow} hidden={edthOn || gest || !!project} />
+      <div className="snd-mobile-wrapper"><SoundToggle /></div>
+        <EdthBubble onOpen={openEdthNow} hidden={edthOn || gest || !!project} />
       {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
       {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>

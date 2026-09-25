@@ -94,7 +94,7 @@
 @keyframes edth-click { from { opacity: 1; transform: scale(.3); } to { opacity: 0; transform: scale(1.4); } }
 
 @media (max-width: 760px) {
-  .edth { right: 8px; bottom: 8px; width: calc(100vw - 16px); }
+  .edth { right: 8px; bottom: 86px; width: calc(100vw - 16px); }
   .edth-bar { height: 50px; }
   .edth-in { font-size: 16px; } /* evita zoom automático no iOS */
 }
@@ -103,3 +103,5 @@
 .edth-cmds { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .edth-cmds button { padding: 5px 10px; border-radius: 99px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); color: #e2e2e7; font: 500 12px var(--sans, system-ui); cursor: pointer; }
 .edth-cmds button:hover { border-color: rgba(255,59,59,.6); background: rgba(255,59,59,.12); color: #fff; }
+
+
