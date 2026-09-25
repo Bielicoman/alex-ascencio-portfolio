@@ -5,8 +5,6 @@ import Lenis from "lenis";
 import { PROJECTS } from "./projects";
 import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
 import { tc, reducedMotion } from "./util";
-import ParticleField from "./components/ParticleField";
-import LensField from "./components/LensField";
 import Floaters from "./components/Floaters";
 import Cursor from "./components/Cursor";
 import Method from "./components/Method";
@@ -334,7 +332,7 @@ function NowPlaying({ open }) {
 }
 // passar o mouse no botão de gestos já começa a baixar modelo e WASM (≈19 MB) antes do clique
 const preloadGest = () => import("./gesture/hands").then((m) => m.preloadHands().catch(() => {}));
-function Hero({ open, onDemo, demo, onGest, gest, onEdth }) {
+function Hero({ open, onDemo, demo, onGest, gest }) {
   const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
     const fl = new Floaters(floatRef.current);
@@ -398,7 +396,7 @@ function Hero({ open, onDemo, demo, onGest, gest, onEdth }) {
           </div>
           <div className="hero-modes">
             <Btn as="button" type="button" variant="glass" className="btn-tour-m" onClick={onDemo} aria-pressed={demo} icon={<I.Play size={13} />}>{demo ? "Parar tour" : "Assistir o site"}</Btn>
-            <Btn as="button" type="button" variant="glass" className="btn-edth" onClick={onEdth} icon={<I.Mic size={15} />}><span className="lbl-d">Controlar por voz · EDITH</span><span className="lbl-m">Falar com a EDITH</span></Btn>
+            <Btn href="/playground/" variant="glass" className="btn-playground" icon={<I.Play size={15} />}>Playground</Btn>
             <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
@@ -476,17 +474,29 @@ function Featured({ open }) {
 function Lab() {
   const canvas = useRef(null), video = useRef(null);
   useEffect(() => {
-    let field;
-    try { field = new LensField(canvas.current, video.current); } catch { canvas.current.classList.add("is-fallback"); return; }
-    if (reducedMotion()) { canvas.current.classList.add("is-fallback"); field.dispose(); return; }
-    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? field.start() : field.stop()), { rootMargin: "100px" });
+    if (reducedMotion()) { canvas.current.classList.add("is-fallback"); return; }
+    let field, disposed = false, visible = false;
+    const io = new IntersectionObserver(async ([e]) => {
+      visible = e.isIntersecting;
+      if (!visible) { field?.stop(); return; }
+      if (!field) {
+        try {
+          const { default: LensField } = await import("./components/LensField");
+          if (disposed) return;
+          field = new LensField(canvas.current, video.current);
+        } catch { canvas.current?.classList.add("is-fallback"); return; }
+      }
+      if (visible && !document.hidden) field.start();
+    }, { rootMargin: "300px" });
     io.observe(canvas.current);
-    return () => { io.disconnect(); field.dispose(); };
+    const visibility = () => document.hidden ? field?.stop() : visible && field?.start();
+    document.addEventListener("visibilitychange", visibility);
+    return () => { disposed = true; io.disconnect(); document.removeEventListener("visibilitychange", visibility); field?.dispose(); };
   }, []);
   return (
     <section id="lab" className="lab">
       <div className="lab-frame">
-        <video ref={video} muted loop playsInline preload="auto" crossOrigin="anonymous" className="lab-video-src" aria-hidden="true" onError={() => canvas.current?.classList.add("is-fallback")}>
+        <video ref={video} muted loop playsInline preload="none" crossOrigin="anonymous" className="lab-video-src" aria-hidden="true" onError={() => canvas.current?.classList.add("is-fallback")}>
           <source src="/media/aperture-motion.webm" type="video/webm" />
           <source src="/media/aperture-motion.mp4" type="video/mp4" />
         </video>
@@ -942,7 +952,7 @@ function DatePick({ value, onChange }) {
 // balão da EDITH no canto inferior direito (lugar clássico do botão de WhatsApp)
 function EdthBubble({ onOpen, hidden }) {
   const [tip, setTip] = useState(false);
-  // mobile: o hero já tem o botão da EDITH; o balão só aparece depois de sair do hero e sem o aviso automático
+  // No celular, o balão aparece depois da hero para não cobrir o Playground.
   const [inHero, setInHero] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 760px)"), hero = document.getElementById("top");
@@ -1216,9 +1226,7 @@ export default function App() {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.stop();
     }
-    // teletransporte: a tela ondula (turbulência + deslocamento + RGB split), salta no pico e se recompõe no destino
-    const chromium = !!navigator.userAgentData?.brands?.some((b) => /Chrom/.test(b.brand));
-    const lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches; // celular: sem filtro SVG em tela cheia
+    // Teleporte: clarão e anel em camadas compostas pela GPU; o salto acontece no pico do clarão.
     let warping = false;
     const speed = new Speedforce();
     // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
@@ -1234,26 +1242,16 @@ export default function App() {
       if (warping) return;
       warping = true;
       sfx.teleport(x);
-      speed.burst(x, y, 0.28);
-      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
-      const turb = document.querySelector("#warp feTurbulence"), maps = document.querySelectorAll("#warp feDisplacementMap");
-      const o = { s: 0, t: 0 };
-      const paint = () => {
-        turb.setAttribute("baseFrequency", `${(0.02 + o.s * 0.0004).toFixed(5)} ${(0.0008 + o.s * 0.000004).toFixed(5)}`); // faixas verticais: borrão de hipervelocidade
-        turb.setAttribute("seed", String(1 + Math.round(o.t * 40)));
-        maps[0].setAttribute("scale", (o.s * 0.7).toFixed(1));
-        maps[1].setAttribute("scale", (o.s * 1.35).toFixed(1));
-        if (!chromium && !lite) veil.style.backdropFilter = `blur(${(o.s / 14).toFixed(1)}px)`;
-      };
+      speed.burst(x, y, 0.38);
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash");
+      field?.stop();
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
-      veil.classList.add("on", lite ? "is-lite" : chromium ? "is-svg" : "is-blur");
-      gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; autoplay(el); } })
-        .to(o, { s: 130, t: 0.5, duration: 0.28, ease: "power3.in", onUpdate: paint })
-        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
-        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
-        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.28)
-        .to(o, { s: 0, t: 1, duration: 0.55, ease: "expo.out", onUpdate: paint }, 0.28)
-        .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
+      veil.classList.add("on");
+      gsap.timeline({ onComplete: () => { veil.classList.remove("on"); warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
+        .fromTo(ring, { scale: 0.15, opacity: 0.9 }, { scale: 1.15, opacity: 0, duration: 0.72, ease: "expo.out" }, 0)
+        .fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power2.in" }, 0)
+        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); }, 0.28)
+        .to(flash, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
@@ -1291,11 +1289,19 @@ export default function App() {
     document.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointermove", onPMove, { passive: true });
 
-    let field, live = reduced, morph = 0, fade = 1;
-    try {
-      field = new ParticleField(fieldCanvas.current);
-      if (reduced) field.renderOnce(); // sem movimento: um quadro; com movimento, liga quando a cortina abre
-    } catch { /* sem WebGL */ }
+    let field, disposed = false, live = reduced, morph = 0, fade = 1;
+    import("./components/ParticleField").then(({ default: ParticleField }) => {
+      if (disposed) return;
+      try {
+        field = new ParticleField(fieldCanvas.current);
+        field.setMorph(morph);
+        field.setOpacity(fade);
+        if (reduced) field.renderOnce();
+        else if (live && fade > 0.01 && !document.hidden) field.start();
+      } catch { /* sem WebGL */ }
+    }).catch(() => {});
+    const visibility = () => document.hidden ? field?.stop() : live && fade > 0.01 && field?.start();
+    document.addEventListener("visibilitychange", visibility);
 
     const ctx = gsap.context(() => {
       if (reduced) { gsap.set(".preloader", { display: "none" }); return; }
@@ -1442,6 +1448,7 @@ export default function App() {
     }, root);
 
     return () => {
+      disposed = true;
       ctx.revert();
       document.removeEventListener("click", onAnchor);
       speed.dispose();
@@ -1449,6 +1456,7 @@ export default function App() {
       document.removeEventListener("pointerover", onOver);
       document.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onPMove);
+      document.removeEventListener("visibilitychange", visibility);
       field?.dispose();
       if (tick) gsap.ticker.remove(tick);
       lenis?.destroy();
@@ -1459,16 +1467,8 @@ export default function App() {
     <div ref={root}>
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
         <symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol>
-        <filter id="warp" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.018" numOctaves="2" seed="1" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d1" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d2" />
-          <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
-          <feBlend in="r" in2="gb" mode="screen" />
-        </filter>
       </svg>
-      <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
+      <div className="warp" aria-hidden="true"><i className="warp-flash" /><i className="warp-ring" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />
@@ -1476,7 +1476,7 @@ export default function App() {
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} onEdth={openEdthNow} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />

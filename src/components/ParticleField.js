@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { MARK_PATH, MARK_W, MARK_H } from "../brand";
+import { renderPixelRatio } from "../util";
 
 // Campo de partículas que reage ao cursor e se reorganiza na marca AA com o scroll.
 const vert = /* glsl */ `
@@ -134,7 +135,7 @@ export default class ParticleField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    const pr = Math.min(window.devicePixelRatio, 1.25); // pontos suaves: acima de 1,25 só custa GPU
+    const pr = renderPixelRatio(w, h);
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;

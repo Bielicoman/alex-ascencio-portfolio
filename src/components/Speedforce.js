@@ -5,7 +5,7 @@ const RED = "255,42,16", ORANGE = "255,118,28", GOLD = "255,200,70", HOT = "255,
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 // curva suave (Catmull-Rom) por pontos de controle com desvio perpendicular aleatório
-function flowPath(x1, y1, x2, y2, bend = 0.35, ctrl = 6, samples = 90) {
+function flowPath(x1, y1, x2, y2, bend = 0.35, ctrl = 6, samples = 52) {
   const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
   const cp = [];
   for (let i = 0; i <= ctrl; i++) {
@@ -27,6 +27,7 @@ export default class Speedforce {
   constructor() {
     const c = (this.c = document.createElement("canvas"));
     c.className = "speedforce"; c.setAttribute("aria-hidden", "true");
+    c.style.visibility = "hidden";
     document.body.appendChild(c);
     this.g = c.getContext("2d");
     this.tendrils = []; this.embers = []; this.sparks = []; this.lines = []; this.spawners = [];
@@ -36,15 +37,19 @@ export default class Speedforce {
     this.fine = matchMedia("(pointer: fine)").matches;
     // modo leve (celular/tablet): metade dos filamentos, DPR 1, brasas sem gradiente, menos faíscas
     this.lite = matchMedia("(pointer: coarse), (max-width: 760px)").matches;
-    this.resize = () => { const d = this.lite ? 1 : Math.min(devicePixelRatio, 1.5); c.width = innerWidth * d; c.height = innerHeight * d; this.g.setTransform(d, 0, 0, d, 0, 0); };
+    this.resize = () => {
+      const d = Math.max(0.5, Math.min(this.lite ? 1 : 1.25, devicePixelRatio, Math.sqrt(1800000 / (innerWidth * innerHeight))));
+      c.width = Math.round(innerWidth * d); c.height = Math.round(innerHeight * d);
+      this.g.setTransform(d, 0, 0, d, 0, 0);
+    };
     this.resize(); window.addEventListener("resize", this.resize);
     this.onMove = (e) => {
       const now = performance.now(), dt = Math.max(1, now - this.pt), vx = (e.clientX - this.px) / dt, vy = (e.clientY - this.py) / dt, sp = Math.hypot(vx, vy);
       if (this.px >= 0 && this.fine && !this.reduced) {
         if (this.charge > 0) { // cursor carregado: filamentos curtos enroscando + faíscas no rastro
           if (now - this.lastArc > 45) { this.lastArc = now; this.coil(e.clientX, e.clientY); }
-          this.spray(e.clientX, e.clientY, 3, 240, -vx * 110, -vy * 110);
-        } else if (sp > 3.2) this.spray(e.clientX, e.clientY, 2, 150, -vx * 60, -vy * 60, 0.6);
+          if (this.sparks.length < 90) this.spray(e.clientX, e.clientY, 2, 240, -vx * 110, -vy * 110);
+        } else if (sp > 3.2 && this.sparks.length < 60) this.spray(e.clientX, e.clientY, 1, 150, -vx * 60, -vy * 60, 0.6);
       }
       this.px = e.clientX; this.py = e.clientY; this.pt = now;
     };
@@ -60,7 +65,7 @@ export default class Speedforce {
     const branches = [];
     for (let k = 0; k < Math.round(p.L / 260); k++) {
       const at = rnd(0.15, 0.85), i = Math.floor(at * (p.pts.length - 1)), [bx, by] = p.pts[i], [nx, ny] = p.nor[i], s = Math.random() < 0.5 ? 1 : -1, len = rnd(40, 150);
-      branches.push({ at, path: flowPath(bx, by, bx + nx * s * len + rnd(-40, 40), by + ny * s * len + rnd(-40, 40), 0.6, 3, 24) });
+      branches.push({ at, path: flowPath(bx, by, bx + nx * s * len + rnd(-40, 40), by + ny * s * len + rnd(-40, 40), 0.6, 3, 16) });
     }
     this.tendrils.push({ ...p, st, branches, w, travel, life, tail, blur, age: 0 });
     this.start();
@@ -83,7 +88,7 @@ export default class Speedforce {
     }
     this.start();
   }
-  tunnel(cx, cy, n = 110) {
+  tunnel(cx, cy, n = 60) {
     const R = Math.hypot(innerWidth, innerHeight);
     for (let i = 0; i < n; i++) this.lines.push({ cx, cy, a: Math.random() * Math.PI * 2, r: 30 + Math.random() * R * 0.2, v: R * (1.4 + Math.random() * 2.2), len: 10, age: 0, life: 0.3 + Math.random() * 0.3, w: 0.5 + Math.random() * 1.2 });
     this.start();
@@ -97,18 +102,18 @@ export default class Speedforce {
     if (this.reduced) return;
     const L = this.lite;
     this.haze = 0.6;
-    this.spray(x, y, L ? 18 : 50, 800);
+    this.spray(x, y, L ? 14 : 28, 800);
     for (let i = 0; i < (L ? 1 : 2); i++) { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: 1.1, travel: 0.14 }); }
     if (!L) this.every(0.1, jumpAt, () => { const [ex, ey] = this.edge(); this.tendril(x, y, ex, ey, { w: rnd(0.6, 1), strands: 2 }); this.coil(x, y); });
     this.after(jumpAt, () => {
       this.flash = 1; this.haze = 1;
       const cx = innerWidth / 2, cy = innerHeight / 2;
-      this.tunnel(cx, cy, L ? 50 : 130);
-      for (let i = 0; i < (L ? 2 : 4); i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(1, 1.6), life: rnd(0.6, 1), strands: L ? 2 : 3 }); }
-      if (!L) for (let i = 0; i < 2; i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: 3, blur: true, strands: 1, life: 1.1, travel: 0.3 }); } // desfocados, em primeiro plano
-      this.spray(cx, cy, L ? 36 : 90, 1200);
-      this.embersAt(L ? 24 : 70);
-      if (!L) this.every(0.15, 0.55, () => { const [ax, ay] = this.edge(), [bx, by] = this.edge(); if (Math.random() < 0.7) this.tendril(ax, ay, bx, by, { w: rnd(0.5, 1.1), strands: 2 }); });
+      this.tunnel(cx, cy, L ? 30 : 60);
+      for (let i = 0; i < (L ? 2 : 3); i++) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(1, 1.6), life: rnd(0.6, 1), strands: 2 }); }
+      if (!L) { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: 3, blur: true, strands: 1, life: 1.1, travel: 0.3 }); }
+      this.spray(cx, cy, L ? 24 : 48, 1200);
+      this.embersAt(L ? 16 : 36);
+      if (!L) this.every(0.22, 0.44, () => { const [ax, ay] = this.edge(), [bx, by] = this.edge(); this.tendril(ax, ay, bx, by, { w: rnd(0.5, 1.1), strands: 2 }); });
       this.charge = 1.4;
     });
   }
@@ -119,11 +124,12 @@ export default class Speedforce {
   start() {
     if (this.running) return;
     this.running = true; this.last = performance.now();
+    this.c.style.visibility = "visible";
     const loop = (now) => {
-      const dt = Math.min(0.04, (now - this.last) / 1000); this.last = now; this.t += dt;
+      const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now; this.t += dt;
       this.step(dt);
       if (this.alive()) this.raf = requestAnimationFrame(loop);
-      else { this.running = false; this.g.clearRect(0, 0, innerWidth, innerHeight); }
+      else { this.running = false; this.g.clearRect(0, 0, innerWidth, innerHeight); this.c.style.visibility = "hidden"; }
     };
     this.raf = requestAnimationFrame(loop);
   }
@@ -131,11 +137,12 @@ export default class Speedforce {
 
   drawPath(g, pts, nor, from, to, st, jitter) {
     g.beginPath();
-    for (let i = from; i <= to; i++) {
+    for (let i = from; i <= to; i += 3) {
       const [x, y] = pts[i], [nx, ny] = nor[i];
       const off = st.amp * Math.sin(i * st.freq * 60 + st.ph + this.t * st.sp) + (Math.random() - 0.5) * jitter;
       i === from ? g.moveTo(x + nx * off, y + ny * off) : g.lineTo(x + nx * off, y + ny * off);
     }
+    if ((to - from) % 3) { const [x, y] = pts[to]; g.lineTo(x, y); }
     g.stroke();
   }
   step(dt) {
@@ -173,8 +180,8 @@ export default class Speedforce {
       if (to - from < 2 || fade <= 0) continue;
       const flick = 0.75 + Math.random() * 0.25, a = fade * flick;
       const layers = T.blur
-        ? [[16 * T.w, RED, 0.05], [7 * T.w, ORANGE, 0.08]]
-        : [[11 * T.w, RED, 0.08], [4.2 * T.w, ORANGE, 0.28], [1.7 * T.w, GOLD, 0.7], [0.7 * T.w, HOT, 1]];
+        ? [[12 * T.w, RED, 0.07]]
+        : [[7 * T.w, ORANGE, 0.25], [1.4 * T.w, GOLD, 0.75], [0.7 * T.w, HOT, 1]];
       for (const s of T.st) {
         for (const [w, col, al] of layers) {
           g.strokeStyle = `rgba(${col},${(al * a * (s.amp ? 0.7 : 1)).toFixed(3)})`; g.lineWidth = s.amp ? w * 0.6 : w;
@@ -190,7 +197,7 @@ export default class Speedforce {
       // ramificações aparecem quando a cabeça passa por elas
       for (const b of T.branches) {
         if (head < b.at) continue;
-        for (const [w, col, al] of [[3.2, ORANGE, 0.22], [0.8, GOLD, 0.8]]) {
+        for (const [w, col, al] of [[1.2, GOLD, 0.75]]) {
           g.strokeStyle = `rgba(${col},${(al * a).toFixed(3)})`; g.lineWidth = w * T.w;
           this.drawPath(g, b.path.pts, b.path.nor, 0, b.path.pts.length - 1, { amp: 0, freq: 0, ph: 0, sp: 0 }, 3);
         }

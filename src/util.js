@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 
 export const FPS = 24;
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Preserve viewport-sized layouts on 4K screens while bounding animated GPU surfaces.
+export const renderPixelRatio = (width, height, maxPixels = 2500000, maxDpr = 1.25) =>
+  Math.min(window.devicePixelRatio || 1, maxDpr, Math.sqrt(maxPixels / Math.max(1, width * height)));
 const p2 = (n) => String(n).padStart(2, "0");
 // timecode SMPTE a 24 fps
 export const tc = (sec) => {

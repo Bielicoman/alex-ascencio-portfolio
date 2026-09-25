@@ -438,7 +438,9 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 .lab { position: relative; background: var(--bg); }
 .lab-frame { position: relative; min-height: 112vh; overflow: hidden; background: #000; display: grid; align-items: center; will-change: clip-path; }
 .lab-canvas, .lab-poster { position: absolute; inset: 0; width: 100%; height: 100%; }
-.lab-poster { object-fit: cover; opacity: 0; filter: brightness(.45); }
+.lab-poster { object-fit: cover; opacity: 1; filter: brightness(.45); }
+.lab-canvas { opacity: 0; transition: opacity .35s ease; }
+.lab-canvas.is-ready { opacity: 1; }
 .lab-canvas.is-fallback { display: none; }
 .lab-canvas.is-fallback ~ .lab-poster { opacity: 1; }
 .lab-video-src { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -1074,13 +1076,12 @@ html.demo .nav { pointer-events: none; }
 @keyframes fingerTap { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.6); } }
 
 /* ───────── teletransporte ───────── */
-.warp { --flash: 0; position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; }
+.warp { position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; }
 .warp.on { visibility: visible; }
-.warp.is-svg { backdrop-filter: url(#warp); -webkit-backdrop-filter: url(#warp); }
-.warp::after { content: ""; position: absolute; inset: 0; opacity: var(--flash); mix-blend-mode: screen;
-  background: radial-gradient(60vmax circle at var(--x, 50%) var(--y, 50%), rgba(255,90,80,.28), rgba(129,18,38,.18) 40%, transparent 70%); }
-.warp-ring { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: 260vmax; height: 260vmax; margin: -130vmax 0 0 -130vmax; border-radius: 50%; transform: scale(0);
-  background: radial-gradient(closest-side, transparent 88%, rgba(255,59,59,.0) 89%, rgba(255,59,59,.55) 95%, rgba(255,255,255,.7) 97.5%, transparent 100%); mix-blend-mode: screen; }
+.warp-flash { position: absolute; inset: 0; opacity: 0; will-change: opacity;
+  background: radial-gradient(ellipse at var(--x, 50%) var(--y, 50%), rgba(255,241,216,.9), rgba(255,90,80,.55) 20%, rgba(129,18,38,.28) 55%, transparent 85%); }
+.warp-ring { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: min(110vmax, 2400px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; transform: scale(.15); will-change: transform, opacity;
+  background: radial-gradient(closest-side, transparent 86%, rgba(255,59,59,.35) 92%, rgba(255,255,255,.75) 96%, transparent 100%); }
 
 /* ───────── som ───────── */
 .snd { display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px 0 14px; border-radius: 99px; color: var(--soft);
@@ -1194,10 +1195,8 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .btn-gest:hover .ai-hand .p-wave { animation: hand-wave .9s var(--ease) 2; transform-origin: 40% 90%; }
 @keyframes hand-wave { 30% { transform: rotate(-14deg); } 70% { transform: rotate(10deg); } }
 
-/* modos de controle na hero: voz (EDTH) e mãos */
+/* modos de exploração na hero */
 .hero-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.btn-edth .ai-mic .p-cap { animation: edth-cap 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
-@keyframes edth-cap { 50% { transform: scaleY(.8); } }
 .edth-pulse { animation: edth-pulse 1.2s ease-in-out 2; }
 @keyframes edth-pulse { 50% { box-shadow: 0 0 0 8px rgba(227,34,44,.25); transform: scale(1.04); } }
 @media (max-width: 760px) { .hero-modes { display: grid; grid-template-columns: 1fr; } }
@@ -1237,4 +1236,21 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
   .edth-bubble { transition: opacity .35s, transform .35s var(--ease); }
   .edth-bubble.is-away { opacity: 0; transform: translateY(16px) scale(.9); pointer-events: none; }
   .edth-bubble.is-away > * { pointer-events: none; }
+}
+
+/* Layout em monitores UHD: a interface usa toda a área sem ampliar os canvases animados. */
+@media (min-width: 2560px) {
+  :root { --pad: clamp(96px, 4vw, 160px); }
+  .hero-word { font-size: min(20.5vw, 780px); top: calc(50svh - .62 * min(20.5vw, 780px)); }
+  .hero-intro { max-width: 880px; }
+  .hero-lead { font-size: clamp(52px, 2.35vw, 90px); }
+  .hero-sub { font-size: 26px; max-width: 780px; }
+  .hero-kicker, .mono { font-size: 16px; }
+  .display { font-size: clamp(100px, 5.6vw, 190px); }
+  .manifesto-inner { max-width: 1800px; }
+  .manifesto-text { font-size: clamp(70px, 3.4vw, 130px); }
+  .stats { max-width: 1500px; }
+  .nav-links a { font-size: 19px; padding: 15px 24px; }
+  .fcard-meta h3 { font-size: clamp(44px, 2.2vw, 82px); }
+  .fcard-meta p { font-size: 26px; }
 }

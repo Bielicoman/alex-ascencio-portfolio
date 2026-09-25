@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { renderPixelRatio } from "../util";
 
 // Vídeo da lente como fundo: bulge óptico, aberração cromática e spot de luz seguindo o cursor.
 const frag = /* glsl */ `
@@ -68,7 +69,7 @@ export default class LensField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+    this.renderer.setPixelRatio(renderPixelRatio(w, h, 2200000, 1));
     this.renderer.setSize(w, h, false);
     this.u.uRes.value.set(w, h);
   }
@@ -84,7 +85,10 @@ export default class LensField {
       this.mouse.lerp(this.target, 0.07);
       this.hover += (this.hoverTarget - this.hover) * 0.05;
       this.u.uHover.value = this.hover;
-      this.renderer.render(this.scene, this.camera);
+      if (this.video.readyState >= 2) {
+        this.renderer.render(this.scene, this.camera);
+        this.canvas.classList.add("is-ready");
+      }
       this.raf = requestAnimationFrame(loop);
     };
     loop();
