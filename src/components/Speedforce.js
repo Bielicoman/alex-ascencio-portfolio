@@ -118,6 +118,7 @@ export default class Speedforce {
     };
     this.resize(); window.addEventListener("resize", this.resize);
     this.onMove = (e) => {
+      if (e.pointerType === "touch") return;
       const now = performance.now(), dt = Math.max(1, now - this.pt), vx = (e.clientX - this.px) / dt, vy = (e.clientY - this.py) / dt, sp = Math.hypot(vx, vy);
       if (this.px >= 0 && !this.reduced) {
         if (this.charge > 0) {
