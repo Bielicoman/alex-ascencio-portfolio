@@ -28,7 +28,7 @@ const ORG = { UNoB: "União Noroeste Brasileira" };
 const thumb = (p) => p.thumb || `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
-const FEATURED = [25, 24, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
+const FEATURED = [25, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id));
 const CATS = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
 const N4K = PROJECTS.filter((p) => p.q === "4K").length;
 // altura em px calculada por área óptica equivalente (ver README)
