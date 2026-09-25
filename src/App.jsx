@@ -1226,7 +1226,7 @@ export default function App() {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.stop();
     }
-    // Teleporte: clarão e anel em camadas compostas pela GPU; o salto acontece no pico do clarão.
+    // Teleporte: a distorção RGB atua apenas no portal, mantendo o resto da tela composto pela GPU.
     let warping = false;
     const speed = new Speedforce();
     // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
@@ -1243,14 +1243,17 @@ export default function App() {
       warping = true;
       sfx.teleport(x);
       speed.burst(x, y, 0.38);
-      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash");
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash"), portal = veil.querySelector(".warp-portal");
+      const distort = !matchMedia("(pointer: coarse), (max-width: 760px)").matches;
       field?.stop();
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on");
       gsap.timeline({ onComplete: () => { veil.classList.remove("on"); warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
         .fromTo(ring, { scale: 0.15, opacity: 0.9 }, { scale: 1.15, opacity: 0, duration: 0.72, ease: "expo.out" }, 0)
+        .fromTo(portal, { opacity: 0, scale: 0.85 }, { opacity: distort ? 0.9 : 0, scale: 1.12, duration: 0.28, ease: "power2.in" }, 0)
         .fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power2.in" }, 0)
         .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); }, 0.28)
+        .to(portal, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28)
         .to(flash, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
@@ -1467,8 +1470,16 @@ export default function App() {
     <div ref={root}>
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
         <symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol>
+        <filter id="warp" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.018" numOctaves="1" seed="1" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="55" xChannelSelector="R" yChannelSelector="G" result="d1" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="95" xChannelSelector="R" yChannelSelector="G" result="d2" />
+          <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
+          <feBlend in="r" in2="gb" mode="screen" />
+        </filter>
       </svg>
-      <div className="warp" aria-hidden="true"><i className="warp-flash" /><i className="warp-ring" /></div>
+      <div className="warp" aria-hidden="true"><i className="warp-portal" /><i className="warp-flash" /><i className="warp-ring" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />

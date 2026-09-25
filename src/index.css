@@ -1078,6 +1078,8 @@ html.demo .nav { pointer-events: none; }
 /* ───────── teletransporte ───────── */
 .warp { position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; }
 .warp.on { visibility: visible; }
+.warp-portal { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: min(60vmin, 560px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0; will-change: transform, opacity;
+  backdrop-filter: url(#warp); -webkit-backdrop-filter: url(#warp); -webkit-mask-image: radial-gradient(circle, #000 52%, transparent 72%); mask-image: radial-gradient(circle, #000 52%, transparent 72%); }
 .warp-flash { position: absolute; inset: 0; opacity: 0; will-change: opacity;
   background: radial-gradient(ellipse at var(--x, 50%) var(--y, 50%), rgba(255,241,216,.9), rgba(255,90,80,.55) 20%, rgba(129,18,38,.28) 55%, transparent 85%); }
 .warp-ring { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: min(110vmax, 2400px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; transform: scale(.15); will-change: transform, opacity;
