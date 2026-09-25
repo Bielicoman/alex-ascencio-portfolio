@@ -1243,16 +1243,18 @@ export default function App() {
       warping = true;
       sfx.teleport(x);
       speed.burst(x, y, 0.38);
-      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash"), portal = veil.querySelector(".warp-portal");
+      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring"), flash = veil.querySelector(".warp-flash"), portal = veil.querySelector(".warp-portal"), screen = veil.querySelector(".warp-screen");
       const distort = !matchMedia("(pointer: coarse), (max-width: 760px)").matches;
       field?.stop();
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on");
       gsap.timeline({ onComplete: () => { veil.classList.remove("on"); warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
         .fromTo(ring, { scale: 0.15, opacity: 0.9 }, { scale: 1.15, opacity: 0, duration: 0.72, ease: "expo.out" }, 0)
+        .fromTo(screen, { opacity: 0 }, { opacity: distort ? 0.82 : 0, duration: 0.18, ease: "power2.in" }, 0.04)
         .fromTo(portal, { opacity: 0, scale: 0.85 }, { opacity: distort ? 0.9 : 0, scale: 1.12, duration: 0.28, ease: "power2.in" }, 0)
         .fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power2.in" }, 0)
         .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); }, 0.28)
+        .to(screen, { opacity: 0, duration: 0.42, ease: "power3.out" }, 0.28)
         .to(portal, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28)
         .to(flash, { opacity: 0, duration: 0.5, ease: "power3.out" }, 0.28);
     };
@@ -1479,7 +1481,7 @@ export default function App() {
           <feBlend in="r" in2="gb" mode="screen" />
         </filter>
       </svg>
-      <div className="warp" aria-hidden="true"><i className="warp-portal" /><i className="warp-flash" /><i className="warp-ring" /></div>
+      <div className="warp" aria-hidden="true"><i className="warp-screen" /><i className="warp-portal" /><i className="warp-flash" /><i className="warp-ring" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />

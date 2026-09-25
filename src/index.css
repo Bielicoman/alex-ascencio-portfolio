@@ -1078,6 +1078,7 @@ html.demo .nav { pointer-events: none; }
 /* ───────── teletransporte ───────── */
 .warp { position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; }
 .warp.on { visibility: visible; }
+.warp-screen { position: absolute; inset: 0; opacity: 0; backdrop-filter: url(#warp); -webkit-backdrop-filter: url(#warp); will-change: opacity; }
 .warp-portal { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: min(60vmin, 560px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0; will-change: transform, opacity;
   backdrop-filter: url(#warp); -webkit-backdrop-filter: url(#warp); -webkit-mask-image: radial-gradient(circle, #000 52%, transparent 72%); mask-image: radial-gradient(circle, #000 52%, transparent 72%); }
 .warp-flash { position: absolute; inset: 0; opacity: 0; will-change: opacity;
