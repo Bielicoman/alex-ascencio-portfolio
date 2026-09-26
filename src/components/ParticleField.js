@@ -102,6 +102,8 @@ export default class ParticleField {
     window.addEventListener("pointermove", this.onMove, { passive: true });
     document.addEventListener("pointerleave", this.onLeave);
     window.addEventListener("resize", this.onResize);
+    this.onTilt = (e) => { this.scene.rotation.y = e.detail.x * .075; this.scene.rotation.x = e.detail.y * .045; };
+    window.addEventListener("portfolio:tilt", this.onTilt);
     this.forceTarget = 0;
   }
   build() {
@@ -172,6 +174,7 @@ export default class ParticleField {
     window.removeEventListener("pointermove", this.onMove);
     document.removeEventListener("pointerleave", this.onLeave);
     window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("portfolio:tilt", this.onTilt);
     this.points.geometry.dispose(); this.mat.dispose(); this.renderer.dispose();
   }
 }

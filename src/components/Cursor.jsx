@@ -2,15 +2,15 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Play } from "./Icons";
 
-// Seta 3D + luz: posição aplicada no mesmo evento do ponteiro (sem interpolação = sem atraso).
-// Só a inclinação da seta tem mola. `host` recebe o <dialog> aberto: o top layer do showModal()
-// fica acima de qualquer z-index, então o cursor precisa morar dentro dele.
+// Seta 3D + luz: posiÃ§Ã£o aplicada no mesmo evento do ponteiro (sem interpolaÃ§Ã£o = sem atraso).
+// SÃ³ a inclinaÃ§Ã£o da seta tem mola. `host` recebe o <dialog> aberto: o top layer do showModal()
+// fica acima de qualquer z-index, entÃ£o o cursor precisa morar dentro dele.
 export default function Cursor({ host }) {
   const wrap = useRef(null), tilt = useRef(null), glow = useRef(null), label = useRef(null);
   const pos = useRef({ x: -200, y: -200 });
 
   useEffect(() => {
-    if (matchMedia("(pointer: coarse)").matches) return;
+    if (matchMedia("(pointer: coarse), (max-width: 760px), (max-width: 760px)").matches) return;
     const root = document.documentElement;
     root.classList.add("has-cursor");
     const s = { rx: 0, ry: 0, rz: 0, vrx: 0, vry: 0, vrz: 0, tx: 0, ty: 0, tz: 0 };
@@ -35,7 +35,7 @@ export default function Cursor({ host }) {
       clearTimeout(idle); idle = setTimeout(() => { s.tx = s.ty = s.tz = 0; }, 80);
       root.classList.add("cursor-live");
     };
-    // mola da inclinação (rigidez 260, amortecimento 16)
+    // mola da inclinaÃ§Ã£o (rigidez 260, amortecimento 16)
     const loop = (now) => {
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
       for (const k of ["x", "y", "z"]) {
@@ -52,7 +52,7 @@ export default function Cursor({ host }) {
       const media = t.closest("[data-cursor]");
       const text = t.closest("input:not([type=range]), textarea, select");
       const link = t.closest("a, button, label, [role=button]");
-      // mão: sobre o que pode ser arrastado (flutuantes da hero, marca 3D), fora dos botões internos
+      // mÃ£o: sobre o que pode ser arrastado (flutuantes da hero, marca 3D), fora dos botÃµes internos
       const grab = !!t.closest(".floater, [data-grab]") && !link && !media;
       root.classList.toggle("cursor-frame", t.tagName === "IFRAME");
       root.classList.toggle("cursor-text", !!text);
@@ -81,7 +81,7 @@ export default function Cursor({ host }) {
     };
   }, []);
 
-  // reposiciona na troca de host (o portal recria os nós)
+  // reposiciona na troca de host (o portal recria os nÃ³s)
   useEffect(() => {
     const t = `translate3d(${pos.current.x}px, ${pos.current.y}px, 0)`;
     if (wrap.current) wrap.current.style.transform = t;

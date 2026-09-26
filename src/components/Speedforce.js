@@ -110,15 +110,17 @@ export default class Speedforce {
     this.flash = 0; this.haze = 0; this.charge = 0;
     this.running = false; this.px = -1; this.py = -1; this.pt = 0; this.lastArc = 0;
     this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.lite = false;
+    this.lite = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
     this.resize = () => {
+      this.lite = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
       const d = Math.max(0.5, Math.min(this.lite ? 1 : 1.25, devicePixelRatio, Math.sqrt(1800000 / (innerWidth * innerHeight))));
       c.width = Math.round(innerWidth * d); c.height = Math.round(innerHeight * d);
+      this.scale = d;
       this.g.setTransform(d, 0, 0, d, 0, 0);
     };
     this.resize(); window.addEventListener("resize", this.resize);
     this.onMove = (e) => {
-      if (e.pointerType === "touch") return;
+      if (e.pointerType === "touch" || this.lite || document.hidden) return;
       const now = performance.now(), dt = Math.max(1, now - this.pt), vx = (e.clientX - this.px) / dt, vy = (e.clientY - this.py) / dt, sp = Math.hypot(vx, vy);
       if (this.px >= 0 && !this.reduced) {
         if (this.charge > 0) {
@@ -207,15 +209,25 @@ export default class Speedforce {
       if (this.bolts.length || this.sparks.length || this.embers.length || this.spawners.length || this.flash > 0.01 || this.haze > 0.01 || this.charge > 0) {
         this.raf = requestAnimationFrame(loop);
       } else {
-        this.running = false; this.g.clearRect(0, 0, innerWidth, innerHeight); this.c.style.visibility = "hidden";
+        this.running = false; this.clear(); this.c.style.visibility = "hidden";
       }
     };
     this.raf = requestAnimationFrame(loop);
   }
 
+  clear() {
+    // Clear backing pixels independently of CSS resizing and the drawing transform.
+    const g = this.g;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, this.c.width, this.c.height);
+    g.beginPath();
+    g.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    g.globalCompositeOperation = "source-over";
+  }
+
   step(dt) {
     const g = this.g, W = innerWidth, H = innerHeight;
-    g.clearRect(0, 0, W, H);
+    this.clear();
     this.charge = Math.max(0, this.charge - dt);
     for (const s of this.spawners) {
       s.t += dt; s.acc += dt;
@@ -251,7 +263,8 @@ export default class Speedforce {
       p.x += p.vx * dt; 
       p.y += p.vy * dt;
       
-      const k = 1 - p.age / p.life;
+      if (p.age >= p.life) continue;
+      const k = Math.max(0, 1 - p.age / p.life);
       // Sharp, crisp sparks (not blurry)
       g.strokeStyle = `rgba(${p.hot ? HOT : (Math.random() < 0.5 ? GOLD : ORANGE)},${(k).toFixed(3)})`; 
       g.lineWidth = p.hot ? 2 : 1;

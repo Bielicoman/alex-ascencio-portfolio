@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { createBrain, TUTORIAL, norm } from "./brain";
+import { FAITH_SOURCES, faithContext, faithFallback, studyInvite } from "./faith";
 import { PROJECTS } from "../projects";
 import { SOCIAL, PDF } from "../profile";
 import { sfx } from "../components/Sound";
@@ -46,7 +47,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
   root.innerHTML = `
     <section class="edth-panel" role="dialog" aria-label="EDITH, assistente do site">
       <div class="edth-more" hidden>
-        <div class="edth-more-head"><span class="mono">Conversa</span><button class="edth-vbtn" aria-label="Escolher a voz da EDITH" aria-expanded="false">${svg("voice", 16)}</button></div>
+        <div class="edth-more-head"><span class="mono">EDITH · sua assistente</span><button class="edth-vbtn" aria-label="Escolher a voz da EDITH" aria-expanded="false">${svg("voice", 16)}</button></div>
         <div class="edth-voices" hidden><p class="mono">Voz da EDITH</p><div class="edth-vlist"></div><small class="edth-vhint"></small></div>
         <div class="edth-cmds" aria-label="Comandos"></div>
         <div class="edth-log" aria-live="polite"></div>
@@ -54,7 +55,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
       <div class="edth-say" aria-live="polite"><p></p><div class="edth-say-x"></div></div>
       <form class="edth-bar">
         <button type="button" class="edth-mic" aria-pressed="false" aria-label="Ligar ou desligar o microfone da EDITH"><span class="edth-orb" aria-hidden="true"><i></i><i></i><i></i><b></b></span></button>
-        <input class="edth-in" placeholder="${SR ? "Fale ou digite…" : "Digite…"}" aria-label="Mensagem para a EDITH" maxlength="500" autocomplete="off" enterkeyhint="send" />
+        <input class="edth-in" placeholder="${SR ? "Fale ou digite…" : "Digite…"}" aria-label="Mensagem para a EDITH" maxlength="2000" autocomplete="off" enterkeyhint="send" />
         <button class="edth-send" aria-label="Enviar">${svg("send", 16)}</button>
         <button type="button" class="edth-exp" aria-label="Ver conversa" aria-expanded="false">${svg("up", 16)}</button>
         <button type="button" class="edth-x" aria-label="Fechar a EDITH">${svg("close", 16)}</button>
@@ -373,16 +374,16 @@ function create({ actions: app = {}, onClose = () => {} }) {
   // ── IA (Groq) para o que o motor local não resolve ──
   async function askAI(text) {
     try {
-      const r = await fetch("/api/edth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, history: history.slice(-20) }) });
+      const r = await fetch("/api/edth", { signal: AbortSignal.timeout(28000), method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, history: history.slice(-13, -1) }) });
       if (!r.ok) return null;
       const j = await r.json();
-      return j.say ? { say: j.say, actions: (j.actions || []).map((a) => (a.type === "download" ? { type: "download" } : a)) } : null;
+      return j.say ? { say: j.say, links: [...(j.links || []).filter(l => Array.isArray(l) && l[1] === "https://wa.me/5512982000062?text=Oi%2C%20Esperan%C3%A7a!"), ...(j.sources || []).filter(s => FAITH_SOURCES[s]).map(s => FAITH_SOURCES[s])], actions: (j.actions || []).map((a) => (a.type === "download" ? { type: "download" } : a)) } : null;
     } catch { return null; }
   }
 
   let busy = false;
   async function handle(text, silentUser = false) {
-    if (dead) return;
+    if (dead || busy) return;
     if (!silentUser) add("user", text);
     history.push({ role: "user", content: text });
     let r = null;
@@ -393,19 +394,26 @@ function create({ actions: app = {}, onClose = () => {} }) {
       const p = PROJECTS[(i + 1) % PROJECTS.length];
       r = { say: `Abrindo ${p.title.split(/\||—/)[0].trim()}.`, actions: [{ type: "play", id: p.id }] };
     }
-    if (!r) r = brain.reply(text);
+    if (!r && matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches && / (abrir|abre|jogar|jogo|playground) /.test(nt)) {
+      const mode = / memoria /.test(nt) ? "memoria" : / camera /.test(nt) ? "camera" : / foco |giroscopio/.test(nt) ? "foco" : null;
+      if (mode) r = { say: `Abrindo a experiência ${mode === "memoria" ? "Memória" : mode === "camera" ? "Câmera" : "Foco"}.`, actions: [{ type: "go", href: `/playground/#${mode}` }] };
+    }
+    if (!r) r = studyInvite(text);
+    if (!r && !faithContext(text).length) r = brain.reply(text);
     if (!r) {
       setState("thinking");
       const typing = document.createElement("div"); typing.className = "edth-msg bot typing"; typing.innerHTML = "<p><i></i><i></i><i></i></p>"; log.appendChild(typing);
-      busy = true; r = await askAI(text); busy = false;
+      busy = true; $(".edth-send").disabled = true; r = await askAI(text); busy = false; $(".edth-send").disabled = false;
+      if (dead) return;
       typing.remove();
-      if (!r) r = { say: "Não entendi. Pode repetir?", actions: [] };
+      if (!r) r = faithFallback(text) || { say: "Minha conexão com a IA está indisponível no momento. Ainda posso ajudar você a explorar os projetos, serviços e contatos do Alex.", actions: [], chips: ["Ver projetos", "Serviços", "Contato"] };
       if (root.dataset.state === "thinking") setState("idle");
     }
     const extra = { links: [...(r.links || [])] };
     const msg = r.say ? add("bot", r.say, { chips: r.chips, all: r.all }) : null;
     history.push({ role: "assistant", content: r.say || "(ação)" });
-    const speech = speak(r.say);
+    if (history.length > 24) history.splice(0, history.length - 24);
+    const speech = micOn ? speak(r.say) : Promise.resolve();
     for (const a of r.actions || []) await exec(a, extra);
     if (extra.links.length) { const l = add("bot", "", { links: extra.links }); if (msg) msg.after(l); }
     await speech;
@@ -420,7 +428,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
   };
   const minimize = () => { collapsed = true; root.classList.add("collapsed"); setExp(false); sayBox.classList.remove("on"); };
   function close() {
-    dead = true; setMic(false); stopSpeech(); sfx.musicHold?.(false, "edth");
+    dead = true; cleanupViewport(); window.removeEventListener("keydown", onEscape); setMic(false); stopSpeech(); sfx.musicHold?.(false, "edth");
     root.classList.add("out"); cursor.remove();
     setTimeout(() => root.remove(), 350);
     instance = null; onClose();
@@ -430,18 +438,29 @@ function create({ actions: app = {}, onClose = () => {} }) {
   $(".edth-vbtn").onclick = () => { const v = $(".edth-voices"); v.hidden = !v.hidden; $(".edth-vbtn").setAttribute("aria-expanded", String(!v.hidden)); if (!v.hidden) pickVoice(); };
   $(".edth-x").onclick = close;
   input.addEventListener("focus", () => { if (collapsed) expandSay(); });
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.activeElement && root.contains(document.activeElement)) { if (!more.hidden) setExp(false); else sayBox.classList.remove("on"); } });
+  const onEscape = (e) => { if (e.key === "Escape" && document.activeElement && root.contains(document.activeElement)) close(); };
+  window.addEventListener("keydown", onEscape);
 
   // boas-vindas: curta; sugestões só na primeira vez
   let first = true;
   try { first = !localStorage.getItem(SEEN); localStorage.setItem(SEEN, "1"); } catch {}
   // lista fixa de comandos no topo da conversa completa
   const cmds = $(".edth-cmds");
-  TUTORIAL.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); cmds.appendChild(b); });
-  add("bot", SR ? "Oi, eu sou a EDITH. Pode falar." : "Oi, eu sou a EDITH. Pode digitar.", first ? { chips: TUTORIAL } : {});
+  const suggestions = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? ["Ver projetos", "Serviços", "Estudar a Bíblia", "Sobre Ellen White", "Abrir playground", "Quero um orçamento"] : TUTORIAL;
+  suggestions.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); cmds.appendChild(b); });
+  add("bot", "Olá! Sou a EDITH. Posso ajudar com os filmes e serviços do Alex, estudos bíblicos e temas adventistas. Como posso ajudar?", { chips: ["Ver projetos", "Estudar a Bíblia", "Sobre Ellen White"] });
   show();
-  // microfone já ligado ao abrir e fica ligado até o usuário pedir para desligar
-  if (SR) { micOn = true; mic.setAttribute("aria-pressed", "true"); root.classList.add("mic-on"); }
-  speak(SR ? "Oi, eu sou a Edith. Pode falar." : "Oi, eu sou a Edith.").then(() => { if (micOn && !speaking && !rec) listen(); });
+  setExp(true);
+  const viewport = window.visualViewport;
+  const fitChat = () => {
+    if (matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches && viewport) {
+      root.style.setProperty("--chat-height", `${viewport.height}px`);
+      const keyboard = Math.max(0, innerHeight - viewport.height - viewport.offsetTop);
+      root.style.bottom = `${keyboard > 80 ? keyboard + 8 : 86}px`;
+    }
+  };
+  viewport?.addEventListener("resize", fitChat);
+  fitChat();
+  const cleanupViewport = () => viewport?.removeEventListener("resize", fitChat);
   return { show, close, minimize, ask: (t) => handle(t) };
 }

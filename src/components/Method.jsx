@@ -64,18 +64,19 @@ const G = {
 };
 
 export default function Method() {
-  const mobile = useMedia("(max-width: 760px)");
+  const mobile = useMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)");
   const [rule, setRule] = useState(0);
   const [shot, setShot] = useState(V1[0][2]);
   const root = useRef(null);
 
   useEffect(() => {
+    if (mobile) return;
     const reduced = reducedMotion();
     const el = root.current;
     const q = (s) => el.querySelectorAll(s);
     let clipIdx = -1, glitching = false;
     const st = ScrollTrigger.create({
-      trigger: el, start: "top top", end: () => `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: reduced ? false : el.querySelector(".method-pin"), invalidateOnRefresh: true,
+      trigger: el, start: "top top", end: () => mobile ? "bottom 35%" : `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: (reduced || mobile) ? false : el.querySelector(".method-pin"), invalidateOnRefresh: true,
       onUpdate: (s) => {
         const t = s.progress * DUR;
         q(".js-ph").forEach((n) => (n.style.left = `${(t / DUR) * 100}%`));
@@ -110,10 +111,40 @@ export default function Method() {
           <span className="eyebrow"><b>04</b>Método</span>
           <h2 className="display js-title"><span className="title-inner">Como eu penso <em>uma timeline.</em></span></h2>
         </div>
-        {mobile ? <CapCut frame={frame} rule={rule} title={title} text={text} /> : <Premiere frame={frame} rule={rule} title={title} text={text} />}
+        {mobile ? <MobileMethod /> : <Premiere frame={frame} rule={rule} title={title} text={text} />}
       </div>
     </section>
   );
+}
+
+function MobileMethod() {
+  const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    if (!playing) return;
+    let last = performance.now();
+    const timer = setInterval(() => {
+      const now = performance.now(), delta = (now - last) / 1000; last = now;
+      if (!document.hidden) setTime(t => Math.min(60, t + delta));
+    }, 100);
+    const pause = () => { if (document.hidden) setPlaying(false); };
+    document.addEventListener("visibilitychange", pause);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", pause); };
+  }, [playing]);
+  useEffect(() => { if (time >= 60) setPlaying(false); }, [time]);
+  const active = time >= 60 ? RULES.length - 1 : Math.max(0, RULES.findIndex(([a,b]) => time >= a && time < b));
+  const clip = V1.find(([a,b]) => time >= a && time < b);
+  return <div className="mobile-method">
+    <div className="mobile-method-screen">
+      {clip ? <img src={`/media/${clip[2]}.webp`} alt="Exemplo visual da etapa de edição" /> : <svg viewBox="0 0 262 151" aria-label="Assinatura Alex Ascencio"><use href="#aa-mark"/></svg>}
+      <span className="mobile-method-badge">Anatomia de uma edição · demonstração</span>
+      <button aria-label={playing ? "Pausar demonstração" : "Reproduzir demonstração"} onClick={() => { if (time >= 60) setTime(0); setPlaying(!playing); }}>{playing ? "Pausar" : "Reproduzir"}<Ico d={G.play} size={14} fill/></button>
+    </div>
+    <div className="mobile-method-scrub"><span>{mmss(time)}</span><input type="range" min="0" max="60" step=".1" value={time} aria-label="Explorar os 60 segundos da edição" onChange={e => {setPlaying(false); setTime(+e.target.value);}}/><span>01:00</span></div>
+    <div className="mobile-method-tracks" aria-hidden="true"><span>IMAGEM</span><div>{V1.map(([a,b,id]) => <i key={a} style={{flex:b-a, backgroundImage:`url(/media/${id}.webp)`}}/>)}</div><span>ÁUDIO</span><div className="mobile-method-audio"/></div>
+    <div className="mobile-method-copy" aria-live="polite"><span className="mono">Etapa {active+1} / {RULES.length}</span><h3>{RULES[active][2]}</h3><p>{RULES[active][3]}</p></div>
+    <div className="mobile-method-chapters" role="group" aria-label="Etapas da edição">{RULES.map(([a,b,t],i) => <button key={a} aria-pressed={i===active} onClick={() => {setPlaying(false);setTime(a);}}><span>0{i+1}</span>{t}</button>)}</div>
+  </div>;
 }
 
 /* ───────── Premiere Pro ───────── */

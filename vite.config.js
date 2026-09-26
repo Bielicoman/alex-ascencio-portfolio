@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { localApi } from "./dev/api-plugin.js";
 import { cpSync, existsSync, mkdirSync, createReadStream, readFileSync } from "node:fs";
 
 // WASM do rastreador de mãos: servido do node_modules no dev e copiado para dist no build (sem CDN de terceiros)
@@ -14,6 +15,7 @@ const PUBLISH = ["media", "brand", "favicon.svg", "favicon-32.png", "apple-touch
 export default defineConfig(({ command }) => ({
   plugins: [
     react(),
+    localApi(),
     {
       name: "portfolio-public-assets",
       configureServer(server) {

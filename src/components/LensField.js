@@ -55,6 +55,7 @@ export default class LensField {
     const mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms: this.u });
     this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
     this.mat = mat;
+    this.geometry = this.scene.children[0].geometry;
     this.t0 = performance.now();
     this.resize();
     this.onMove = (e) => {
@@ -64,6 +65,9 @@ export default class LensField {
       this.hoverTarget = 1;
     };
     this.onResize = () => this.resize();
+    this.onMetadata = () => this.u.uVid.value.set(video.videoWidth || 1280, video.videoHeight || 720);
+    video.addEventListener("loadedmetadata", this.onMetadata);
+    this.onMetadata();
     window.addEventListener("pointermove", this.onMove, { passive: true });
     window.addEventListener("resize", this.onResize);
   }
@@ -76,7 +80,7 @@ export default class LensField {
   start() {
     if (this.running) return;
     this.running = true;
-    this.video.play().catch(() => {});
+    this.video.play().catch(() => this.canvas.classList.add("is-fallback"));
     const loop = () => {
       if (!this.running) return;
       const t = (performance.now() - this.t0) / 1000;
@@ -87,7 +91,7 @@ export default class LensField {
       this.u.uHover.value = this.hover;
       if (this.video.readyState >= 2) {
         this.renderer.render(this.scene, this.camera);
-        this.canvas.classList.add("is-ready");
+        if (!this.video.paused) { this.canvas.classList.add("is-ready"); this.canvas.classList.remove("is-fallback"); }
       }
       this.raf = requestAnimationFrame(loop);
     };
@@ -98,6 +102,7 @@ export default class LensField {
     this.stop();
     window.removeEventListener("pointermove", this.onMove);
     window.removeEventListener("resize", this.onResize);
-    this.tex.dispose(); this.mat.dispose(); this.renderer.dispose();
+    this.video.removeEventListener("loadedmetadata", this.onMetadata);
+    this.tex.dispose(); this.geometry.dispose(); this.mat.dispose(); this.renderer.dispose();
   }
 }

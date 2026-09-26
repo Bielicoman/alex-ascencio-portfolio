@@ -1,0 +1,51 @@
+:root { color-scheme:dark; --mp-red:#e3222c; --mp-soft:#a8a8b2; font-family:'Geist Variable',system-ui,sans-serif; background:#060607; color:#f3f3f5; }
+* { box-sizing:border-box; }
+body { margin:0; background:radial-gradient(ellipse at 90% 12%,#5a10142e,transparent 45%); min-height:100dvh; }
+button,a { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+button { font:inherit; color:inherit; cursor:pointer; border:1px solid #ffffff1a; background:#ffffff05; border-radius:14px; padding:13px 16px; min-height:48px; }
+button:disabled { opacity:.45; cursor:default; }
+a { color:inherit; text-decoration:none; }
+button:focus-visible,a:focus-visible,canvas:focus-visible { outline:2px solid #ff737d; outline-offset:4px; }
+[hidden] { display:none!important; }
+.mp-top { display:flex; align-items:center; justify-content:space-between; padding:calc(20px + env(safe-area-inset-top)) 22px 20px; border-bottom:1px solid #ffffff0d; font-size:12px; }
+.mp-top a { min-height:44px; display:flex; align-items:center; }
+.mp-top > span { color:var(--mp-soft); font-size:10px; }
+.mp-top svg { color:#ec3c46; }
+.mp-main { max-width:680px; margin:auto; padding:34px 20px calc(28px + env(safe-area-inset-bottom)); }
+.mp-kicker { font-family:'Geist Mono Variable',monospace; font-size:9px; letter-spacing:.12em; color:var(--mp-soft); }
+h1 { font-size:clamp(38px,10.5vw,64px); font-weight:550; line-height:1.02; letter-spacing:-.065em; margin:20px 0; }
+h1 em { font-weight:400; font-style:normal; color:#ff6e77; }
+.mp-lead { color:var(--mp-soft); line-height:1.7; font-size:14px; }
+.mp-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:28px 0 38px; }
+.mp-tabs button { font-size:11px; padding:13px 5px; border-radius:99px; }
+.mp-tabs button[aria-pressed=true] { background:#f3f3f5; color:#09090b; border-color:#f3f3f5; }
+.mp-heading { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+h2 { margin:9px 0 0; font-size:30px; line-height:1.08; letter-spacing:-.04em; font-weight:550; }
+.mp-tag { font-family:'Geist Mono Variable',monospace; color:#747480; font-size:10px; }
+.mp-description { color:var(--mp-soft); font-size:14px; line-height:1.65; margin:18px 0 24px; }
+.mp-score { display:flex; justify-content:space-between; font-family:'Geist Mono Variable',monospace; font-size:11px; padding:0 2px 14px; color:#dddde3; }
+.mp-field { display:block; width:100%; height:clamp(270px,43svh,400px); border-radius:24px; border:1px solid #ffffff16; touch-action:none; }
+.mp-status { font-size:13px; line-height:1.6; color:#d9d9df; min-height:42px; margin:18px 0; }
+.mp-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.mp-actions button { flex:1 1 42%; font-size:13px; }
+.mp-primary { background:var(--mp-red); border-color:var(--mp-red); color:white; }
+.mp-foot { font-size:11px; color:#7f7f8a; line-height:1.8; text-align:center; border-top:1px solid #ffffff0d; padding-top:28px; margin-top:40px; }
+.mp-memory { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.mp-memory-card { position:relative; padding:0; aspect-ratio:1; border-radius:16px; overflow:hidden; perspective:500px; }
+.mp-back,.mp-front { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px; transition:transform .3s,opacity .3s; }
+.mp-back { background:linear-gradient(135deg,#24242b,#0e0e12); font-size:24px; font-weight:650; letter-spacing:-.09em; }
+.mp-back span { font-family:'Geist Mono Variable',monospace; letter-spacing:.08em; color:#8e8e9c; font-size:7px; }
+.mp-front { background:#381016; opacity:0; transform:rotateY(-90deg); }
+.mp-front i { font-style:normal; color:#ff717c; font-size:27px; }
+.mp-front b { font-size:10px; letter-spacing:.12em; }
+.revealed .mp-front { opacity:1; transform:none; }
+.revealed .mp-back { opacity:0; transform:rotateY(90deg); }
+.matched { opacity:.7!important; border-color:#ff6e7755; }
+.mp-viewfinder { aspect-ratio:16/9; width:100%; position:relative; overflow:hidden; border-radius:18px; background:#131316; border:1px solid #ffffff1a; }
+.mp-viewfinder video { width:100%; height:100%; object-fit:cover; }
+.mp-thirds { position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,transparent 33.1%,#ffffff70 33.3%,transparent 33.5%,transparent 66.4%,#ffffff70 66.6%,transparent 66.8%),linear-gradient(transparent 33.1%,#ffffff70 33.3%,transparent 33.5%,transparent 66.4%,#ffffff70 66.6%,transparent 66.8%); }
+.mp-view-label { position:absolute; bottom:12px; left:12px; font:8px 'Geist Mono Variable',monospace; background:#0009; padding:6px; }
+.mp-capture { margin-top:22px; }
+.mp-capture img { width:100%; border-radius:16px; }
+.mp-capture a { display:flex; align-items:center; min-height:48px; font-size:13px; color:#ff8e97; }
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;}}
