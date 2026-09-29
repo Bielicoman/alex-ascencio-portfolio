@@ -9,7 +9,7 @@ export const CONTACT = [
   ["Local", "São Paulo, Brasil · atendimento remoto e global", null],
 ];
 export const EXP = [
-  ["Editor de mídia e conteúdo", "UNIÃO NOROESTE BRASILEIRA", "Atual", "Edição, finalização e motion de conteúdo institucional. Ex.: Homenagem Dia das Profissões (2026).", true],
+  ["Editor de mídia e conteúdo", "UNIÃO NOROESTE BRASILEIRA", "Atual", "Edição, finalização e motion de conteúdo institucional. Ex.: Dia Mundial dos Desbravadores (2026).", true],
   ["Filmmaker & editor", "PRISMA BRASIL", "2024 — 2026", "Filmmaker oficial da turnê de 45 anos nos Estados Unidos: concerto comemorativo ao vivo, videoclipes e making-ofs."],
   ["Filmmaker & editor de vídeo", "Freelancer", "2020 — hoje", "Direção e pós de videoclipes, documentários, cinema e institucionais em 4K, com fluxo de pós integrado a IA generativa."],
   ["Diretor & editor · “Ele Reviveu”", "Communion · TV Novo Tempo", "2024", "Direção e edição de videoclipe para exibição nacional na TV Novo Tempo."],
@@ -17,7 +17,7 @@ export const EXP = [
 ];
 // [id, autoria, formato] — definidos à mão para não repetir categoria no lugar do artista
 export const FEATURED = [
-  [25, "União Noroeste Brasileira", "Institucional"], [24, "Quarteto Elo", "Videoclipe"], [7, "Prisma Brasil", "Registro ao vivo · 45 anos"], [14, "", "Curta-metragem"],
+  [26, "União Noroeste Brasileira", "Institucional"], [24, "Quarteto Elo", "Videoclipe"], [7, "Prisma Brasil", "Registro ao vivo · 45 anos"], [14, "", "Curta-metragem"],
   [16, "Califórnia Dreams", "Documentário"], [6, "", "Reality show"], [2, "Gabriella Stehling", "Temporada de covers"], [4, "Willian Krusty", "Videoclipe"],
 ];
 export const METHOD = [
