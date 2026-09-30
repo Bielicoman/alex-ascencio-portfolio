@@ -195,9 +195,9 @@
   .mobile-brand { min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--pad) 0; }
   .mobile-brand > span:last-child { display: none; }
   .hero { padding-bottom: 20px; }
-  .hero-stage { height: clamp(300px, 46svh, 470px); }
-  .hero-word { top: 18px; font-size: 18vw; }
-  .hero-person { --pw: min(86vw, 400px); }
+  .hero-stage { --pw: min(82vw, 380px); height: calc(var(--pw) / .765 + 6px); }
+  .hero-word { top: 14px; font-size: 18vw; }
+  .hero-person { --pw: min(82vw, 380px); }
   .hero-bottom { margin-top: -30px; }
   .hero-lead { font-size: clamp(26px, 7.4vw, 36px); }
   .hero-sub { margin: 10px 0 18px; max-width: 34ch; }
