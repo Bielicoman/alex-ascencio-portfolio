@@ -1275,11 +1275,12 @@ export default function App() {
       const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
       const maps = document.querySelectorAll("#warp feDisplacementMap");
       const wave = createWarpWave(document.querySelector("#warp feImage"), x, y, innerWidth, innerHeight);
-      const o = { s: 0, t: 0 };
+      const o = { s: 0, t: 0, g: 0 };
       const paint = () => {
-        wave(o.t);
-        maps[0].setAttribute("scale", (o.s * .75).toFixed(1));
+        wave(o.t, o.g);
+        maps[0].setAttribute("scale", (o.s * .55).toFixed(1));
         maps[1].setAttribute("scale", (o.s).toFixed(1));
+        maps[2].setAttribute("scale", (o.s * 1.55).toFixed(1));
         if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 20).toFixed(1)}px)`;
       };
       paint();
@@ -1287,11 +1288,13 @@ export default function App() {
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on", chromium ? "is-svg" : "is-blur");
       warpTimeline = gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
-        .to(o, { s: lite ? 42 : 76, t: 0.25, duration: 0.28, ease: "power3.in", onUpdate: paint })
+        .to(o, { s: lite ? 80 : 170, t: 0.25, g: 1, duration: 0.28, ease: "power3.in", onUpdate: paint })
+        .add(() => sfx.glitch(0.07, 4), 0.26)
         .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
         .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
         .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.28)
         .to(o, { s: 0, t: 1, duration: 0.55, ease: "expo.out", onUpdate: paint }, 0.28)
+        .to(o, { g: 0, duration: 0.6, ease: "steps(9)", onUpdate: paint }, 0.28)
         .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
@@ -1516,9 +1519,12 @@ export default function App() {
           <feImage result="n" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="55" xChannelSelector="R" yChannelSelector="G" result="d1" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="95" xChannelSelector="R" yChannelSelector="G" result="d2" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G" result="d3" />
           <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
-          <feBlend in="r" in2="gb" mode="screen" />
+          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feColorMatrix in="d3" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feBlend in="r" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="b" mode="screen" />
         </filter>
       </svg>
       <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
