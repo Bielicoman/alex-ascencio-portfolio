@@ -172,7 +172,7 @@ export default class Speedforce {
 
   burst(x, y, jumpAt = 0.28) {
     if (this.reduced) return;
-    const L = this.lite;
+    const L = false; // mobile = mesma quantidade de raios do desktop
     this.haze = 0.4;
     this.spray(x, y, L ? 30 : 100, 900);
     

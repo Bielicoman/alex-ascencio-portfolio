@@ -1257,7 +1257,7 @@ export default function App() {
     // Teleporte: a distorção RGB atua apenas no portal, mantendo o resto da tela composto pela GPU.
     let warping = false, warpTimeline;
     const isTouch = matchMedia("(pointer: coarse)").matches;
-    const speed = isTouch ? null : new Speedforce();
+    const speed = new Speedforce(); // raios também no celular
     // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
     // (currículo). Qualquer rolagem/toque/tecla do usuário assume o controle na hora (o Lenis cede).
     const autoplay = (el) => {
@@ -1290,7 +1290,7 @@ export default function App() {
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
       veil.classList.add("on", chromium ? "is-svg" : "is-blur");
       warpTimeline = gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
-        .to(o, { s: lite ? 80 : 170, t: 0.25, g: 1, duration: 0.28, ease: "power3.in", onUpdate: paint })
+        .to(o, { s: 170, t: 0.25, g: 1, duration: 0.28, ease: "power3.in", onUpdate: paint })
         .add(() => sfx.glitch(0.07, 4), 0.26)
         .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
         .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
