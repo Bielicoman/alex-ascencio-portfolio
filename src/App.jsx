@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { PROJECTS } from "./projects";
+import ClipPlayer from "./components/ClipPlayer";
 import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
 import { tc, reducedMotion } from "./util";
 import Floaters from "./components/Floaters";
@@ -110,6 +111,7 @@ function PlayBtn({ playing = false, className = "" }) {
     </span>
   );
 }
+const ytId = (p) => p.url.split("/embed/")[1];
 const yt = (p) => `${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
 function Roll({ children }) {
   return <span className="roll"><span>{children}</span><span aria-hidden="true">{children}</span></span>;
@@ -233,7 +235,7 @@ function Player({ project, onClose, onHost, onNav }) {
     window.__lenis?.stop();
     return () => { sfx.whoosh(0.35, false, 0.06); sfx.musicHold(false); onHost(null); window.__lenis?.start(); prev?.focus?.({ preventScroll: true }); };
   }, [onHost]);
-  const watch = project.url?.replace("/embed/", "/watch?v=");
+  const watch = project.url && project.url.replace("/embed/", "/watch?v=") + (project.start ? `&t=${project.start}` : "");
   return (
     <dialog ref={ref} className="player" onCancel={onClose} onClick={(e) => e.target === e.currentTarget && onClose()} aria-labelledby="pl-title">
       <div className="player-card" tabIndex={-1}>
@@ -251,6 +253,8 @@ function Player({ project, onClose, onHost, onNav }) {
         <div className="player-frame">
           {project.video ? (
             <video key={project.id} src={project.video} poster={thumb(project)} controls autoPlay playsInline preload="metadata" />
+          ) : project.end ? (
+            <ClipPlayer key={project.id} id={ytId(project)} start={project.start || 0} end={project.end} title={project.title} />
           ) : (
             <iframe
               key={project.id}
@@ -324,6 +328,7 @@ function NowPlaying({ open }) {
         )}
         {playing && (cur.video
           ? <video ref={vid} key={`v${cur.id}`} src={cur.video} autoPlay playsInline onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onEnded={() => go(1)} />
+          : cur.end ? <ClipPlayer key={`y${cur.id}`} id={ytId(cur)} start={cur.start || 0} end={cur.end} title={cur.title} />
           : <iframe key={`y${cur.id}`} title={cur.title} src={yt(cur)} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />)}
         {!playing && <button className="np-hit" onClick={toggle} data-cursor="Assistir" aria-label={`Assistir ${cur.title} aqui`} />}
         <span className="np-live mono"><span className="rec" /> {label}</span>
