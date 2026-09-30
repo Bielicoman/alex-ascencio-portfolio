@@ -4,7 +4,23 @@ import { useEffect, useRef, useState } from "react";
 export default function MotionControl() {
   const [state, setState] = useState("off");
   const cleanup = useRef(() => {});
+  const self = useRef(null);
   useEffect(() => () => cleanup.current(), []);
+  // liga sozinho em celular: Android/Chrome não exige permissão → inicia na hora;
+  // iOS exige gesto do usuário → o primeiro toque em qualquer ponto da tela dispara a permissão.
+  useEffect(() => {
+    if (!matchMedia("(pointer: coarse)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.isSecureContext || !window.DeviceOrientationEvent) return;
+    if (typeof DeviceOrientationEvent.requestPermission !== "function") { self.current?.(); return; }
+    const first = (e) => {
+      if (e.target.closest?.(".motion-control")) return;
+      off(); self.current?.();
+    };
+    const off = () => { window.removeEventListener("touchend", first); window.removeEventListener("click", first); };
+    window.addEventListener("touchend", first, { passive: true });
+    window.addEventListener("click", first);
+    return off;
+  }, []);
   async function toggle() {
     cleanup.current();
     if (state === "on") { setState("off"); return; }
@@ -33,6 +49,7 @@ export default function MotionControl() {
       cleanup.current = () => { clearTimeout(timeout); cancelAnimationFrame(frame); window.removeEventListener("deviceorientation", move); window.removeEventListener("orientationchange", reset); hero.style.removeProperty("--tilt-x"); hero.style.removeProperty("--tilt-y"); window.dispatchEvent(new CustomEvent("portfolio:tilt", { detail: { x: 0, y: 0 } })); };
     } catch { setState("denied"); }
   }
+  self.current = toggle;
   const label = { off: "Ativar movimento 3D", on: "Movimento 3D ligado", waiting: "Incline o celular…", denied: "Sensor não autorizado · tentar", unavailable: "Sensor indisponível", reduced: "Movimento reduzido ativado" }[state];
   return <button className="motion-control" onClick={toggle} aria-label={label} aria-pressed={state === "on"}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M3 8 1 12l2 4M21 8l2 4-2 4M11 18h2"/></svg><span role="status">{label}</span></button>;
 }
