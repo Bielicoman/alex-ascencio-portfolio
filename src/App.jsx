@@ -41,7 +41,7 @@ const CLIENTS = [
   ["Communion", "communion", 24], ["Califórnia Dreams", "california-dreams-v02", 44], ["A Bíblia Comentada", "biblia-comentada", 34.6],
 ];
 const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Kati Carvalho", "Willian Krusty", "Pedro Valença", "Prisminha", "Alice Rasec", "Patrícia de Paiva", "UNASP", "Via Global", "Ministério Entre Aspas", "Museu de Arqueologia Bíblica", "Rodrigo Silva"];
-const NAV = [["#top", "Início", I.Home], ["#filmes", "Filmes", I.Film], ["#lab", "Serviços", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Projetos", I.Aperture], ["#sobre", "Sobre", I.Hand]];
+const NAV = [["#top", "Início", I.Home], ["#filmes", "Destaques", I.Film], ["#lab", "Serviços", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Projetos", I.Aperture], ["#sobre", "Sobre", I.Hand]];
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
   [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
@@ -396,7 +396,7 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
         <Chip cls="fl-c" icon={I.Wave} title="Cor & som medidos" sub="Look por cena · LUFS por clipe" depth={0.8} amp={9} speed={0.45} />
         <Chip cls="fl-b" icon={I.Spark} red title="IA com critério" sub="Só entra se passar como filmado" depth={1.1} amp={12} speed={0.5} />
         <Chip cls="fl-d" icon={I.Film} title={`${N4K} entregas em 4K`} sub="Da captação ao master" depth={0.7} amp={8} speed={0.62} />
-                  <Chip cls="fl-nav fl-nav-1" href="#filmes" icon={I.Film} title="Filmes" sub="01" depth={1.2} amp={10} speed={0.6} />
+                  <Chip cls="fl-nav fl-nav-1" href="#filmes" icon={I.Film} title="Destaques" sub="01" depth={1.2} amp={10} speed={0.6} />
           <Chip cls="fl-nav fl-nav-2" href="#lab" icon={I.Code} title="Serviços" sub="02" depth={0.9} amp={8} speed={0.5} />
           <Chip cls="fl-nav fl-nav-3" href="#metodo" icon={I.Layers} title="Método" sub="03" depth={1.1} amp={11} speed={0.55} />
           <Chip cls="fl-nav fl-nav-4" href="#arquivo" icon={I.Aperture} title="Projetos" sub="04" depth={1.3} amp={12} speed={0.65} />
