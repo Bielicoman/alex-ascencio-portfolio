@@ -176,15 +176,15 @@
 
   /* 1 ─ dock + orbe */
   .nav, html.nav-hidden:not(.menu-open) .nav {
-    left: 12px !important; right: 82px !important; height: var(--dock-h) !important; padding: 4px !important;
+    left: 10px !important; right: 76px !important; height: var(--dock-h) !important; padding: 4px 2px !important;
     bottom: calc(10px + env(safe-area-inset-bottom)) !important; border-radius: 22px !important;
     background: rgba(14,14,17,.88) !important; backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
     box-shadow: 0 16px 34px -14px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.07);
   }
-  .nav-links > a, .nav-links > a:nth-of-type(3) { height: 54px !important; gap: 4px; font-size: 9.5px !important; letter-spacing: .01em; transition: background .3s, color .3s; }
+  .nav-links > a, .nav-links > a:nth-of-type(3) { height: 54px !important; gap: 4px; font-size: 9px !important; letter-spacing: -.01em; padding-inline: 0; transition: background .3s, color .3s; }
   .nav-links > a[aria-current] { background: rgba(227,34,44,.14); box-shadow: inset 0 0 0 1px rgba(255,100,110,.2); }
-  .edth-bubble, html.nav-hidden:not(.menu-open) .edth-bubble { right: 12px !important; bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
-  .edth-launch { width: 60px; height: 60px; }
+  .edth-bubble, html.nav-hidden:not(.menu-open) .edth-bubble { right: 10px !important; bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+  .edth-launch { width: 56px; height: 56px; }
   .snd-mobile-wrapper { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: var(--pad); bottom: auto; left: auto; z-index: 92; }
   .snd { width: 40px; height: 40px; padding: 0; justify-content: center; }
   .snd-l { display: none; }
@@ -257,6 +257,8 @@
   .footer-row .magnetic { right: 0; margin-right: 0; }
 }
 @media (max-width: 380px) {
-  .nav-links > a, .nav-links > a:nth-of-type(3) { font-size: 8.5px !important; }
+  .nav-links > a, .nav-links > a:nth-of-type(3) { font-size: 8px !important; }
+  .nav, html.nav-hidden:not(.menu-open) .nav { left: 8px !important; right: 70px !important; }
+  .edth-launch { width: 52px; height: 52px; }
   .card { grid-template-columns: 116px minmax(0, 1fr); }
 }
