@@ -275,3 +275,11 @@
 @media (max-width: 760px) {
   .nav-links, html.nav-light:not(.menu-open) .nav-links { border: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 }
+
+/* hero mobile: "Assistir o site" ao lado do Playground */
+@media (max-width: 760px) {
+  .hero-modes { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hero-modes .magnetic:has(.btn-tour-m), .hero-modes .btn-tour-m { display: inline-flex !important; }
+  .hero-modes .magnetic:has(.btn-tour-m) { display: block !important; }
+  .hero-modes .btn { height: 48px; min-height: 48px; font-size: 13px; padding-left: 14px; padding-right: 5px; justify-content: space-between; gap: 6px; white-space: nowrap; }
+}
