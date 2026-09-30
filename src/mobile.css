@@ -196,7 +196,7 @@
   .mobile-brand > span:last-child { display: none; }
   .hero { padding-bottom: 20px; }
   /* a hero inteira (marca + foto + texto + botões) cabe acima do dock: a foto encolhe com a altura útil */
-  .hero { --sh: clamp(280px, calc(100svh - 330px), calc(min(82vw, 380px) / .765 + 6px)); }
+  .hero { --sh: clamp(280px, calc(100svh - 390px), calc(min(82vw, 380px) / .765 + 6px)); }
   .hero-stage { height: var(--sh); }
   .hero-word { top: 14px; font-size: 18vw; }
   .hero-person { --pw: calc((var(--sh) - 6px) * .765); }
@@ -264,3 +264,9 @@
   .edth-launch { width: 52px; height: 52px; }
   .card { grid-template-columns: 116px minmax(0, 1fr); }
 }
+
+/* luz da foto do Sobre: brilho largo e suave em vez da risca branca de 2% (que ficava parada no rosto no mobile) */
+.ab-light { filter: blur(7px); opacity: .85;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,140,130,.05) 42%, rgba(255,255,255,.15) 50%, rgba(255,140,130,.05) 58%, transparent 70%); }
+.about.is-static .ab-light { display: none; }
+@media (max-width: 899px) { .ab-light { display: none; } }

@@ -51,5 +51,6 @@ export default function MotionControl() {
   }
   self.current = toggle;
   const label = { off: "Ativar movimento 3D", on: "Movimento 3D ligado", waiting: "Incline o celular…", denied: "Sensor não autorizado · tentar", unavailable: "Sensor indisponível", reduced: "Movimento reduzido ativado" }[state];
+  if (state === "unavailable") return null; // sem sensor: não mostra rótulo morto
   return <button className="motion-control" onClick={toggle} aria-label={label} aria-pressed={state === "on"}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M3 8 1 12l2 4M21 8l2 4-2 4M11 18h2"/></svg><span role="status">{label}</span></button>;
 }
