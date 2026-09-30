@@ -270,3 +270,8 @@
   background: linear-gradient(100deg, transparent 30%, rgba(255,140,130,.05) 42%, rgba(255,255,255,.15) 50%, rgba(255,140,130,.05) 58%, transparent 70%); }
 .about.is-static .ab-light { display: none; }
 @media (max-width: 899px) { .ab-light { display: none; } }
+
+/* dock: uma moldura só (.nav). O .nav-links herdava borda/brilho de vidro e desenhava um 2º contorno por dentro */
+@media (max-width: 760px) {
+  .nav-links, html.nav-light:not(.menu-open) .nav-links { border: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}
