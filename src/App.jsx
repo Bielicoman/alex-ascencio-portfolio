@@ -38,9 +38,9 @@ const N4K = PROJECTS.filter((p) => p.q === "4K").length;
 const CLIENTS = [
   ["Kiger", "kiger", 27.3], ["MAB", "mab", 50], ["Novo Tempo", "novotempo", 45], ["Prisma Brasil", "prisma", 52],
   ["Dilson Castro", "dilson", 38.1], ["Dunamis Studio", "dunamis", 36.8], ["IASD", "iasd", 60], ["CPB", "cpb", 54],
-  ["Communion", "communion", 24], ["Califórnia Dreams", "california-dreams-v02", 44], ["A Bíblia Comentada", "biblia-comentada", 34.6],
+  ["Communion", "communion", 24], ["Quarteto Elo", "quarteto-elo", 34.5], ["Califórnia Dreams", "california-dreams-v02", 44], ["A Bíblia Comentada", "biblia-comentada", 34.6],
 ];
-const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Kati Carvalho", "Willian Krusty", "Pedro Valença", "Prisminha", "Alice Rasec", "Patrícia de Paiva", "UNASP", "Via Global", "Ministério Entre Aspas", "Museu de Arqueologia Bíblica", "Rodrigo Silva"];
+const ARTISTS = ["Gabriella Stehling", "Kati Carvalho", "Willian Krusty", "Pedro Valença", "Prisminha", "Alice Rasec", "Patrícia de Paiva", "UNASP", "Via Global", "Ministério Entre Aspas", "Museu de Arqueologia Bíblica", "Rodrigo Silva"];
 const NAV = [["#top", "Início", I.Home], ["#filmes", "Destaques", I.Film], ["#lab", "Serviços", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Projetos", I.Aperture], ["#sobre", "Sobre", I.Hand]];
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
