@@ -748,6 +748,7 @@ function ToolIcon({ cls, m }) {
 }
 // "Sobre" como apresentação: no desktop a seção fica fixa e o scroll conduz uma cena em capítulos;
 // no celular a mesma coreografia roda por tempo quando a seção entra. Som em cada marcação.
+const AB_S1 = 7.6, AB_S2 = 12.4; // início dos capítulos Trajetória e Ferramentas na timeline (s)
 const CHAPTERS = [["01", "Quem sou"], ["02", "Trajetória"], ["03", "Ferramentas"]];
 function About() {
   const root = useRef(null), card = useRef(null), tlRef = useRef(null), stRef = useRef(null);
@@ -813,7 +814,7 @@ function About() {
         let t = slide(0, 3.5);
         tl.fromTo(".ab-slide[data-i='0'] .ab-line", { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.12 }, t + 0.1);
         // ── 4. Trajetória: REC abre, clipes entram, agulha varre até o presente
-        t = slide(1, desk ? 5.4 : 5.2);
+        t = slide(1, desk ? AB_S1 : 5.2);
         tl.fromTo(".traj-now", { clipPath: "inset(0 100% 0 0 round 22px)" }, { clipPath: "inset(0 0% 0 0 round 22px)", duration: 1, ease: "expo.inOut" }, t + 0.15)
           .call(cue(() => { sfx.tick(1000, innerWidth * 0.7, 0.04); setTimeout(() => sfx.tick(1000, innerWidth * 0.7, 0.04), 140); }), null, t + 0.55)
           .fromTo(".traj-corner", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.06, ease: "back.out(3)" }, t + 0.8)
@@ -822,7 +823,7 @@ function About() {
           .fromTo(".traj-ph", { left: 0, right: "auto" }, { left: "calc(100% - 2px)", duration: 1.4, ease: "power2.inOut" }, t + 1.1)
           .call(cue(() => sfx.glitch(0.03, 2)), null, t + 2.4);
         // ── 5. Ferramentas: categorias acendem, cartões viram em 3D, varredura por categoria
-        t = slide(2, desk ? 8.4 : 8);
+        t = slide(2, desk ? AB_S2 : 8);
         tl.fromTo(cats, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.07 }, t + 0.1)
           .fromTo(tools, { rotateX: -95, opacity: 0, y: 20, transformOrigin: "50% 0%" }, { rotateX: 0, opacity: 1, y: 0, duration: 0.9, stagger: 0.08, ease: "back.out(1.4)" }, t + 0.4);
         tools.forEach((_, i) => tl.call(cue(() => sfx.glass(innerWidth * (0.55 + (i % 3) * 0.12))), null, t + 0.45 + i * 0.08));
@@ -833,9 +834,9 @@ function About() {
           .to({}, { duration: 0.8 });
         if (desk) {
           stRef.current = ScrollTrigger.create({
-            trigger: el, start: "top top", end: () => `+=${innerHeight * 2.6}`, pin: true, scrub: 0.5, animation: tl, refreshPriority: -1, invalidateOnRefresh: true,
+            trigger: el, start: "top top", end: () => `+=${innerHeight * 4.2}`, pin: true, scrub: 0.8, animation: tl, refreshPriority: -1, invalidateOnRefresh: true,
             onToggle: (st) => { tl.__live = st.isActive; },
-            onUpdate: (st) => { const tt = tl.time(); setCh(tt >= 8.7 ? 2 : tt >= 5.7 ? 1 : 0); },
+            onUpdate: (st) => { const tt = tl.time(); setCh(tt >= AB_S2 + 0.3 ? 2 : tt >= AB_S1 + 0.3 ? 1 : 0); },
           });
         } else {
           tl.pause();
@@ -852,7 +853,7 @@ function About() {
   const jump = (i) => { // capítulos clicáveis: rola até o ponto da cena
     const st = stRef.current, tl = tlRef.current;
     if (!st || !tl) return;
-    const at = [4.8, 8.2, 12.5][i] / tl.duration();
+    const at = [AB_S1 - 2.6, AB_S1 + 1.6, tl.duration() - 0.8][i] / tl.duration();
     window.__lenis?.scrollTo(st.start + (st.end - st.start) * at, { duration: 1.4 });
   };
   const title = "A pessoa por trás da timeline.".split(" ");
@@ -1263,7 +1264,7 @@ export default function App() {
       const sp = el.parentElement?.classList.contains("pin-spacer") ? el.parentElement : null;
       if (!sp || el.id !== "sobre") return;
       const end = sp.getBoundingClientRect().top + lenis.scroll + sp.offsetHeight - innerHeight;
-      lenis.scrollTo(end, { duration: 6.5, easing: (t) => 0.5 - Math.cos(Math.PI * t) / 2, force: true, lock: false });
+      lenis.scrollTo(end, { duration: 19, easing: (t) => t, force: true, lock: false });
     };
         const chromium = /Chrome|Chromium|Edg\//.test(navigator.userAgent);
     const lite = isTouch || matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches;

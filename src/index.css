@@ -877,6 +877,8 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 .footer-made { color: var(--dim); font-size: 10px; }
 .top-btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2); transition: background .3s, color .3s; }
 .top-btn:hover { background: #fff; color: #000; }
+/* afasta do orbe da EDITH (canto inferior direito) */
+.footer-row .magnetic { margin-right: clamp(110px, 9vw, 150px); }
 
 /* ───────── player ───────── */
 .player { width: min(1180px, 94vw); max-width: none; max-height: 94vh; padding: 0; border: 0; background: none; color: inherit; overflow: visible; }
@@ -1038,7 +1040,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
   .footer-cols { grid-template-columns: 1fr 1fr; gap: 30px 20px; }
   .footer-watermark { width: 110vw; bottom: -14vw; }
   .footer-row { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .footer-row .magnetic { position: absolute; right: 0; top: 18px; }
+  .footer-row .magnetic { position: absolute; right: 96px; top: 18px; margin-right: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
