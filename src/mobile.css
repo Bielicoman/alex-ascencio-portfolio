@@ -195,11 +195,13 @@
   .mobile-brand { min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) var(--pad) 0; }
   .mobile-brand > span:last-child { display: none; }
   .hero { padding-bottom: 20px; }
-  .hero-stage { --pw: min(82vw, 380px); height: calc(var(--pw) / .765 + 6px); }
+  /* a hero inteira (marca + foto + texto + botões) cabe acima do dock: a foto encolhe com a altura útil */
+  .hero { --sh: clamp(280px, calc(100svh - 330px), calc(min(82vw, 380px) / .765 + 6px)); }
+  .hero-stage { height: var(--sh); }
   .hero-word { top: 14px; font-size: 18vw; }
-  .hero-person { --pw: min(82vw, 380px); }
+  .hero-person { --pw: calc((var(--sh) - 6px) * .765); }
   .hero-bottom { margin-top: -30px; }
-  .hero-lead { font-size: clamp(26px, 7.4vw, 36px); }
+  .hero-lead { font-size: clamp(22px, 6.3vw, 32px); }
   .hero-sub { margin: 10px 0 18px; max-width: 34ch; }
   .hero-ctas { gap: 10px; }
   .hero-ctas .btn { height: 52px; min-height: 52px; font-size: 13.5px; }
