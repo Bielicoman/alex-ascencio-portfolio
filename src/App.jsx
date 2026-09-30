@@ -36,9 +36,9 @@ const N4K = PROJECTS.filter((p) => p.q === "4K").length;
 // altura em px calculada por área óptica equivalente (ver README)
 const CLIENTS = [
   ["Kiger", "kiger", 27.3], ["MAB", "mab", 50], ["UNASP", "unasp", 24.1], ["Novo Tempo", "novotempo", 45],
-  ["Prisma Brasil", "prisma", 52], ["Dilson Castro", "dilson", 38.1], ["Via Global", "via-global", 33.6], ["Entre Aspas", "entre-aspas", 27.5],
+  ["Prisma Brasil", "prisma", 52], ["Dilson Castro", "dilson", 38.1], ["Via Global", "via-global", 33.6], ["Entre Aspas", "entre-aspas", 27.5], ["Dunamis Studio", "dunamis", 36.8],
 ];
-const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Communion", "Kati Carvalho", "Califórnia Dreams", "Willian Krusty", "Pedro Valença", "Prisminha", "Dunamis Studio", "Patrícia de Paiva", "CPB"];
+const ARTISTS = ["Quarteto Elo", "Gabriella Stehling", "Communion", "Kati Carvalho", "Califórnia Dreams", "Willian Krusty", "Pedro Valença", "Prisminha", "Alice Rasec", "Patrícia de Paiva", "CPB"];
 const NAV = [["#top", "Início", I.Home], ["#filmes", "Filmes", I.Film], ["#lab", "Serviços", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Projetos", I.Aperture], ["#sobre", "Sobre", I.Hand]];
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],

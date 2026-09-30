@@ -38,7 +38,7 @@ export const EDU = [
   ["Introdução à Tecnologia da Informação", "SENAI · EAD", "2021"],
   ["Fotografia autoral", "Curso com Ale Borges", "2020"],
 ];
-export const CLIENTS = ["União Noroeste Brasileira", "Novo Tempo", "Feliz7Play", "Prisma Brasil", "UNASP", "Communion", "Gabriella Stehling", "Quarteto Elo", "Kati Carvalho", "Willian Krusty", "Dilson Castro", "MAB", "Califórnia Dreams"];
+export const CLIENTS = ["União Noroeste Brasileira", "Novo Tempo", "Feliz7Play", "Prisma Brasil", "UNASP", "Communion", "Gabriella Stehling", "Quarteto Elo", "Kati Carvalho", "Willian Krusty", "Dilson Castro", "MAB", "Califórnia Dreams", "Alice Rasec", "Dunamis Studio"];
 export const SOCIAL = {
   instagram: "https://instagram.com/alexascencioai",
   linkedin: "https://www.linkedin.com/in/ascencioalexgabriel/",
