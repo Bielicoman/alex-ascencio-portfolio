@@ -31,7 +31,8 @@ const thumb = (p) => p.thumb || `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
 const FEATURED = [26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
-const CATS = ["Todos", ...new Set(PROJECTS.map((p) => p.cat))];
+const CAT_ORDER = ["Clipes", "Filmes", "Document\u00e1rio", "Reportagem", "Institucional", "Reality Show", "Bastidores"];
+const CATS = ["Todos", ...[...new Set(PROJECTS.map((p) => p.cat))].sort((a, b) => (CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99))];
 const N4K = PROJECTS.filter((p) => p.q === "4K").length;
 // altura em px calculada por área óptica equivalente (ver README)
 const CLIENTS = [
