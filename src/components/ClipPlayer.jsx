@@ -31,7 +31,7 @@ export default function ClipPlayer({ id, start = 0, end, title, autoPlay = true 
       const slot = document.createElement("div");
       host.current.appendChild(slot);
       player.current = new YT.Player(slot, {
-        host: "https://www.youtube-nocookie.com",
+        host: "https://www.youtube.com",
         videoId: id,
         playerVars: { autoplay: autoPlay ? 1 : 0, controls: 0, start, end, rel: 0, modestbranding: 1, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, cc_load_policy: 0 },
         events: {

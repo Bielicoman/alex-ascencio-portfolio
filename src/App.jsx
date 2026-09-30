@@ -114,7 +114,8 @@ function PlayBtn({ playing = false, className = "" }) {
   );
 }
 const ytId = (p) => p.url.split("/embed/")[1];
-const yt = (p) => `${p.url.replace("www.youtube.com", "www.youtube-nocookie.com")}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+// www.youtube.com (não nocookie): leva a sessão logada do visitante e evita o "faça login para confirmar que você não é um bot"
+const yt = (p) => `${p.url}?autoplay=1&rel=0&modestbranding=1&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
 function Roll({ children }) {
   return <span className="roll"><span>{children}</span><span aria-hidden="true">{children}</span></span>;
 }
