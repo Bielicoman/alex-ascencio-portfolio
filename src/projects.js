@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: 33, date: "2026-10-10", title: "Essenciais 2026 | Revista Novo Tempo", cat: "Reportagem", q: "HD", start: 503, end: 705, img: "/media/thumbs/2026-10-13_essenciais2026_thumb_v01.webp", thumb: "/media/thumbs/2026-10-13_essenciais2026_thumb_v01.webp", url: "https://www.youtube.com/embed/ERrs32SdCAA", desc: "Reportagem sobre o programa Essenciais 2026 e a capacitação de colaboradores adventistas no Noroeste do Brasil, exibida no Revista Novo Tempo de 09/10/2026. Edição de Alex Ascencio." },
   // ── Dates verified directly from YouTube publish dates ──
   // Sort is automatic — just add new videos anywhere with the correct date field
   // IDs are stable unique identifiers (do not change them)
