@@ -35,7 +35,7 @@ export const Play = make("play", <><circle className="p-ring" cx="12" cy="12" r=
 export const Close = make("close", <g className="p-x"><path {...d} d="M6 6l12 12M18 6 6 18" /></g>);
 export const Mail = make("mail", <><rect {...d} x="3" y="5" width="18" height="14" rx="3" /><path className="p-flap" {...d} d="m4 7 8 6 8-6" /></>);
 export const Copy = make("copy", <><rect className="p-front" {...d} x="8" y="8" width="12" height="12" rx="3" /><path className="p-back" {...d} d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></>);
-export const Check = make("check", <path {...d} className="p-check" d="m5 12 5 5 9-10" />);
+export const Check = make("check", <path {...d} className="p-check" d="m5 12.5 4.6 4.6L19 7.5" />);
 export const Download = make("download", <><g className="p-mv"><path {...d} d="M12 4v11M7 10l5 5 5-5" /></g><path {...d} d="M5 20h14" /></>);
 export const Instagram = make("instagram", <><rect {...d} x="3" y="3" width="18" height="18" rx="5.5" /><circle className="p-lens" {...d} cx="12" cy="12" r="4" /><circle className="p-dot" cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none" /></>);
 export const Linkedin = make("linkedin", <><rect {...d} x="3" y="3" width="18" height="18" rx="4" /><g className="p-in"><path {...d} d="M8 10.5V17M8 7.2v.1M12 17v-6.5M12 13.3c0-3.6 5-3.6 5 0V17" /></g></>);
@@ -48,20 +48,25 @@ export const Scissors = make("scissors", <>
   <g className="p-bladeB"><circle {...d} cx="6" cy="17" r="3" /><path {...d} d="M8.5 15.5 20 6" /></g>
 </>);
 export const Layers = make("layers", <><path className="p-top" {...d} d="m12 3 9 5-9 5-9-5z" /><path {...d} d="m3 13 9 5 9-5" /><path className="p-mid" {...d} d="m3 17 9 5 9-5" strokeOpacity=".45" /></>);
-export const Wave = make("wave", <>{[[3, 10, 14], [7, 8, 16], [11, 5, 19], [15, 9, 15], [19, 7, 17]].map(([x, a, b], i) => <path key={x} className={`p-bar b${i}`} {...d} d={`M${x} ${a}V${b}`} />)}</>);
 export const Aperture = make("aperture", <><circle {...d} cx="12" cy="12" r="9" /><g className="p-blades"><path {...d} d="M14.3 3.3 9 12M20.6 9.6H10.4M18.4 18.3 12.9 9M9.7 20.7 15 12M3.4 14.4h10.2M5.6 5.7l5.5 9.3" /></g></>);
 export const Clapper = make("clapper", <><rect {...d} x="3" y="10" width="18" height="9.6" rx="2" /><g className="p-clap"><rect {...d} x="3" y="4.4" width="18" height="3.6" rx="1.2" /><path {...d} d="M8.4 5.3l1 1.8M13.4 5.3l1 1.8M18.2 5.3l.8 1.5" /></g></>);
 export const Code = make("code", <><g className="p-l"><path {...d} d="m8 7-5 5 5 5" /></g><g className="p-r"><path {...d} d="m16 7 5 5-5 5" /></g><path className="p-slash" {...d} d="m14 4-4 16" strokeOpacity=".55" /></>);
-export const Globe = make("globe", <><circle {...d} cx="12" cy="12" r="9" /><g className="p-spin"><path {...d} d="M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18" /></g><path {...d} d="M3.5 9h17M3.5 15h17" /></>);
-export const Phone = make("phone", <g className="p-ring2"><path {...d} d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4z" /></g>);
-export const Palette = make("palette", <><circle {...d} cx="12" cy="12" r="9" /><g className="p-spin"><circle cx="12" cy="7" r="1.6" fill="currentColor" stroke="none" /><circle cx="16.3" cy="14.5" r="1.6" fill="currentColor" stroke="none" opacity=".7" /><circle cx="7.7" cy="14.5" r="1.6" fill="currentColor" stroke="none" opacity=".45" /></g></>);
-export const Mic = make("mic", <><rect className="p-cap" {...d} x="9" y="3" width="6" height="11" rx="3" /><path {...d} d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></>);
+export const Palette = make("palette", <><path {...d} d="M12 3.2a8.8 8.8 0 0 0 0 17.6c1.1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7h2a4.8 4.8 0 0 0 4.8-4.8c0-3.9-4-7-9.2-7z" /><g className="p-dots"><circle className="d0" cx="7.6" cy="11.4" r="1.3" fill="currentColor" stroke="none" /><circle className="d1" cx="10" cy="7.6" r="1.3" fill="currentColor" stroke="none" /><circle className="d2" cx="14.6" cy="7.8" r="1.3" fill="currentColor" stroke="none" /></g></>);
+export const Mic = make("mic", <><rect className="p-cap" {...d} x="9" y="3" width="6" height="11" rx="3" /><path {...d} d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" /><g className="p-lvl"><path d="M2.5 8.5v5M21.5 8.5v5" strokeOpacity=".55" /></g></>);
 export const Film = make("film", <><rect {...d} x="3" y="4" width="18" height="16" rx="2.5" /><g className="p-strip"><path {...d} d="M7 4v16M17 4v16M3 8.5h4M3 15.5h4M17 8.5h4M17 15.5h4" /></g></>);
-export const Pause = make("pause", <><rect x="7" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /><rect x="13.4" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /></>);
+export const Pause = make("pause", <><rect className="p-b1" x="7" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /><rect className="p-b2" x="13.4" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /></>);
 export const Prev = make("prev", <g className="p-mv"><path {...d} d="M15 5 8 12l7 7" /></g>);
 export const Next = make("next", <g className="p-mv"><path {...d} d="m9 5 7 7-7 7" /></g>);
 export const Expand = make("expand", <g className="p-mv"><path {...d} d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></g>);
-export const Hand = make("hand", <g className="p-wave"><path {...d} d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.8V4.5a1.5 1.5 0 0 1 3 0V12m0-6a1.5 1.5 0 0 1 3 0v6m0-3.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L3.6 15a1.5 1.5 0 0 1 2.3-2L8 15" /></g>);
 export const Doc = make("doc", <><path {...d} d="M6 3h8l4 4v14H6z" /><path className="p-fold" {...d} d="M14 3v4h4" /><g className="p-lines"><path className="l1" d="M9 11h6" /><path className="l2" d="M9 14h6" /><path className="l3" d="M9 17h4" /></g></>);
 
-export const Home = make("home", <g className="p-mv"><path {...d} d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path {...d} d="M9 22V12h6v10" /></g>);
+export const Home = make("home", <><path className="p-roof" {...d} d="M3 10.5 12 3l9 7.5" /><path {...d} d="M5 9v10.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V9" /><path className="p-door" {...d} d="M10 21v-5.5h4V21" /></>);
+
+// Projetos: grade de trabalhos (as células acendem em sequência)
+export const Grid = make("grid", <>{[[3, 3], [13.5, 3], [3, 13.5], [13.5, 13.5]].map(([x, y], i) => <rect key={i} className={`p-cell c${i}`} {...d} x={x} y={y} width="7.5" height="7.5" rx="2" />)}</>);
+// Método: timeline com três trilhas e a agulha (playhead) que percorre
+export const Timeline = make("timeline", <><path {...d} d="M3 7h7M13 7h8M3 12h4M10 12h11M3 17h10M16 17h5" /><g className="p-head"><path d="M8.5 3.5v17" /><path d="M7 3.5h3" /></g></>);
+// Sobre: pessoa (cabeça acena de leve)
+export const User = make("user", <><circle className="p-headc" {...d} cx="12" cy="8" r="3.6" /><path {...d} d="M4.8 20.5c.6-3.7 3.6-6 7.2-6s6.6 2.3 7.2 6" /></>);
+// Cor & áudio: faders (servem a cor e a mix); os cursores sobem e descem fora de fase
+export const Sliders = make("sliders", <><path {...d} d="M6 4v16M12 4v16M18 4v16" strokeOpacity=".45" /><g className="p-k k1"><circle cx="6" cy="14" r="2.2" fill="currentColor" stroke="none" /></g><g className="p-k k2"><circle cx="12" cy="9" r="2.2" fill="currentColor" stroke="none" /></g><g className="p-k k3"><circle cx="18" cy="15.5" r="2.2" fill="currentColor" stroke="none" /></g></>);

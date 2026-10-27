@@ -43,12 +43,12 @@ const CLIENTS = [
   ["Communion", "communion", 24], ["Quarteto Elo", "quarteto-elo", 34.5], ["Califórnia Dreams", "california-dreams-v02", 44], ["A Bíblia Comentada", "biblia-comentada", 34.6],
 ];
 const ARTISTS = ["Gabriella Stehling", "Kati Carvalho", "Willian Krusty", "Pedro Valença", "Prisminha", "Alice Rasec", "Patrícia de Paiva", "UNASP", "Via Global", "Ministério Entre Aspas", "Museu de Arqueologia Bíblica", "Rodrigo Silva"];
-const NAV = [["#top", "Início", I.Home], ["#filmes", "Destaques", I.Film], ["#lab", "Serviços", I.Code], ["#metodo", "Método", I.Layers], ["#arquivo", "Projetos", I.Aperture], ["#sobre", "Sobre", I.Hand]];
+const NAV = [["#top", "Início", I.Home], ["#filmes", "Destaques", I.Film], ["#lab", "Serviços", I.Aperture], ["#metodo", "Método", I.Timeline], ["#arquivo", "Projetos", I.Grid], ["#sobre", "Sobre", I.User]];
 const SERVICES = [
   [I.Scissors, "Edição & montagem", "Ritmo de cinema, corte pela cena e respiro para a história.", "Premiere Pro · DaVinci Resolve"],
   [I.Layers, "Motion design", "Tipografia, marca e transições em camadas editáveis.", "After Effects"],
-  [I.Wave, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · LUFS"],
-  [I.Aperture, "IA generativa", "Planos gerados que passam como produção real — ou ficam fora do corte.", "ComfyUI · Higgsfield"],
+  [I.Sliders, "Cor & áudio", "Look por cena e mix medida em LUFS antes de nivelar.", "Resolve · Lumetri · LUFS"],
+  [I.Spark, "IA generativa", "Planos gerados que passam como produção real — ou ficam fora do corte.", "ComfyUI · Higgsfield"],
 ];
 const [MARK_R, MARK_L] = MARK_PATH.split(/(?<=Z)\s*/);
 const useBrasilia = () => {

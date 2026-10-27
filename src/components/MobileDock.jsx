@@ -4,7 +4,7 @@ import * as I from "./Icons";
 import { useMedia } from "../util";
 import "./MobileDock.css";
 
-const ITEMS = [["top", "Início", I.Home], ["filmes", "Destaques", I.Film], ["lab", "Serviços", I.Code], ["metodo", "Método", I.Layers], ["arquivo", "Projetos", I.Aperture], ["sobre", "Sobre", I.Hand]];
+const ITEMS = [["top", "Início", I.Home], ["filmes", "Destaques", I.Film], ["lab", "Serviços", I.Aperture], ["metodo", "Método", I.Timeline], ["arquivo", "Projetos", I.Grid], ["sobre", "Sobre", I.User]];
 export default function MobileDock({ onEdth, edthOpen, hidden }) {
   const [active, setActive] = useState("top");
   const mobile = useMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)");
