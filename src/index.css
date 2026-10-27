@@ -638,13 +638,13 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 .search:focus-within { border-color: rgba(255,255,255,.3); outline: 2px solid var(--red-hi); outline-offset: 3px; }
 .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: #fff; font-size: 15px; }
 .archive-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin: 40px 0 30px; }
-.filters { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2px; max-width: 100%; padding: 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: 99px; }
-.filters::-webkit-scrollbar { display: none; }
-.filters button { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 16px; border-radius: 99px; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; white-space: nowrap; color: var(--soft); transition: background .4s var(--ease), color .3s; }
-.filters button sup { display: inline-grid; place-items: center; min-width: 20px; height: 18px; margin: 0; padding: 0 5px; border-radius: 99px; font: 500 10px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0; vertical-align: 0; color: var(--mute); background: rgba(255,255,255,.07); transition: background .4s var(--ease), color .3s; }
-.filters button:hover { color: #fff; background: rgba(255,255,255,.06); }
-.filters button[aria-pressed="true"] { background: #fff; color: #000; }
-.filters button[aria-pressed="true"] sup { color: #0b0b0c; background: rgba(0,0,0,.08); }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.filters button { flex: none; display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 6px 0 16px; border: 1px solid var(--line-2); border-radius: 99px; background: rgba(255,255,255,.035); font-size: 14px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; white-space: nowrap; color: var(--soft); transition: background .4s var(--ease), border-color .3s, color .3s; }
+.filters button sup { display: inline-grid; place-items: center; min-width: 28px; height: 28px; margin: 0; padding: 0 8px; border-radius: 99px; font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0; vertical-align: 0; color: var(--mute); background: rgba(255,255,255,.06); transition: background .4s var(--ease), color .3s; }
+.filters button:hover { color: #fff; border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.06); }
+.filters button[aria-pressed="true"] { color: #0b0b0c; background: #fff; border-color: #fff; }
+.filters button[aria-pressed="true"] sup { color: #fff; background: var(--red); }
+.filters button:focus-visible { outline: 2px solid var(--red-hi); outline-offset: 3px; border-radius: 99px; }
 .archive-count { color: var(--mute); margin: 0; }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 44px 20px; align-items: start; }
 .card { position: relative; display: grid; gap: 16px; text-align: left; min-width: 0; }
@@ -1020,9 +1020,6 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 10px; }
   .card-t b { font-size: 18px; }
   .section-head .search { width: 100%; }
-  .filters { display: flex; flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; border-radius: 99px; }
-  .filters::-webkit-scrollbar { display: none; }
-  .filters button { flex: none; }
   .archive-bar { margin: 28px 0 24px; }
   .traj-clips { grid-template-columns: 1fr; }
   .traj-track { grid-template-columns: 34px 1fr; }
@@ -1288,4 +1285,11 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 .fl-nav { display: none; }
 @media (min-width: 761px) {
   .nav-ic, .snd-mobile-wrapper, .nav-links a.link-top { display: none; }
+}
+
+/* filtros no celular: uma linha rolável, com respiro para o anel de foco */
+@media (max-width: 760px) {
+  .filters { flex-wrap: nowrap; overflow-x: auto; width: auto; margin: -6px; padding: 6px 28px 6px 6px; scroll-padding-inline: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .filters::-webkit-scrollbar { display: none; }
+  .filters button { min-height: 44px; font-size: 13px; scroll-snap-align: start; }
 }

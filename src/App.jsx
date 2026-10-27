@@ -17,7 +17,6 @@ import "./mobile.css";
 import "./components/Loading.css";
 import runDemo from "./components/Demo";
 import { sfx } from "./components/Sound";
-import Speedforce from "./components/Speedforce";
 import * as I from "./components/Icons";
 import { LOGO_DR, LOGO_HF, LOGO_COMFY } from "./components/logos";
 
@@ -1171,7 +1170,7 @@ export default function App() {
     // Não refiltrar a página inteira nem serializar um mapa PNG a cada quadro.
     let warping = false, warpTimeline;
     const isTouch = matchMedia("(pointer: coarse)").matches;
-    const speed = new Speedforce(); // raios também no celular
+    const speed = null; // raios do salto removidos com o flash
     // seção fixa (Sobre no desktop): depois do salto, a apresentação roda sozinha até a tela final
     // (currículo). Qualquer rolagem/toque/tecla do usuário assume o controle na hora (o Lenis cede).
     const autoplay = (el) => {
@@ -1180,35 +1179,14 @@ export default function App() {
       const end = sp.getBoundingClientRect().top + lenis.scroll + sp.offsetHeight - innerHeight;
       lenis.scrollTo(end, { duration: 19, easing: (t) => t, force: true, lock: false });
     };
-    const teleport = (el, x, y) => {
+    // navegação por âncora: scroll contínuo até a seção (sem flash), atravessando as seções no caminho.
+    // Duração cresce com a distância (1,1 a 2,6 s), curva in-out igual à --ease-io do site.
+    const easeIO = (t) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
+    const teleport = (el) => {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
-      if (warping) return;
-      warping = true;
-      document.documentElement.classList.add("is-teleporting");
-      sfx.teleport(x);
-      speed?.burst(x, y, 0.28);
-      const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
-      field?.stop();
-      veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
-      veil.classList.add("on");
-      const reach = Math.max(Math.hypot(x, y), Math.hypot(innerWidth - x, y), Math.hypot(x, innerHeight - y), Math.hypot(innerWidth - x, innerHeight - y));
-      warpTimeline = gsap.timeline({ onComplete: () => { veil.classList.remove("on"); document.documentElement.classList.remove("is-teleporting"); warping = false; if (live && fade > 0.01 && !document.hidden) field?.start(); autoplay(el); } })
-        .add(() => sfx.glitch(0.07, 4), 0.26)
-        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: reach / 150, opacity: 0, duration: 1, ease: "expo.out" }, 0)
-        .fromTo(veil.querySelector(".warp-tears"), { opacity: 0, xPercent: -8, scaleX: 1.12 }, { opacity: .75, xPercent: 5, duration: .28, ease: "power3.in" }, 0)
-        .to(veil.querySelector(".warp-tears"), { opacity: 0, xPercent: 0, scaleX: 1, duration: .4, ease: "power3.out" }, .28)
-        .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
-        .add(() => {
-          lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update();
-          // Finaliza somente o que o salto deixou fora de quadro. A seção de destino
-          // conserva sua animação; as seções atravessadas não interpolam juntas.
-          const scroll = lenis.scroll;
-          for (const st of ScrollTrigger.getAll()) {
-            if (!st.isActive) st.getTween()?.progress?.(1);
-            if (st.vars.once && st.end < scroll && st.animation) st.animation.progress(1).pause();
-          }
-        }, 0.28)
-        .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
+      const dist = Math.abs(el.getBoundingClientRect().top);
+      const duration = Math.min(2.6, Math.max(1.1, 0.7 + (dist / innerHeight) * 0.16));
+      lenis.scrollTo(el, { duration, easing: easeIO, force: true, onComplete: () => autoplay(el) });
     };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
