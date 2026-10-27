@@ -80,7 +80,7 @@ export default function Method() {
     const q = (s) => el.querySelectorAll(s);
     let clipIdx = -1;
     const st = ScrollTrigger.create({
-      trigger: el, start: "top top", end: () => mobile ? "bottom 35%" : `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: (reduced || mobile) ? false : el.querySelector(".method-pin"), invalidateOnRefresh: true,
+      trigger: el, start: "top top", end: () => mobile ? "bottom 35%" : `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: false, invalidateOnRefresh: true, // sem pin: a seção rola normal; o vídeo da timeline toca sozinho
     });
     const update = (event) => {
         const t = Math.min(DUR, event.detail);
