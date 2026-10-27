@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { MARK_PATH, MARK_W, MARK_H } from "../brand";
 import { renderPixelRatio } from "../util";
+import { FrameBudget } from "./FrameBudget";
 
 // Campo de partículas que reage ao cursor e se reorganiza na marca AA com o scroll.
 const vert = /* glsl */ `
@@ -88,9 +89,12 @@ export default class ParticleField {
     this.morph = 0;
     this.running = false;
     this.t0 = performance.now();
+    this.quality = 1;
+    this.budget = new FrameBudget(() => { if (this.quality > .55) { this.quality *= .8; this.resize(); } });
     this.build();
     this.resize();
     this.onMove = (e) => {
+      if (!this.running || document.hidden) return;
       const r = this.canvas.getBoundingClientRect();
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -137,7 +141,7 @@ export default class ParticleField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    const pr = renderPixelRatio(w, h);
+    const pr = renderPixelRatio(w, h) * this.quality;
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
@@ -151,8 +155,10 @@ export default class ParticleField {
   start() {
     if (this.running) return;
     this.running = true;
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       if (!this.running) return;
+      this.raf = requestAnimationFrame(loop);
+      if (!this.budget.frame(now)) return;
       const t = (performance.now() - this.t0) / 1000;
       this.uniforms.uTime.value = t;
       const px = this.mouse.x, py = this.mouse.y;
@@ -163,7 +169,6 @@ export default class ParticleField {
       this.uniforms.uMorph.value += (this.morph - this.uniforms.uMorph.value) * 0.08;
       this.points.rotation.y = Math.sin(t * 0.1) * 0.06 + this.mouse.x * 0.01 * (1 - this.uniforms.uMorph.value);
       this.renderer.render(this.scene, this.camera);
-      this.raf = requestAnimationFrame(loop);
     };
     loop();
   }

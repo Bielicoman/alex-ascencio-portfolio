@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { renderPixelRatio } from "../util";
+import { FrameBudget } from "./FrameBudget";
 
 // Vídeo da lente como fundo: bulge óptico, aberração cromática e spot de luz seguindo o cursor.
 const frag = /* glsl */ `
@@ -57,8 +58,11 @@ export default class LensField {
     this.mat = mat;
     this.geometry = this.scene.children[0].geometry;
     this.t0 = performance.now();
+    this.quality = 1;
+    this.budget = new FrameBudget(() => { if (this.quality > .55) { this.quality *= .8; this.resize(); } }, 30);
     this.resize();
     this.onMove = (e) => {
+      if (!this.running || document.hidden) return;
       const r = canvas.getBoundingClientRect();
       if (e.clientY < r.top || e.clientY > r.bottom) return;
       this.target.set((e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height);
@@ -73,7 +77,7 @@ export default class LensField {
   }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    this.renderer.setPixelRatio(renderPixelRatio(w, h, 2200000, 1));
+    this.renderer.setPixelRatio(renderPixelRatio(w, h, 2200000, 1) * this.quality);
     this.renderer.setSize(w, h, false);
     this.u.uRes.value.set(w, h);
   }
@@ -81,19 +85,20 @@ export default class LensField {
     if (this.running) return;
     this.running = true;
     this.video.play().catch(() => this.canvas.classList.add("is-fallback"));
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       if (!this.running) return;
+      this.raf = requestAnimationFrame(loop);
+      if (!this.budget.frame(now)) return;
       const t = (performance.now() - this.t0) / 1000;
       this.u.uTime.value = t;
       if (this.hoverTarget < 1) this.target.set(0.5 + Math.sin(t * 0.4) * 0.22, 0.5 + Math.cos(t * 0.3) * 0.15);
-      this.mouse.lerp(this.target, 0.07);
-      this.hover += (this.hoverTarget - this.hover) * 0.05;
+      this.mouse.lerp(this.target, 0.1351);
+      this.hover += (this.hoverTarget - this.hover) * 0.0975;
       this.u.uHover.value = this.hover;
       if (this.video.readyState >= 2) {
         this.renderer.render(this.scene, this.camera);
         if (!this.video.paused) { this.canvas.classList.add("is-ready"); this.canvas.classList.remove("is-fallback"); }
       }
-      this.raf = requestAnimationFrame(loop);
     };
     loop();
   }

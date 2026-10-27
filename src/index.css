@@ -362,7 +362,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 
 /* botão de play: vidro + anel que se desenha */
 .pbtn { --s: 56px; position: relative; display: grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
-.pbtn-core { position: relative; width: calc(var(--s) - 10px); height: calc(var(--s) - 10px); border-radius: 50%; display: grid; place-items: center; color: #fff;
+.pbtn-core { position: absolute; inset: 5px; width: auto; height: auto; border-radius: 50%; display: grid; place-items: center; color: #fff;
   background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.02) 55%), rgba(10,10,12,.42); border: 1px solid rgba(255,255,255,.22);
   backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.30), inset 0 -10px 18px -12px rgba(0,0,0,.55), 0 14px 34px -14px rgba(0,0,0,.85); transition: background .5s var(--ease), border-color .5s, color .4s, transform .6s var(--ease), box-shadow .5s; }
@@ -373,7 +373,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 :is(button, a, .card, .fcard):hover .pbtn-core { background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.05) 55%), rgba(10,10,12,.5); border-color: rgba(255,255,255,.5); color: #fff; transform: scale(1.05); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), inset 0 -10px 18px -12px rgba(0,0,0,.55), 0 20px 46px -14px rgba(0,0,0,.9); }
 .np .pbtn-core { background: radial-gradient(circle at 50% 30%, #ff5a52, var(--red) 60%, #a3152a); border-color: transparent; box-shadow: 0 12px 28px -10px rgba(227,34,44,.9), inset 0 1px 0 rgba(255,255,255,.35); }
 .np-main:hover .pbtn-core { background: #fff; color: var(--red); }
-.card-play { --s: 64px; position: absolute; left: 50%; top: 50%; margin: -32px 0 0 -32px; opacity: 0; transform: scale(.7); transition: opacity .4s, transform .7s var(--ease); }
+.card-play { --s: 64px; position: absolute; left: 50%; top: 50%; translate: -50% -50%; opacity: 0; transform: scale(.7); transition: opacity .4s, transform .7s var(--ease); }
 .card:is(:hover, .hover) .card-play { opacity: 1; transform: none; }
 .fcard-play { --s: 60px; }
 
@@ -873,12 +873,19 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
 .footer-social a:hover { background: #fff; color: #000; border-color: #fff; transform: translateY(-3px); }
 .footer-info p { margin: 0; display: flex; align-items: center; gap: 9px; color: var(--soft); font-size: 14px; }
 .footer-info .ai { color: var(--mute); }
-.footer-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid var(--line); color: var(--mute); font-size: 13px; }
+.footer-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid var(--line); color: var(--mute); font-size: 13px; overflow: clip; isolation: isolate; }
+.footer-row .footer-watermark { z-index: -1; }
+@media (min-width: 761px) { .footer-row { padding-right: 90px; } }
 .footer-made { color: var(--dim); font-size: 10px; }
-.top-btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2); transition: background .3s, color .3s; }
+.footer-return { position: relative; display: flex; justify-content: center; padding: 32px 0 42px; isolation: isolate; }
+.top-btn { position: relative; width: 60px; height: 60px; flex: none; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2); background: var(--bg); transition: background .3s, color .3s; }
+.top-btn::after { content: ""; position: absolute; inset: -6px; border: 1.5px solid var(--red-hi); border-radius: inherit; pointer-events: none; animation: top-ring 2.8s var(--ease-io) infinite paused; }
+.footer-return.is-visible .top-btn::after { animation-play-state: running; }
+.top-btn svg { transition: transform .35s var(--ease); }
+.top-btn:hover svg { transform: translateY(-3px); }
+@keyframes top-ring { 0%, 100% { transform: scale(.98); opacity: .85; } 50% { transform: scale(1.1); opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .top-btn::after { animation: none; } }
 .top-btn:hover { background: #fff; color: #000; }
-/* afasta do orbe da EDITH (canto inferior direito) */
-.footer-row .magnetic { margin-right: clamp(110px, 9vw, 150px); }
 
 /* ───────── player ───────── */
 .player { width: min(1180px, 94vw); max-width: none; max-height: 94vh; padding: 0; border: 0; background: none; color: inherit; overflow: visible; }
@@ -1000,7 +1007,7 @@ html.has-cursor .floater, html.has-cursor .mark3d canvas { cursor: none; }
   .fcard-media img { width: 100%; margin: 0; }
   .fcard-top { left: 18px; right: 18px; }
   .fcard-meta { left: 10px; right: 10px; bottom: 10px; padding: 14px 12px 14px 16px; }
-  .fcard-play { width: 42px; height: 42px; }
+  .fcard-play { --s: 42px; width: var(--s); height: var(--s); }
   .method-pin { height: 100svh; padding: 76px 12px 12px; gap: 12px; }
   .method-head { padding: 0 calc(var(--pad) - 12px); }
   .method-head .display { font-size: 30px; margin-top: 10px; }
@@ -1080,13 +1087,17 @@ html.demo .nav { pointer-events: none; }
 @keyframes fingerTap { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.6); } }
 
 /* ───────── teletransporte ───────── */
-.warp { --flash: 0; position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; }
+.warp { --flash: 0; position: fixed; inset: 0; z-index: 390; pointer-events: none; visibility: hidden; contain: strict; }
 .warp.on { visibility: visible; }
-.warp.is-svg { backdrop-filter: url(#warp); -webkit-backdrop-filter: url(#warp); }
 .warp::after { content: ""; position: absolute; inset: 0; opacity: var(--flash); mix-blend-mode: screen;
   background: radial-gradient(60vmax circle at var(--x, 50%) var(--y, 50%), rgba(255,90,80,.28), rgba(129,18,38,.18) 40%, transparent 70%); }
-.warp-ring { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: 260vmax; height: 260vmax; margin: -130vmax 0 0 -130vmax; border-radius: 50%; transform: scale(0);
+.warp-ring { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; transform: scale(0);
   background: radial-gradient(closest-side, transparent 88%, rgba(255,59,59,.0) 89%, rgba(255,59,59,.55) 95%, rgba(255,255,255,.7) 97.5%, transparent 100%); mix-blend-mode: screen; }
+.warp.on .warp-ring, .warp.on .warp-tears { will-change: transform, opacity; }
+.warp-tears { position: absolute; inset: 0; opacity: 0;
+  background: linear-gradient(transparent 19%, #ff401030 19.2%, transparent 19.8%, transparent 44%, #ffc08a24 44.1%, transparent 45%, transparent 68%, #65dfff24 68.1%, transparent 68.5%); }
+.warp-ring::before, .warp-ring::after { content: ""; position: absolute; inset: 3px -2px; border: 1px solid #ff6a3690; border-radius: inherit; }
+.warp-ring::after { inset: -2px 4px; border-color: #78dfff50; }
 
 /* ───────── som ───────── */
 .snd { display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px 0 14px; border-radius: 99px; color: var(--soft);
@@ -1266,6 +1277,8 @@ html.nav-light:not(.menu-open) .snd.on { color: #0e0e10; }
 }
 
 /* Navigation composition for phones lives in mobile.css. */
+.archive, .clients, .footer { contain: layout style; }
+.stats > div { contain: layout; }
 .fl-nav { display: none; }
 @media (min-width: 761px) {
   .nav-ic, .snd-mobile-wrapper, .nav-links a.link-top { display: none; }

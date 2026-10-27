@@ -1,5 +1,5 @@
 import gsap from "gsap";
-import { createBrain, TUTORIAL, norm } from "./brain";
+import { createBrain, TUTORIAL, norm, retiredExperience } from "./brain";
 import { FAITH_SOURCES, faithContext, faithFallback, studyInvite } from "./faith";
 import { PROJECTS } from "../projects";
 import { SOCIAL, PDF } from "../profile";
@@ -9,7 +9,7 @@ import "./edth.css";
 // EDITH (fala-se "Edíte"): assistente do site por voz e texto, numa barra compacta no canto.
 // Microfone contínuo até o usuário pedir para desligar. Com vídeo aberto ou barra recolhida, só reage
 // quando ouve "Edith" (palavra de ativação). Responde com voz neural jovem (/api/tts) ou a do navegador,
-// age no site (vídeos, seções, tour, orçamento, recado por e-mail, jogos) e conversa livre via /api/edth (Groq).
+// age no site (vídeos, seções, tour, orçamento, recado por e-mail) e conversa livre via /api/edth (Groq).
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const ICON = {
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
@@ -41,6 +41,15 @@ export default function openEdth(opts = {}) {
 
 function create({ actions: app = {}, onClose = () => {} }) {
   const brain = createBrain();
+  let dead = false;
+  const requests = new Set();
+  const request = async (url, options, timeout = 28000) => {
+    const controller = new AbortController();
+    requests.add(controller);
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try { return await fetch(url, { ...options, signal: controller.signal }); }
+    finally { clearTimeout(timer); requests.delete(controller); }
+  };
   const history = [];
   const root = document.createElement("div");
   root.className = "edth";
@@ -111,7 +120,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
   let serverTTS = null; // voz neural do site: null = ainda não testada
   const vbox = root.querySelector(".edth-voices"), vlist = root.querySelector(".edth-vlist"), vhint = root.querySelector(".edth-vhint");
   let voice = null, voices = [];
-  const ptVoices = () => speechSynthesis.getVoices().filter((v) => /^pt[-_](BR)/i.test(v.lang) || /portugu[eê]s.*brasil|brazil/i.test(v.name));
+  const ptVoices = () => window.speechSynthesis?.getVoices().filter((v) => /^pt[-_](BR)/i.test(v.lang) || /portugu[eê]s.*brasil|brazil/i.test(v.name)) || [];
   const rank = (v) => { const n = v.name.toLowerCase(); if (MALE.test(n) && !/female/.test(n)) return 99; const i = FEM.findIndex((f) => n.includes(f)); return (i < 0 ? 50 : i) - (/natural|online|neural/i.test(n) ? 0.5 : 0); };
   const pickVoice = () => {
     voices = ptVoices().sort((a, b) => rank(a) - rank(b));
@@ -119,11 +128,13 @@ function create({ actions: app = {}, onClose = () => {} }) {
     voice = voices.find((v) => v.name === saved) || voices.find((v) => rank(v) < 50) || voices.find((v) => rank(v) < 99) || null;
     renderVoices();
   };
+  let voiceTimer, voicesChanged;
   const voicesReady = new Promise((res) => {
-    if (!("speechSynthesis" in window)) { res(); return; }
+    if (!window.speechSynthesis) { res(); return; }
     const done = () => { pickVoice(); if (voices.length) res(); };
-    done(); speechSynthesis.onvoiceschanged = () => { done(); res(); };
-    setTimeout(res, 1500); // alguns navegadores nunca disparam o evento
+    done(); voicesChanged = () => { if (!dead) done(); res(); };
+    speechSynthesis.addEventListener("voiceschanged", voicesChanged);
+    voiceTimer = setTimeout(res, 1500); // alguns navegadores nunca disparam o evento
   });
   function renderVoices() {
     if (!vlist) return;
@@ -145,7 +156,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
   let wakeUntil = 0, collapsed = false;
   const awake = () => !videoOpen() && !collapsed || Date.now() < wakeUntil;
   // voz: 1º a voz neural do site (/api/tts, sempre igual e realista); sem ela, a voz do navegador
-  let audio = null, speakId = 0;
+  let audio = null, speakId = 0, finishSpeech = null;
   const ttsCache = new Map();
   let ttsFails = 0;
   const spoken = (t) => t.replace(/\bEDITH\b|\bEdith\b/g, "Edíte").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba ").replace(/\n+/g, ". ");
@@ -153,25 +164,35 @@ function create({ actions: app = {}, onClose = () => {} }) {
     if (serverTTS === false) return null;
     if (ttsCache.has(text)) return ttsCache.get(text);
     try {
-      const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const r = await request("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }, 10000);
       if (!r.ok) { if (r.status === 501 || r.status === 404 || ++ttsFails >= 2) serverTTS = false; return null; }
       const url = URL.createObjectURL(await r.blob());
+      if (dead) { URL.revokeObjectURL(url); return null; }
+      if (ttsCache.size >= 20) { const [oldText, oldUrl] = ttsCache.entries().next().value; URL.revokeObjectURL(oldUrl); ttsCache.delete(oldText); }
       serverTTS = true; ttsCache.set(text, url); renderVoices();
       return url;
     } catch { return null; }
   };
-  const stopSpeech = () => { speakId++; try { audio?.pause(); } catch {} if ("speechSynthesis" in window) speechSynthesis.cancel(); };
+  const stopSpeech = () => {
+    speakId++; finishSpeech?.(); finishSpeech = null;
+    try { if (audio) { audio.onplay = audio.onended = audio.onerror = null; audio.pause(); audio = null; } } catch {}
+    window.speechSynthesis?.cancel();
+    speaking = false; afterSpeak = null; sfx.musicHold?.(false, "edth");
+  };
   const speak = async (text) => {
-    if (!text) return;
+    if (!text || dead) return;
     stopSpeech();
     const id = ++speakId, t = spoken(text);
     const begin = () => { speaking = true; abortRec(); setState("speaking"); sfx.musicHold?.(true, "edth"); };
-    const end = () => { if (id !== speakId) return; speaking = false; sfx.musicHold?.(false, "edth"); if (root.dataset.state === "speaking") setState("idle"); afterSpeak?.(); afterSpeak = null; if (micOn && !dead) setTimeout(listen, 250); };
+    let ended = false;
+    const end = () => { if (ended || id !== speakId || dead) return; ended = true; speaking = false; sfx.musicHold?.(false, "edth"); setState("idle"); afterSpeak?.(); afterSpeak = null; if (micOn) setTimeout(listen, 250); };
+    speaking = true; abortRec();
     setState("thinking");
     const url = await neural(t);
-    if (id !== speakId) return;
+    if (id !== speakId || dead) return;
     if (url) {
       await new Promise((res) => {
+        finishSpeech = res;
         audio = new Audio(url); audio.volume = 1;
         audio.onplay = begin;
         audio.onended = audio.onerror = () => { end(); res(); };
@@ -180,7 +201,8 @@ function create({ actions: app = {}, onClose = () => {} }) {
       return;
     }
     await voicesReady;
-    if (!("speechSynthesis" in window) || id !== speakId) { end(); return; }
+    if (!window.speechSynthesis || id !== speakId) { end(); return; }
+    if (!voices.length) { add("bot", "A voz está indisponível neste navegador agora. Você pode continuar a conversa por texto."); end(); return; }
     await new Promise((res) => {
       const u = new SpeechSynthesisUtterance(t);
       // timbre jovem: tom e andamento um pouco acima do padrão; sem voz feminina, sobe mais (paliativo)
@@ -188,6 +210,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
       begin();
       // salvaguarda: alguns navegadores não disparam onend (sem voz instalada, frase longa no Chrome)
       const guard = setTimeout(() => { end(); res(); }, 2500 + t.length * 110);
+      finishSpeech = () => { clearTimeout(guard); res(); };
       u.onend = u.onerror = () => { clearTimeout(guard); end(); res(); };
       speechSynthesis.speak(u);
     });
@@ -197,15 +220,16 @@ function create({ actions: app = {}, onClose = () => {} }) {
   // cada escuta é um objeto próprio; escuta interrompida de propósito (abort) não processa.
   // O navegador encerra a escuta sozinho de tempos em tempos: com o microfone ligado, ela reinicia na hora.
   let rec = null, fails = 0;
-  const abortRec = () => { if (rec) { rec.aborted = true; try { rec.abort(); } catch {} rec = null; } };
+  const abortRec = () => { if (rec) { rec.aborted = true; rec.cancelPending?.(); try { rec.abort(); } catch {} rec = null; } };
   const listen = () => {
-    if (!SR || dead || speaking || !micOn) return;
+    if (!SR || dead || speaking || busy || !micOn || document.hidden) return;
     abortRec();
     const r = (rec = new SR()); r.lang = "pt-BR"; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
     let got = "", idle = 0;
+    r.cancelPending = () => { clearTimeout(idle); got = ""; };
     const flush = () => {
       const text = got.trim(); got = "";
-      if (!text) return;
+      if (!text || r.aborted || dead || !micOn) return;
       const t = norm(text), w = t.match(WAKE);
       if (w) { // "Edith, …": acorda e executa o resto da frase
         const words = text.split(/\s+/), i = words.findIndex((x, k) => WAKE.test(norm(x)) || WAKE.test(norm(x + " " + (words[k + 1] || ""))));
@@ -218,8 +242,10 @@ function create({ actions: app = {}, onClose = () => {} }) {
       }
       if (awake()) { wakeUntil = videoOpen() || collapsed ? Date.now() + 12000 : 0; handle(text); }
     };
-    r.onstart = () => { if (r.aborted) return; fails = 0; setState("listening"); live.hidden = true; };
+    r.onstart = () => { if (r.aborted) return; setState("listening"); live.hidden = true; };
     r.onresult = (e) => {
+      if (r.aborted || dead) return;
+      fails = 0;
       let fin = "", tmp = "";
       for (let i = e.resultIndex; i < e.results.length; i++) (e.results[i].isFinal ? (fin += e.results[i][0].transcript) : (tmp += e.results[i][0].transcript));
       if (tmp && awake()) live.textContent = tmp;
@@ -227,13 +253,14 @@ function create({ actions: app = {}, onClose = () => {} }) {
     };
     r.onerror = (e) => {
       if (e.error === "not-allowed" || e.error === "service-not-allowed") { setMic(false); add("bot", "O microfone está bloqueado. Libere no cadeado da barra de endereço, ou digite."); }
+      else if (e.error === "audio-capture" || (e.error === "network" && ++fails >= 3)) { setMic(false); add("bot", "Não consegui usar o reconhecimento de voz agora. Você pode continuar digitando ou tentar ligar o microfone novamente."); }
     };
     r.onend = () => {
       if (r.aborted || r !== rec) return;
       clearTimeout(idle); flush();
       if (root.dataset.state === "listening") setState("idle");
       rec = null;
-      if (micOn && !dead && !speaking) setTimeout(listen, ++fails > 5 ? 1500 : 150); // reinicia sozinho
+      if (micOn && !dead && !speaking && !busy) setTimeout(listen, 150 + Math.min(++fails, 10) * 150);
     };
     try { r.start(); } catch { rec = null; setTimeout(listen, 600); }
   };
@@ -256,9 +283,11 @@ function create({ actions: app = {}, onClose = () => {} }) {
   cursor.className = "edth-cursor"; cursor.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 3l16 7-7 2-2 7z" fill="#fff" stroke="#0a0a0b" stroke-width="1.2" stroke-linejoin="round"/></svg><i></i>';
   document.body.appendChild(cursor);
   const point = async (el) => {
+    if (dead) return;
     const from = panel.getBoundingClientRect(), r = el.getBoundingClientRect();
     gsap.set(cursor, { x: from.left + 20, y: from.top + 20, opacity: 1 });
     await gsap.to(cursor, { x: r.left + r.width / 2, y: r.top + r.height / 2, duration: 1.05, ease: "power3.inOut" });
+    if (dead) return;
     cursor.classList.remove("click"); void cursor.offsetWidth; cursor.classList.add("click");
     sfx.thock?.(r.left + r.width / 2);
     await new Promise((res) => setTimeout(res, 380));
@@ -280,7 +309,8 @@ function create({ actions: app = {}, onClose = () => {} }) {
   };
 
   // ── executor de ações (tudo validado: nada fora da lista roda) ──
-  async function exec(a, extra) {
+  async function exec(a, extra, epoch = turn) {
+    if (dead) return;
     switch (a.type) {
       case "nav": nav(a.id); break;
       case "play": {
@@ -288,8 +318,10 @@ function create({ actions: app = {}, onClose = () => {} }) {
         if (videoOpen()) app.closePlayer?.();
         resetArchive();
         await new Promise((r) => setTimeout(r, 120));
+        if (dead || epoch !== turn) return;
         const card = document.querySelector(`#arquivo .card[data-id="${p.id}"]`);
-        if (card) { await scrollToEl(card); await point(card.querySelector(".card-media") || card); }
+        if (card) { await scrollToEl(card); if (dead || epoch !== turn) return; await point(card.querySelector(".card-media") || card); }
+        if (dead || epoch !== turn) return;
         window.dispatchEvent(new CustomEvent("demo:open", { detail: { id: p.id } }));
         break;
       }
@@ -298,8 +330,9 @@ function create({ actions: app = {}, onClose = () => {} }) {
         resetArchive();
         const grid = document.querySelector("#arquivo .filters");
         if (grid) await scrollToEl(grid, -140);
+        if (dead || epoch !== turn) return;
         const b = [...document.querySelectorAll("#arquivo .filters button")].find((x) => x.textContent.startsWith(a.cat));
-        if (b) { await point(b); b.click(); }
+        if (b) { await point(b); if (!dead && epoch === turn) b.click(); }
         break;
       }
       case "open": {
@@ -315,8 +348,8 @@ function create({ actions: app = {}, onClose = () => {} }) {
         break;
       }
       case "go": {
-        const ok = /^\/(curriculo\/|playground\/(#[a-z]+)?)$/.test(a.href);
-        if (ok) { const go = () => (location.href = a.href); if (speaking) afterSpeak = go; else setTimeout(go, 900); }
+        const ok = a.href === "/curriculo/";
+        if (ok) { const go = () => { if (!dead && epoch === turn) location.href = a.href; }; if (speaking) afterSpeak = go; else setTimeout(go, 900); }
         break;
       }
       case "tour": app.tour?.(); break;
@@ -350,7 +383,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
         break;
       }
       case "budget": return handle("quero fazer um orçamento", true);
-      case "close": setTimeout(close, 1200); break;
+      case "close": setTimeout(() => { if (epoch === turn) close(); }, 1200); break;
     }
   }
 
@@ -374,37 +407,45 @@ function create({ actions: app = {}, onClose = () => {} }) {
   // ── IA (Groq) para o que o motor local não resolve ──
   async function askAI(text) {
     try {
-      const r = await fetch("/api/edth", { signal: AbortSignal.timeout(28000), method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, history: history.slice(-13, -1) }) });
+      const r = await request("/api/edth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, history: history.slice(-13, -1) }) });
       if (!r.ok) return null;
       const j = await r.json();
       return j.say ? { say: j.say, links: [...(j.links || []).filter(l => Array.isArray(l) && l[1] === "https://wa.me/5512982000062?text=Oi%2C%20Esperan%C3%A7a!"), ...(j.sources || []).filter(s => FAITH_SOURCES[s]).map(s => FAITH_SOURCES[s])], actions: (j.actions || []).map((a) => (a.type === "download" ? { type: "download" } : a)) } : null;
     } catch { return null; }
   }
 
-  let busy = false;
+  let busy = false, turn = 0;
+  const pending = [];
   async function handle(text, silentUser = false) {
-    if (dead || busy) return;
+    if (dead) return;
+    const control = norm(text).trim();
+    if (busy && /^(parar|pare|para|para tudo|silencio|stop|desligar o microfone|desliga o microfone|desligar microfone|desliga microfone)$/.test(control)) {
+      turn++; requests.forEach(r => r.abort()); pending.length = 0; stopSpeech(); app.stopTour?.();
+      if (control.includes("microfone")) setMic(false);
+      setState("idle"); log.querySelectorAll(".typing").forEach(el => el.remove());
+      add("bot", control.includes("microfone") ? "Microfone desligado." : "Parei."); return;
+    }
+    if (busy) { if (pending.length < 3) pending.push([text, silentUser]); else input.value = text; return; }
+    const epoch = ++turn;
+    busy = true; abortRec(); stopSpeech();
+    try {
     if (!silentUser) add("user", text);
     history.push({ role: "user", content: text });
-    let r = null;
+    let r = retiredExperience(text);
     const nt = norm(text);
-    if (videoOpen() && nt.split(" ").length <= 8 && / (proximo|seguinte|outro|pula|passa) /.test(nt)) { // próximo vídeo com o player aberto
+    if (!r && videoOpen() && nt.split(" ").length <= 8 && / (proximo|seguinte|outro|pula|passa) /.test(nt)) { // próximo vídeo com o player aberto
       const cur = document.querySelector("dialog.player[open] #pl-title")?.textContent?.trim();
       const i = PROJECTS.findIndex((p) => p.title === cur || (cur && p.title.startsWith(cur.split("|")[0].trim())));
       const p = PROJECTS[(i + 1) % PROJECTS.length];
       r = { say: `Abrindo ${p.title.split(/\||—/)[0].trim()}.`, actions: [{ type: "play", id: p.id }] };
-    }
-    if (!r && matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches && / (abrir|abre|jogar|jogo|playground) /.test(nt)) {
-      const mode = / memoria /.test(nt) ? "memoria" : / camera /.test(nt) ? "camera" : / foco |giroscopio/.test(nt) ? "foco" : null;
-      if (mode) r = { say: `Abrindo a experiência ${mode === "memoria" ? "Memória" : mode === "camera" ? "Câmera" : "Foco"}.`, actions: [{ type: "go", href: `/playground/#${mode}` }] };
     }
     if (!r) r = studyInvite(text);
     if (!r && !faithContext(text).length) r = brain.reply(text);
     if (!r) {
       setState("thinking");
       const typing = document.createElement("div"); typing.className = "edth-msg bot typing"; typing.innerHTML = "<p><i></i><i></i><i></i></p>"; log.appendChild(typing);
-      busy = true; $(".edth-send").disabled = true; r = await askAI(text); busy = false; $(".edth-send").disabled = false;
-      if (dead) return;
+      r = await askAI(text);
+      if (dead || epoch !== turn) return;
       typing.remove();
       if (!r) r = faithFallback(text) || { say: "Minha conexão com a IA está indisponível no momento. Ainda posso ajudar você a explorar os projetos, serviços e contatos do Alex.", actions: [], chips: ["Ver projetos", "Serviços", "Contato"] };
       if (root.dataset.state === "thinking") setState("idle");
@@ -414,13 +455,20 @@ function create({ actions: app = {}, onClose = () => {} }) {
     history.push({ role: "assistant", content: r.say || "(ação)" });
     if (history.length > 24) history.splice(0, history.length - 24);
     const speech = micOn ? speak(r.say) : Promise.resolve();
-    for (const a of r.actions || []) await exec(a, extra);
+    for (const a of r.actions || []) { if (dead || epoch !== turn) break; await exec(a, extra, epoch); }
+    if (dead || epoch !== turn) return;
     if (extra.links.length) { const l = add("bot", "", { links: extra.links }); if (msg) msg.after(l); }
     await speech;
+    } catch (error) {
+      if (!dead) { setState("idle"); add("bot", "Não consegui concluir esse pedido. Pode tentar novamente ou usar os botões do site."); console.error("[EDITH]", error); }
+    } finally {
+      busy = false;
+      if (!dead && pending.length) { const next = pending.shift(); handle(...next); }
+      else if (!dead && micOn && !speaking) setTimeout(listen, 250);
+    }
   }
 
   // ── abrir / recolher / fechar ──
-  let dead = false;
   const expandSay = () => { collapsed = false; root.classList.remove("collapsed"); };
   const show = (listenNow) => {
     expandSay(); panel.hidden = false; root.classList.add("open");
@@ -428,7 +476,11 @@ function create({ actions: app = {}, onClose = () => {} }) {
   };
   const minimize = () => { collapsed = true; root.classList.add("collapsed"); setExp(false); sayBox.classList.remove("on"); };
   function close() {
-    dead = true; cleanupViewport(); window.removeEventListener("keydown", onEscape); setMic(false); stopSpeech(); sfx.musicHold?.(false, "edth");
+    if (dead) return;
+    dead = true; cleanupViewport(); document.removeEventListener("visibilitychange", onVisibility); window.removeEventListener("keydown", onEscape); setMic(false); stopSpeech(); sfx.musicHold?.(false, "edth");
+    requests.forEach((r) => r.abort()); pending.length = 0; clearTimeout(sayT); clearTimeout(voiceTimer);
+    window.speechSynthesis?.removeEventListener("voiceschanged", voicesChanged);
+    ttsCache.forEach((url) => URL.revokeObjectURL(url)); ttsCache.clear();
     root.classList.add("out"); cursor.remove();
     setTimeout(() => root.remove(), 350);
     instance = null; onClose();
@@ -440,13 +492,15 @@ function create({ actions: app = {}, onClose = () => {} }) {
   input.addEventListener("focus", () => { if (collapsed) expandSay(); });
   const onEscape = (e) => { if (e.key === "Escape" && document.activeElement && root.contains(document.activeElement)) close(); };
   window.addEventListener("keydown", onEscape);
+  const onVisibility = () => { if (document.hidden) { abortRec(); stopSpeech(); } else if (micOn && !dead && !busy) listen(); };
+  document.addEventListener("visibilitychange", onVisibility);
 
   // boas-vindas: curta; sugestões só na primeira vez
   let first = true;
   try { first = !localStorage.getItem(SEEN); localStorage.setItem(SEEN, "1"); } catch {}
   // lista fixa de comandos no topo da conversa completa
   const cmds = $(".edth-cmds");
-  const suggestions = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? ["Ver projetos", "Serviços", "Estudar a Bíblia", "Sobre Ellen White", "Abrir playground", "Quero um orçamento"] : TUTORIAL;
+  const suggestions = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? ["Ver projetos", "Serviços", "Estudar a Bíblia", "Sobre Ellen White", "Vídeo mais recente", "Quero um orçamento"] : TUTORIAL;
   suggestions.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); cmds.appendChild(b); });
   add("bot", "Olá! Sou a EDITH. Posso ajudar com os filmes e serviços do Alex, estudos bíblicos e temas adventistas. Como posso ajudar?", { chips: ["Ver projetos", "Estudar a Bíblia", "Sobre Ellen White"] });
   show();

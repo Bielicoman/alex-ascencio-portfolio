@@ -2,7 +2,7 @@
 // Com RESEND_API_KEY (resend.com, grátis até 3.000/mês) envia daqui; CONTACT_TO troca o destino.
 // Sem chave responde 501 e o site envia pelo FormSubmit direto do navegador (sem cadastro:
 // o primeiro envio manda um e-mail de ativação para o Alex, que só precisa clicar em "Activate").
-const ORIGINS = /^https:\/\/(alex-ascencio-portfolio[\w-]*\.vercel\.app)$|^http:\/\/localhost(:\d+)?$/;
+const ORIGINS = /^https:\/\/(alex-ascencio-portfolio[\w-]*\.vercel\.app)$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,}$/i;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 

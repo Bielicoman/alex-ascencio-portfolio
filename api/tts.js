@@ -7,33 +7,30 @@
 // GET /api/tts?probe=1 testa a síntese e devolve só o diagnóstico (provedor, bytes, erro).
 import crypto from "node:crypto";
 import WebSocket from "ws";
+import { edgeGec } from "./edge-gec.js";
 
-const ORIGINS = /^https:\/\/(alex-ascencio-portfolio[\w-]*\.vercel\.app)$|^http:\/\/localhost(:\d+)?$/;
+const ORIGINS = /^https:\/\/(alex-ascencio-portfolio[\w-]*\.vercel\.app)$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_V = "143.0.3650.75";
 const xml = (s) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
 
 // token Sec-MS-GEC: SHA-256 de (ticks do Windows arredondados a 5 min + token do leitor do Edge)
-function gec() {
-  let s = BigInt(Math.floor(Date.now() / 1000)) + 11644473600n;
-  s -= s % 300n;
-  return crypto.createHash("sha256").update(`${s * 10000000n}${TOKEN}`).digest("hex").toUpperCase();
-}
 
-function edge(text, voice) {
+function edge(text, voice, timeout = 5000) {
   return new Promise((resolve, reject) => {
     const id = crypto.randomUUID().replace(/-/g, "");
-    const url = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TOKEN}&Sec-MS-GEC=${gec()}&Sec-MS-GEC-Version=1-${EDGE_V}&ConnectionId=${id}`;
+    const url = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TOKEN}&Sec-MS-GEC=${edgeGec()}&Sec-MS-GEC-Version=2-${EDGE_V}&ConnectionId=${id}`;
     const ws = new WebSocket(url, {
       headers: {
         Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
         "User-Agent": `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${EDGE_V.split(".")[0]}.0.0.0 Safari/537.36 Edg/${EDGE_V}`,
         Pragma: "no-cache", "Cache-Control": "no-cache", "Accept-Language": "pt-BR,pt;q=0.9",
+        Cookie: `muid=${crypto.randomBytes(16).toString("hex").toUpperCase()};`,
       },
     });
     const chunks = [];
     let finished = false;
-    const timer = setTimeout(() => done(new Error("timeout")), 9000);
+    const timer = setTimeout(() => done(new Error("timeout")), timeout);
     function done(err) {
       if (finished) return; finished = true;
       clearTimeout(timer); try { ws.terminate(); } catch {}
@@ -46,7 +43,8 @@ function edge(text, voice) {
     });
     ws.on("message", (data, isBinary) => {
       if (isBinary) {
-        const len = data.readUInt16BE(0), head = data.subarray(2, 2 + len).toString();
+      if (data.length < 2) return;
+      const len = data.readUInt16BE(0), head = data.subarray(2, 2 + len).toString();
         if (head.includes("Path:audio")) chunks.push(data.subarray(2 + len));
       } else if (String(data).includes("Path:turn.end")) done(chunks.length ? null : new Error("sem áudio"));
     });
@@ -76,8 +74,9 @@ async function synth(text) {
     if (r.ok) return { buf: Buffer.from((await r.json()).audioContent, "base64"), via: "google" };
     errs.push("google " + r.status); console.error("[tts] google", r.status, (await r.text()).slice(0, 200));
   }
-  for (const v of [process.env.EDGE_TTS_VOICE, "pt-BR-ThalitaMultilingualNeural", "pt-BR-FranciscaNeural"].filter(Boolean)) {
-    try { return { buf: await edge(text, v), via: "edge:" + v }; }
+  const deadline = Date.now() + 8500;
+  for (const v of [...new Set([process.env.EDGE_TTS_VOICE, "pt-BR-FranciscaNeural"].filter(Boolean))]) {
+    try { return { buf: await edge(text, v, Math.max(1, Math.min(5000, deadline - Date.now()))), via: "edge:" + v }; }
     catch (e) { errs.push(`edge ${v}: ${e.message}`); console.error("[tts] edge", v, e.message); }
   }
   return { errs };

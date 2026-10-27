@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { localApi } from "./dev/api-plugin.js";
 import { cpSync, existsSync, mkdirSync, createReadStream, readFileSync } from "node:fs";
+import { infoPage, writeInfoPages } from "./src/info-pages.js";
 
 // WASM do rastreador de mãos: servido do node_modules no dev e copiado para dist no build (sem CDN de terceiros)
 const HAND_SRC = "node_modules/@mediapipe/tasks-vision/wasm";
@@ -19,6 +20,11 @@ export default defineConfig(({ command }) => ({
     {
       name: "portfolio-public-assets",
       configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const page = infoPage(req.url.split("?")[0]);
+          if (!page) return next();
+          res.setHeader("Content-Type", "text/html; charset=utf-8"); res.end(page);
+        });
         server.middlewares.use(`/media/hand/${HAND_V}`, (req, res, next) => {
           const f = req.url.split("?")[0].slice(1);
           if (!HAND_FILES.includes(f)) return next();
@@ -31,6 +37,7 @@ export default defineConfig(({ command }) => ({
         for (const p of PUBLISH) if (existsSync(`public/${p}`)) cpSync(`public/${p}`, `dist/${p}`, { recursive: true });
         mkdirSync(`dist/media/hand/${HAND_V}`, { recursive: true });
         for (const f of HAND_FILES) cpSync(`${HAND_SRC}/${f}`, `dist/media/hand/${HAND_V}/${f}`);
+        writeInfoPages("dist");
       },
     },
   ],
@@ -40,8 +47,8 @@ export default defineConfig(({ command }) => ({
   build: {
     chunkSizeWarningLimit: 700,
     rollupOptions: {
-      // páginas: site, currículo digital e playground de gestos
-      input: { main: "index.html", curriculo: "curriculo/index.html", playground: "playground/index.html" },
+      // páginas: portfólio e currículo digital; páginas informativas geradas no fechamento.
+      input: { main: "index.html", curriculo: "curriculo/index.html" },
       output: { manualChunks: { three: ["three"], motion: ["gsap", "lenis"], react: ["react", "react-dom"] } },
     },
   },

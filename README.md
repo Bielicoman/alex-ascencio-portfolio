@@ -61,22 +61,24 @@ O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm 
 `page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })`. Salvar como `public/media/cv/AAAA-MM-DD_alexascencio_curriculo_vNN.pdf`
 (nunca sobrescrever) e atualizar `PDF` em `src/curriculo/main.jsx`. Imagens do currículo em `public/media/cv/img/` (foto 520 px, miniaturas 400 px).
 
-## Controle por gestos e Playground
+## Controle por gestos
 - **Hero → "Controlar com as mãos"** (só desktop): liga a webcam e controla a página. Apontar move o cursor; pinça rápida = clique; pinça + arrasto no vazio = rolar (soltar em movimento arremessa); pinça num flutuante = pegar e jogar; duas pinças = zoom na seção. Esc desliga. Tutorial com checagem ao vivo de cada gesto.
-- **/playground/**: página independente com Partículas (marca AA em 26 mil pontos), Objetos 3D em gravidade zero, Piano, Bateria, Teremim e o jogo "Corte". Funciona com câmera, mouse ou toque.
 - Rastreamento: MediaPipe HandLandmarker (21 pontos, 2 mãos) + filtro One Euro, tudo no navegador. O WASM é copiado de `node_modules/@mediapipe/tasks-vision/wasm` para `dist/media/hand/wasm` no build; o modelo (7,8 MB) vem do CDN oficial do MediaPipe e só baixa quando a câmera é ligada.
 - Gestos avançados (5 dedos classificados por ângulo das falanges, pose estável por 4 quadros): punho + arrasto rola; palma aberta deslizando ← → troca de seção; V segurado 0,7 s = tour; joinha = contato; joinha para baixo = topo; chifre = som; duas palmas paradas = pausar/retomar.
 - Voz (Web Speech API, pt-BR; Chrome/Edge/Safari): "ver demonstração", "ir para filmes", "descer", "subir", "parar", "contato", "desligar"… Liga sozinha se o microfone já foi autorizado; senão, botão "Voz" no HUD.
 - Rosto (FaceLandmarker com blendshapes): paralaxe da hero pela posição da cabeça; piscada longa (0,45–1,8 s) = pausar. Olhar via webcam comum não tem precisão para apontar (erro de 3–5 cm), então não controla o cursor.
-- Corpo (PoseLandmarker lite, 33 pontos): modo "Corpo" no Playground — esqueleto em HUD, ângulos, reator e repulsor (palma aberta + braço esticado).
-- Jogo "Sabre" (Playground): blocos no ritmo, corte na direção da seta com a mão da cor certa (vermelho = esquerda, branco = direita; com uma mão só ou mouse, corta as duas). Três trilhas originais sintetizadas no navegador (`src/playground/music.js`): Neon Corte (synthwave, 118 BPM), Timeline (boom bap, 92 BPM), Hiperdrive (drum & bass, 172 BPM). A mesma partitura gera áudio e mapa de blocos, no relógio do Web Audio. Normal/Expert, combo ×2/×4/×8, energia, rank S–F e recorde local. Sabres 3D: segurando uma caneta/bastão com a mão fechada, a lâmina aponta do mindinho para o indicador usando os pontos 3D da mão (worldLandmarks); corte calculado em 3D (lâmina varrida contra o bloco, profundidade tolerante). Duas mãos no mesmo objeto = um sabre.
 - Cada modelo roda no seu Web Worker (em paralelo); mãos começam na GPU e caem para CPU se a média passar de 40 ms.
-- Código: `src/gesture/` (rastreador, worker, voz, controle da home), `src/playground/` (página, áudio sintetizado e modos).
+- Código: `src/gesture/` (rastreador, worker, voz e controle da home).
 
 ## EDITH · assistente por voz (fala-se "Edíte")
 - Barra compacta no canto inferior direito: orbe = microfone, campo de texto, conversa completa sob demanda (▲) e fechar. Última resposta aparece numa bolha curta que some sozinha.
-- Microfone contínuo: liga ao abrir e só desliga quando o usuário pede ("desliga o microfone") ou fecha. Com vídeo aberto, só reage depois de ouvir "Edith" ("Edith, fecha o vídeo", "Edith, próximo").
-- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes, jogos, som. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas. Perguntas abertas ("que dia é hoje", "quem ganhou o jogo") nunca viram comando: vão para a IA, que sabe a data/hora de Brasília e pesquisa na web quando precisa (ferramenta `browser_search` da Groq; diagnóstico `GET /api/edth?probe=1`).
-- Voz: `api/tts.js` → ElevenLabs (`ELEVENLABS_API_KEY`) › Google (`GOOGLE_TTS_API_KEY`) › voz neural do Edge (Thalita pt-BR, grátis, não oficial; `EDGE_TTS_VOICE`) › voz do navegador. Diagnóstico: `GET /api/tts?probe=1`.
+- Microfone opcional: o visitante liga pelo orbe e desliga quando pede ("desliga o microfone") ou fecha. Com vídeo aberto, só reage depois de ouvir "Edith" ("Edith, fecha o vídeo", "Edith, próximo").
+- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes e efeitos sonoros opcionais. Pedidos pelos jogos antigos recebem uma explicação de que o recurso foi removido e sugestões para explorar os projetos. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas. Perguntas abertas ("que dia é hoje", "quem ganhou o jogo") nunca viram comando: vão para a IA, que sabe a data/hora de Brasília e pesquisa na web quando precisa (ferramenta `browser_search` da Groq; diagnóstico `GET /api/edth?probe=1`).
+- Voz: `api/tts.js` → ElevenLabs (`ELEVENLABS_API_KEY`) › Google (`GOOGLE_TTS_API_KEY`) › voz neural do Edge (Francisca pt-BR, grátis, não oficial; `EDGE_TTS_VOICE`) › voz do navegador. Diagnóstico: `GET /api/tts?probe=1`.
+
+A demonstração do método usa quatro trechos reais de oito segundos em H.264/AAC, carregados apenas ao entrar na tela. Dois buffers fazem o dissolve de imagem e a transição de áudio; o som depende de ativação explícita. O medidor mostra o sinal real. A reprodução para quando a demonstração sai da tela ou a aba fica oculta.
 - Recados: `api/contact.js` envia com Resend (`RESEND_API_KEY`, `CONTACT_TO`); sem chave, o navegador envia pelo FormSubmit para o e-mail do Alex (o primeiro envio pede ativação por e-mail).
 - Dados do Alex (currículo e EDITH): `src/profile.js`.
+
+## Efeitos sonoros
+O controle Som começa desligado na primeira visita e guarda a escolha no navegador. Ele ativa somente efeitos pontuais de interface. Não há trilha musical, pad ou outros geradores contínuos de fundo. Vídeos e a demonstração dos clipes usam seus próprios controles de áudio.

@@ -2,7 +2,7 @@
 // A chave fica só no servidor: Vercel → Environment Variables → GROQ_API_KEY.
 // Sem chave responde 501 e o site segue com o motor local (src/edth/brain.js).
 import { retrieveFaith } from "./faith-retrieval.js";
-import { KNOWLEDGE } from "../src/edth/brain.js";
+import { KNOWLEDGE, retiredExperience } from "../src/edth/brain.js";
 import { faithContext, faithFallback, studyInvite, FAITH_SOURCES } from "../src/edth/faith.js";
 
 // modelos em ordem de preferência; a lista real da conta é consultada e cacheada (a Groq aposenta modelos)
@@ -27,6 +27,7 @@ async function models(key) {
 const now = () => new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const SYSTEM = (context = [], documents = []) => `Agora é ${now()} (horário de Brasília).
 Você é EDITH, assistente virtual do portfólio de Alex Ascencio. Seja cordial, paciente, respeitosa, clara e objetiva. Responda primeiro à pergunta; aprofunde quando solicitado. Não alegue conhecimento absoluto nem invente fatos, citações, versículos, páginas de livros, pesquisas ou experiências pessoais.
+Sua função principal neste site é apresentar os projetos audiovisuais, serviços, experiência, currículo e contatos profissionais do Alex, e ajudar o visitante a navegar e preparar um orçamento. Em perguntas gerais sobre sua função, priorize essas tarefas. Só introduza assuntos religiosos quando o visitante perguntar sobre eles.
 Ajude com a Bíblia e a perspectiva da Igreja Adventista do Sétimo Dia, suas 28 crenças, interpretação historicista de Daniel e Apocalipse, santuário, sábado, salvação, estado dos mortos, Ellen G. White, história, instituições, CPB, Escola Sabatina, ADRA, Desbravadores e Novo Tempo. Distinga o texto bíblico da interpretação adventista e de outras tradições; respeite quem pensa diferente. A Bíblia é a norma de fé. Os escritos de Ellen White não substituem a Bíblia.
 Cite referências bíblicas relevantes; só transcreva citações literais se tiver certeza do texto e da tradução. Para Ellen White, não invente obra, capítulo ou página. Preços da CPB, notícias, dirigentes, estatísticas e datas de eventos exigem consulta atual. Não marque datas para a volta de Jesus. Não faça diagnóstico médico ou prometa cura.
 Para estudos bíblicos, ofereça gentilmente conversar com a Esperança da Novo Tempo, WhatsApp +55 (12) 98200-0062. Devolva "study": true para exibir o contato quando a pessoa quiser estudar; nunca envie mensagem em nome dela. Não confunda esse número com o contato profissional do Alex.
@@ -51,12 +52,13 @@ Ações permitidas:
 - {"type":"filter","cat":"Clipes|Documentário|Cinema|Reality Show|Turnê|Bastidores|Institucional"}
 - {"type":"open","href":"instagram|linkedin|whatsapp|email"}
 - {"type":"download","href":"cv"}  (currículo em PDF)
-- {"type":"go","href":"/curriculo/" ou "/playground/#sabre|particulas|objetos|corpo|piano|bateria|teremim|corte"}
+- {"type":"go","href":"/curriculo/"}
 - {"type":"tour"} (demonstração automática do site)
 - {"type":"budget"} (começar orçamento por voz)
 - {"type":"message"} (a pessoa quer mandar um recado ou e-mail para o Alex)
 - {"type":"close_video"} (fechar o vídeo aberto)
 Use no máximo 2 ações e só quando o usuário pedir algo que elas resolvem. Em conversa comum, "actions": [].
+O Playground e os jogos foram removidos. Se alguém pedir esse recurso, informe a remoção e ofereça os projetos do portfólio, sem gerar ações de navegação para experiências antigas. Não há música de fundo no site; o controle Som se refere apenas a efeitos opcionais.
 Pesquisa na internet: se a resposta depender de informação atual ou que você não sabe com certeza (notícias, clima, jogos, cotações, preços, eventos, pessoas, lugares, qualquer fato fora do site), não chute: responda {"say": "", "search": "<consulta curta em português para a web>", "actions": []}.`;
 
 // busca na web: ferramenta browser_search da Groq nos modelos gpt-oss (ou um sistema "compound", se a conta tiver)
@@ -108,6 +110,8 @@ export default async function handler(req, res) {
   let body = req.body;
   if (typeof body === "string") try { body = JSON.parse(body); } catch { body = {}; }
   if (!body || typeof body !== "object" || (body.mode !== "brief" && (typeof body.message !== "string" || !body.message.trim()))) return res.status(400).json({ error: "mensagem vazia ou inválida" });
+  const retired = retiredExperience(body?.message || "");
+  if (retired) return res.status(200).json(retired);
   const direct = studyInvite(body?.message || "");
   if (direct) return res.status(200).json(direct);
   if (!key) {

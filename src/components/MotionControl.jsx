@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-// Sensor is opt-in; an idle/hidden hero never runs a second animation loop.
+// Ativação automática no celular; nenhuma configuração aparece no layout.
 export default function MotionControl() {
   const [state, setState] = useState("off");
   const cleanup = useRef(() => {});
@@ -28,10 +28,12 @@ export default function MotionControl() {
     if (!window.isSecureContext || !window.DeviceOrientationEvent) { setState("unavailable"); return; }
     try {
       if (typeof DeviceOrientationEvent.requestPermission === "function" && await DeviceOrientationEvent.requestPermission() !== "granted") { setState("denied"); return; }
-      let base = null, frame = 0, received = false;
+      let base = null, frame = 0, received = false, visible = true;
       const hero = document.querySelector(".hero");
+      const observer = new IntersectionObserver(([e]) => { visible = e.isIntersecting; });
+      observer.observe(hero);
       const move = (event) => {
-        if (event.beta == null || event.gamma == null || document.hidden || hero.getBoundingClientRect().bottom < 0) return;
+        if (event.beta == null || event.gamma == null || document.hidden || !visible) return;
         if (!received) { received = true; setState("on"); }
         base ||= { beta: event.beta, gamma: event.gamma };
         cancelAnimationFrame(frame);
@@ -45,12 +47,10 @@ export default function MotionControl() {
       window.addEventListener("deviceorientation", move, { passive: true });
       window.addEventListener("orientationchange", reset);
       setState("waiting");
-      const timeout = setTimeout(() => { if (!received) { cleanup.current(); setState("unavailable"); } }, 3500);
-      cleanup.current = () => { clearTimeout(timeout); cancelAnimationFrame(frame); window.removeEventListener("deviceorientation", move); window.removeEventListener("orientationchange", reset); hero.style.removeProperty("--tilt-x"); hero.style.removeProperty("--tilt-y"); window.dispatchEvent(new CustomEvent("portfolio:tilt", { detail: { x: 0, y: 0 } })); };
+      cleanup.current = () => { observer.disconnect(); cancelAnimationFrame(frame); window.removeEventListener("deviceorientation", move); window.removeEventListener("orientationchange", reset); hero.style.removeProperty("--tilt-x"); hero.style.removeProperty("--tilt-y"); window.dispatchEvent(new CustomEvent("portfolio:tilt", { detail: { x: 0, y: 0 } })); };
     } catch { setState("denied"); }
   }
   self.current = toggle;
-  const label = { off: "Ativar movimento 3D", on: "Movimento 3D ligado", waiting: "Incline o celular…", denied: "Sensor não autorizado · tentar", unavailable: "Sensor indisponível", reduced: "Movimento reduzido ativado" }[state];
   if (state === "unavailable") return null; // sem sensor: não mostra rótulo morto
-  return <button className="motion-control" onClick={toggle} aria-label={label} aria-pressed={state === "on"}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M3 8 1 12l2 4M21 8l2 4-2 4M11 18h2"/></svg><span role="status">{label}</span></button>;
+  return null;
 }

@@ -70,7 +70,6 @@ export default function startGestures({ onEnd = () => {}, tutorial = true, actio
           <button class="gx-mod gx-face" aria-pressed="false">${svg("face", 14)}<span>Rosto</span></button>
         </span>
         <span class="gx-btns">
-          <a class="gx-pg" href="/playground/">Playground ↗</a>
           <button class="gx-help" aria-label="Tutorial">?</button>
           <button class="gx-x" aria-label="Desligar controle por gestos">${svg("close", 14)}</button>
         </span>
@@ -394,7 +393,6 @@ export default function startGestures({ onEnd = () => {}, tutorial = true, actio
     { say: ["pausar gestos", "pausar", "pausa"], run: () => setPaused(true) },
     { say: ["continuar", "retomar", "voltar gestos"], run: () => setPaused(false) },
     { say: ["curriculo", "abrir curriculo"], run: () => (location.href = "/curriculo/") },
-    { say: ["playground", "abrir playground"], run: () => (location.href = "/playground/") },
     { say: ["tutorial", "ajuda", "como funciona"], run: () => openTut() },
     { say: ["desligar", "desligar camera", "sair", "encerrar"], run: () => stop() },
   ];

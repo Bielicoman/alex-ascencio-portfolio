@@ -1,4 +1,4 @@
-// Sound design sintetizado (Web Audio API): nenhum arquivo de áudio, tudo gerado e reativo.
+// Efeitos pontuais opcionais (Web Audio API), sem trilha ou leitos de fundo.
 // Cadeia: fontes → [seco + envio de reverb] → master → compressor/limitador → saída.
 // O navegador só libera áudio depois de um gesto (clique/tecla/toque): até lá tudo é silencioso.
 const PENT = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760]; // dó maior pentatônica
@@ -9,7 +9,7 @@ class Sound {
     this.ctx = null;
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch { /* sem storage */ }
-    this.enabled = saved !== "off";
+    this.enabled = saved === "on";
     this.subs = new Set();
     this.last = {};
     this.unlocked = false;
@@ -22,7 +22,6 @@ class Sound {
     try { localStorage.setItem(KEY, on ? "on" : "off"); } catch { /* sem storage */ }
     if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.9 : 0, this.ctx.currentTime, 0.08);
     if (on) { this.unlock(); this.chime(); }
-    if (this.mus) this.musicApply();
     this.hint?.();
     this.subs.forEach((f) => f(on));
   }
@@ -32,7 +31,6 @@ class Sound {
     if (this.ctx.state === "suspended") this.ctx.resume().then(() => this.hint());
     this.unlocked = true;
     this.hint();
-    if (this.musicWant && !this.mus?.timer) this.music(true);
   }
   ok() { return this.enabled && this.ctx && this.ctx.state === "running"; }
   // tenta começar sem gesto: o navegador libera quando o site tem permissão de som
@@ -40,7 +38,7 @@ class Sound {
   tryAutoplay() {
     if (!this.enabled) return Promise.resolve(false);
     if (!this.ctx) this.build();
-    const done = () => { const on = this.ctx.state === "running"; if (on) { this.unlocked = true; if (this.musicWant && !this.mus?.timer) this.music(true); } this.hint(); return on; };
+    const done = () => { const on = this.ctx.state === "running"; if (on) this.unlocked = true; this.hint(); return on; };
     return Promise.race([this.ctx.resume().then(done, done), new Promise((r) => setTimeout(() => r(done()), 400))]);
   }
   // limita a taxa de disparo por tipo (ms)
@@ -67,7 +65,6 @@ class Sound {
     const gb = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate), gd = gb.getChannelData(0);
     for (let i = 0, v = 0; i < gd.length; i++) { if (i % 37 === 0) v = Math.random() * 2 - 1; gd[i] = v; }
     this.crush = gb;
-    this.beds();
     document.addEventListener("visibilitychange", () => { if (!this.ctx) return; document.hidden ? this.ctx.suspend() : this.enabled && this.ctx.resume(); });
   }
 
@@ -89,46 +86,13 @@ class Sound {
   src(buf, t, dur) { const s = this.ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.start(t, Math.random()); s.stop(t + dur); return s; }
   panX(x) { return x == null ? 0 : (x / innerWidth) * 1.4 - 0.7; }
 
-  /* ── camadas contínuas: ar do scroll, pad da marca, giro do 3D ── */
-  beds() {
-    const ctx = this.ctx;
-    const mk = (buf, type, f, q) => {
-      const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
-      const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
-      const g = ctx.createGain(); g.gain.value = 0;
-      s.connect(fl).connect(g); s.start();
-      return { fl, g };
-    };
-    this.air = mk(this.noise, "lowpass", 300, 0.7);
-    this.out(this.air.g, { rev: 0.25 });
-    this.whirr = mk(this.noise, "bandpass", 400, 4);
-    this.out(this.whirr.g, { rev: 0.3 });
-    // pad: acorde de lá menor com 9ª (A2 E3 B3 C4) em serras desafinadas, filtrado
-    this.pad = { g: ctx.createGain(), fl: ctx.createBiquadFilter() };
-    this.pad.g.gain.value = 0; this.pad.fl.type = "lowpass"; this.pad.fl.frequency.value = 500; this.pad.fl.Q.value = 0.8;
-    [110, 164.81, 246.94, 261.63].forEach((f, i) => [-7, 7].forEach((det) => { const o = ctx.createOscillator(); o.type = i === 0 ? "triangle" : "sawtooth"; o.frequency.value = f; o.detune.value = det; o.connect(this.pad.fl); o.start(); }));
-    this.pad.fl.connect(this.pad.g);
-    this.out(this.pad.g, { rev: 0.8 });
-  }
-  scrollAir(v) { // v = velocidade do Lenis (px/quadro)
-    if (!this.ok()) return;
-    const a = Math.min(1, Math.abs(v) / 60), t = this.ctx.currentTime;
-    this.air.g.gain.setTargetAtTime(a * 0.045, t, 0.12);
-    this.air.fl.frequency.setTargetAtTime(260 + a * 2600, t, 0.15);
-  }
-  padLevel(v) { // 0–1: partículas se organizando na marca
-    if (!this.ok()) return;
-    const t = this.ctx.currentTime;
-    this.pad.g.gain.setTargetAtTime(v * 0.012, t, 0.3); // leito: RMS ~ −32 dB no máximo
-    this.pad.fl.frequency.setTargetAtTime(380 + v * 1500, t, 0.3);
-    if (v > 0.97 && this.rate("resolve", 4000)) this.shimmer(0.028, 0);
-  }
-  spin(speed) { // giro da marca 3D (rad/s)
-    if (!this.ok()) return;
-    const s = Math.min(1, Math.abs(speed) / 6), t = this.ctx.currentTime;
-    this.whirr.g.gain.setTargetAtTime(s * 0.09, t, 0.06);
-    this.whirr.fl.frequency.setTargetAtTime(220 + s * 1400, t, 0.08);
-  }
+  // Compatibilidade com interações visuais: nenhum gerador contínuo é criado.
+  scrollAir() {}
+  padLevel() {}
+  spin() {}
+  music() {}
+  musicHold() {}
+  hint() { window.dispatchEvent(new CustomEvent("sfx:hint", { detail: false })); }
 
   /* ── eventos ── */
   tick(f = 2200, x, g = 0.03) {
@@ -236,11 +200,6 @@ class Sound {
     for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
     const w = this.ctx.createWaveShaper(); w.curve = c; w.oversample = "4x"; return w;
   }
-  duck(depth = 0.15, hold = 1.2) { // abaixa os leitos contínuos durante o impacto
-    const t = this.ctx.currentTime;
-    for (const b of [this.air.g, this.pad.g, this.whirr.g]) { b.gain.cancelScheduledValues(t); b.gain.setTargetAtTime(b.gain.value * depth, t, 0.02); }
-    setTimeout(() => this.scrollAir(0), hold * 1000);
-  }
   // estalo elétrico: micro-rajadas de ruído agudo com ganhos e filtros aleatórios
   crackle(dur = 0.6, g = 0.08, x, at = this.ctx.currentTime, density = 70) {
     const n = Math.round(dur * density);
@@ -259,7 +218,6 @@ class Sound {
   teleport(x) { // "speed force": carga elétrica → estrondo sônico no salto → passagem com Doppler → estalos morrendo
     if (!this.ok()) return;
     const ctx = this.ctx, t0 = ctx.currentTime, hit = t0 + 0.28;
-    setTimeout(() => this.duck(0.2, 1), 250);
     // carga: zumbido de campo (60/120 Hz com tremolo de 28 Hz) + estalos + zaps
     const hum = ctx.createGain(); hum.gain.setValueAtTime(0.0001, t0); hum.gain.exponentialRampToValueAtTime(0.09, hit); hum.gain.exponentialRampToValueAtTime(0.0001, hit + 0.7);
     // tremolo num estágio próprio (0–1), antes do envelope — modular o envelope direto somava ±0,5 ao ganho
@@ -299,7 +257,7 @@ class Sound {
     [55, 82.41, 110, 164.81].forEach((f, i) => [-14, 9].forEach((det) => { const o = this.osc("sawtooth", f, hit); o.detune.value = det + i * 3; o.connect(braam); o.start(hit); o.stop(hit + 2.4); }));
     braam.connect(bd).connect(be); this.out(be, { rev: 0.85 });
   }
-  // ── abertura: trilha própria, sutil, sincronizada com a animação (sem o impacto do teleporte) ──
+  // ── abertura: efeitos pontuais sincronizados, sem acompanhamento musical ──
   // fase 1 — logo em wipe + timecode contando
   introPre(dur = 1.4) {
     if (!this.ok()) return;
@@ -326,17 +284,6 @@ class Sound {
     const we = ctx.createGain(); we.gain.setValueAtTime(0.0001, open); we.gain.exponentialRampToValueAtTime(0.14, open + 0.18); we.gain.exponentialRampToValueAtTime(0.0001, open + 1.4);
     w.connect(we); this.out(we, { rev: 0.35 }); w.start(open); w.stop(open + 1.5);
     setTimeout(() => this.whoosh(1.1, false, 0.04), openAt * 1000);
-    // letras: plucks afinados, do centro para fora (mesma ordem da animação)
-    for (let i = 0; i < letters; i++) {
-      const d = Math.abs(i - (letters - 1) / 2), at = open + 0.35 + d * 0.055;
-      const o = this.osc("triangle", PENT[(2 + Math.round(d)) % PENT.length], at), e = this.env(0.012, 0.003, 0.35, at);
-      o.connect(e); this.out(e, { rev: 0.55, pan: (i / (letters - 1)) * 1.2 - 0.6 }); o.start(at); o.stop(at + 0.4);
-    }
-    // foto: pad quente (lá menor com 9ª) entrando devagar
-    const pad = ctx.createBiquadFilter(); pad.type = "lowpass"; pad.frequency.setValueAtTime(300, open + 0.3); pad.frequency.exponentialRampToValueAtTime(1400, open + 2.2);
-    const pe = ctx.createGain(); pe.gain.setValueAtTime(0.0001, open + 0.3); pe.gain.exponentialRampToValueAtTime(0.022, open + 1.4); pe.gain.exponentialRampToValueAtTime(0.0001, open + 4.2);
-    [220, 261.63, 329.63, 493.88].forEach((f) => [-6, 6].forEach((det) => { const o = this.osc("sawtooth", f, open + 0.3); o.detune.value = det; o.connect(pad); o.start(open + 0.3); o.stop(open + 4.4); }));
-    pad.connect(pe); this.out(pe, { rev: 0.9 });
     // chips surgindo: pings de vidro bem leves, em cascata
     [0, 0.09, 0.18, 0.27, 0.36].forEach((d, i) => {
       const at = open + 0.85 + d, o = this.osc("sine", 2637 + i * 220, at), e = this.env(0.006, 0.003, 0.4, at);
@@ -348,94 +295,6 @@ class Sound {
     this.whoosh(0.55, true, 0.025);
   }
 }
-
-/* ───────── trilha: groove cinematográfico gerado ao vivo (lá menor, 96 BPM, Am–F–C–G) ───────── */
-const BPM = 96, STEP = 60 / BPM / 4;
-const CHORDS = [
-  { root: 110, pad: [220, 261.63, 329.63] },   // Am
-  { root: 87.31, pad: [174.61, 220, 261.63] }, // F
-  { root: 130.81, pad: [196, 261.63, 329.63] }, // C
-  { root: 98, pad: [196, 246.94, 293.66] },    // G
-];
-const KICK = [0, 7, 8, 10], CLAP = [4, 12], BASS = [0, 3, 6, 8, 11, 14];
-Object.assign(Sound.prototype, {
-  musicBus() {
-    if (this.mus) return this.mus;
-    const ctx = this.ctx, g = ctx.createGain(); g.gain.value = 0.0001;
-    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 30;
-    g.connect(hp).connect(this.master);
-    const rv = ctx.createGain(); rv.gain.value = 0.18; g.connect(rv).connect(this.revIn);
-    this.mus = { g, on: false, want: false, step: 0, next: 0, timer: null, level: 0.25, hold: this.holds?.size ? 0 : 1 }; // ~ −29 dB RMS: fundo
-    return this.mus;
-  },
-  // "want": zona da trilha (scroll); "hold": 0 enquanto um vídeo está aberto
-  // aviso "toque para ouvir": a trilha quer tocar, mas o navegador ainda não liberou o áudio (rolar não conta como gesto)
-  hint() { const show = this.enabled && !!this.musicWant && !(this.ctx && this.ctx.state === "running"); window.dispatchEvent(new CustomEvent("sfx:hint", { detail: show })); },
-  music(want) { this.musicWant = want; this.hint(); if (!this.ctx) return; const m = this.musicBus(); m.want = want; this.musicApply(); },
-  // trava por dono: o player e a EDITH seguram a música de forma independente (a EDITH soltar não religa a trilha com o vídeo aberto)
-  musicHold(h, who = "player") {
-    this.holds = this.holds || new Set();
-    h ? this.holds.add(who) : this.holds.delete(who);
-    if (!this.ctx) return;
-    const m = this.musicBus(); m.hold = this.holds.size ? 0 : 1; this.musicApply();
-  },
-  musicApply() {
-    const m = this.mus, t = this.ctx.currentTime, on = this.enabled && m.want && m.hold;
-    if (on) {
-      if (!m.timer) { m.next = t + 0.06; m.timer = setInterval(() => this.musicTick(), 25); }
-      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(m.level, t, 0.9); // fade-in ~2,5 s
-    } else if (m.timer) {
-      m.g.gain.cancelScheduledValues(t); m.g.gain.setTargetAtTime(0.0001, t, 0.55); // fade-out ~1,8 s
-      clearTimeout(m.stopT); m.stopT = setTimeout(() => { if (!(this.enabled && m.want && m.hold)) { clearInterval(m.timer); m.timer = null; } }, 2600);
-    }
-  },
-  musicTick() { // agendador com antecipação de 120 ms
-    const m = this.mus;
-    while (m.next < this.ctx.currentTime + 0.12) { this.musicStep(m.step, m.next); m.next += STEP; m.step++; }
-  },
-  musicStep(n, t) {
-    const s = n % 16, bar = Math.floor(n / 16), ch = CHORDS[bar % 4], full = bar % 16 >= 4, g = this.mus.g;
-    const tone = (type, f, at, peak, dec, dest = g, fl) => {
-      const o = this.osc(type, f, at), e = this.env(peak, 0.004, dec, at);
-      if (fl) { o.connect(fl); fl.connect(e); } else o.connect(e);
-      e.connect(dest); o.start(at); o.stop(at + dec + 0.05);
-    };
-    if (KICK.includes(s)) {
-      const o = this.osc("sine", 150, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.12);
-      const e = this.env(0.9, 0.002, 0.34, t); o.connect(e).connect(g); o.start(t); o.stop(t + 0.4);
-    }
-    if (full && CLAP.includes(s)) {
-      const nz = this.src(this.noise, t, 0.2), b = this.ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 1800; b.Q.value = 0.9;
-      const e = this.env(0.32, 0.002, 0.16, t); nz.connect(b).connect(e).connect(g);
-      tone("triangle", 190, t, 0.12, 0.08);
-    }
-    { // hats: 16 avos com acento no contratempo; aberto no passo 14
-      const open = s === 14, nz = this.src(this.noise, t, open ? 0.3 : 0.05), h = this.ctx.createBiquadFilter(); h.type = "highpass"; h.frequency.value = 7500;
-      const e = this.env((s % 4 === 2 ? 0.1 : 0.045) * (open ? 1.4 : 1), 0.001, open ? 0.24 : 0.035, t); nz.connect(h).connect(e).connect(g);
-    }
-    if (BASS.includes(s)) {
-      const f = ch.root * (s === 6 || s === 14 ? 2 : 1), lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
-      lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(160, t + 0.2);
-      tone("sawtooth", f, t, 0.22, 0.24, g, lp);
-      tone("sine", f / 2, t, 0.3, 0.26);
-    }
-    if (s === 0) { // pad do compasso, com respiração no kick (sidechain)
-      const dur = STEP * 16, lp = this.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = 0.6;
-      const e = this.ctx.createGain(); e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.07, t + 0.5);
-      KICK.forEach((k) => { const kt = t + k * STEP; e.gain.setValueAtTime(0.02, kt + 0.001); e.gain.linearRampToValueAtTime(0.07, kt + 0.28); });
-      e.gain.setTargetAtTime(0.0001, t + dur - 0.2, 0.08);
-      ch.pad.forEach((f) => [-9, 9].forEach((d) => { const o = this.osc("sawtooth", f, t); o.detune.value = d; o.connect(lp); o.start(t); o.stop(t + dur + 0.3); }));
-      lp.connect(e).connect(g);
-      const sp = this.ctx.createGain(); sp.gain.value = 0.5; e.connect(sp).connect(this.revIn);
-    }
-    if (full && s % 2 === 0) { // arpejo de pluck, duas oitavas acima
-      const f = ch.pad[(s / 2) % 3] * (s % 8 === 6 ? 4 : 2), e = this.env(0.05, 0.002, 0.18, t), o = this.osc("triangle", f, t);
-      const p = this.ctx.createStereoPanner(); p.pan.value = ((s / 2) % 3 - 1) * 0.5;
-      o.connect(e).connect(p).connect(g); const sp = this.ctx.createGain(); sp.gain.value = 0.6; p.connect(sp).connect(this.revIn);
-      o.start(t); o.stop(t + 0.22);
-    }
-  },
-});
 
 export const sfx = new Sound();
 if (typeof window !== "undefined") window.__sfx = sfx; // medição de nível nos testes

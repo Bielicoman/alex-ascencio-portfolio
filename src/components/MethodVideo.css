@@ -1,0 +1,17 @@
+.method-video { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: #000; isolation: isolate; }
+.method-video .method-video-layer { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .4s cubic-bezier(.45,0,.55,1); }
+.method-video-signature { position: absolute; z-index: 3; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: #08080a; opacity: 0; pointer-events: none; transition: opacity .4s cubic-bezier(.45,0,.55,1); }
+.method-video-signature svg { width: clamp(56px, 22%, 118px); height: auto; color: var(--red, #e3222c); fill: currentColor; }
+.method-video-signature span { font: 600 10px/1.3 var(--mono, monospace); letter-spacing: .18em; color: #eee; }
+.method-video.is-end .method-video-signature { opacity: 1; }
+.method-video-controls { position: absolute; z-index: 4; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+.method-video-controls button { min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; border-radius: 99px; border: 1px solid #ffffff30; background: #101013e8; color: #f3f3f5; font: 500 10px/1.2 var(--sans, system-ui); transition: background .2s, border-color .2s; }
+.method-video-controls button:hover { background: #28282df2; border-color: #ffffff70; }
+.method-video-controls button:focus-visible { outline: 2px solid var(--red-hi, #ff3b3b); outline-offset: 3px; }
+.method-video-controls button[aria-pressed=true] { border-color: #ff666c80; }
+.method-video-error { position: absolute; z-index: 2; inset: 12px 12px auto; color: #eee; font: 11px/1.45 var(--sans, system-ui); text-align: center; padding: 8px; border-radius: 8px; background: #101013eb; }
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1024px) {
+  .method-video-controls { right: 6px; bottom: 6px; gap: 4px; }
+  .method-video-controls button { min-height: 44px; min-width: 44px; padding-inline: 9px; font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .method-video .method-video-layer, .method-video-signature { transition: none; } }

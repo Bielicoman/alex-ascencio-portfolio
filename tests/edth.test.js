@@ -2,6 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import handler from "../api/edth.js";
 import { faithContext, studyInvite, HOPE_LINK } from "../src/edth/faith.js";
+import { createBrain } from "../src/edth/brain.js";
+
+test("perguntas gerais não viram ajuda da assistente nem biografia do Alex", () => {
+  const brain = createBrain();
+  for (const text of ["Como funciona uma lente de cinema?", "Como funciona um sensor?", "Quem é Einstein?"]) assert.equal(brain.reply(text), null, text);
+  assert.ok(brain.reply("Quem é o Alex?").say);
+  assert.ok(brain.reply("Como funciona o site?").chips.length);
+  assert.equal(brain.reply("Assistir Ele É").actions[0].id, 34);
+  assert.equal(brain.reply("Assistir Voltemos ao Início").actions[0].id, 35);
+});
 
 async function request(body, method="POST") {
   const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(data){this.data=data;return this;}};

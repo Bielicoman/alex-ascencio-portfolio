@@ -1,0 +1,29 @@
+.mobile-dock { display: none; }
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1024px) {
+  html body #root .nav, html body #root .edth-bubble { display: none !important; }
+  .mobile-dock {
+    --dock-red: #ff666c;
+    position: fixed; z-index: 100; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom));
+    width: auto; max-width: 640px; height: 68px; margin-inline: auto;
+    display: grid; grid-template-columns: minmax(0,1fr) 50px; align-items: center; gap: 6px; padding: 6px;
+    border: 1px solid #ffffff1c; border-radius: 22px; background: #101013f7;
+    box-shadow: 0 10px 28px #0007, inset 0 1px 0 #ffffff05;
+  }
+  .mobile-dock-links { display: grid; grid-template-columns: repeat(6,minmax(44px,1fr)); gap: 0; overflow-x: auto; scrollbar-width: none; }
+  .mobile-dock-links::-webkit-scrollbar { display: none; }
+  .mobile-dock-links a { min-width: 44px; min-height: 54px; display: grid; align-content: center; justify-items: center; gap: 5px; border-radius: 15px; color: #b2b2bd; font: 500 8.5px/1.2 var(--sans); white-space: nowrap; transition: background .25s var(--ease), color .25s var(--ease); }
+  .mobile-dock-links a[aria-current] { color: var(--dock-red); background: #e3222c19; box-shadow: inset 0 0 0 1px #ff666c24; }
+  .mobile-dock-links a:active { background: #ffffff12; }
+  .mobile-dock :focus-visible { outline: 2px solid var(--dock-red); outline-offset: -2px; }
+  .mobile-dock-assistant { width: 50px; height: 54px; display: grid; justify-items: center; align-content: center; gap: 4px; border-radius: 16px; border-left: 1px solid #ffffff12; font: 600 8px/1.1 var(--mono); letter-spacing: .06em; color: #eea5a9; }
+  .mobile-dock-orb { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 35% 28%,#ffe1df 0%,#ff8a8b 18%,#e3222c 55%,#86111a 100%); box-shadow: 0 0 0 3px #e3222c15; animation: dock-orb 3s cubic-bezier(.45,0,.55,1) infinite; }
+  .mobile-dock-assistant[aria-expanded=true] { background: #e3222c15; }
+  @keyframes dock-orb { 0%,100% { transform: scale(.96); } 50% { transform: scale(1.04); } }
+  body { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .mobile-dock-orb { animation: none; } }
+@media (max-width: 350px) {
+  .mobile-dock-links { scrollbar-width: thin; scrollbar-color: #ffffff40 transparent; }
+  .mobile-dock-links::-webkit-scrollbar { display: block; height: 2px; }
+  .mobile-dock-links::-webkit-scrollbar-thumb { background: #ffffff40; border-radius: 99px; }
+}

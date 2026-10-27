@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { tc, mmss, reducedMotion, useMedia } from "../util";
 import { sfx } from "./Sound";
+import MethodVideo, { METHOD_MEDIA_IDS } from "./MethodVideo";
+import "./Method.css";
 
 // Sequência de 60 s usada nas duas simulações (Premiere no desktop, CapCut no celular).
-const V1 = [[0, 1, 24], [1, 2, 14], [2, 3, 7], [3, 4, 16], [4, 10, 1], [10, 17, 21], [17, 23, 12], [23, 30, 18], [30, 37, 13], [37, 44, 23], [44, 50, 2], [50, 56, 9]];
-const V2 = [[8, 12, 4], [25, 29, 11], [33, 37.5, 5], [46, 50, 17]];
-const V3 = [[18, 21, 3], [40, 42.5, 22]];
+const ORDER = [...METHOD_MEDIA_IDS];
+for (let i = ORDER.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ORDER[i], ORDER[j]] = [ORDER[j], ORDER[i]]; }
+const V1 = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 10], [10, 17], [17, 23], [23, 30], [30, 37], [37, 44], [44, 50], [50, 56]].map(([a,b],i)=>[a,b,ORDER[i%ORDER.length]]);
+const V2 = [[8, 12], [25, 29], [33, 37.5], [46, 50]].map(([a,b],i)=>[a,b,ORDER[(i+3)%ORDER.length]]);
+const V3 = [[18, 21], [40, 42.5]].map(([a,b],i)=>[a,b,ORDER[(i+2)%ORDER.length]]);
+const shotAt = time => time >= 56 ? "end" : (V3.find(([a,b])=>time>=a&&time<b) || V2.find(([a,b])=>time>=a&&time<b) || V1.find(([a,b])=>time>=a&&time<b) || V1[0])[2];
+const BOUNDARIES = [...new Set([...V1,...V2,...V3].flatMap(([a,b])=>[a,b]))].sort((a,b)=>a-b);
+const AUDIO_CUTS = BOUNDARIES.slice(0,-1).map((a,i)=>[a,BOUNDARIES[i+1],shotAt(a+.01)]);
 const FX = [2, 23, 44];
-const A1 = [[6, 16], [19, 29], [31.5, 43], [45, 55]];
 export const RULES = [
   [0, 4, "Abertura em staccato", "3 a 4 planos de ~1 s, com flash de 2 a 3 frames no meio, antes de assentar em planos de 4 a 7 s."],
   [4, 8, "A imagem vem primeiro", "O plano estabelece o lugar. A fala só entra em A1 aos 6 s, quando o espectador já sabe onde está."],
@@ -20,13 +26,7 @@ export const RULES = [
 ];
 const DUR = 60;
 const pct = (a) => `${(a / DUR) * 100}%`;
-const clipName = (id) => `A0${(id % 7) + 1}_C0${String(id).padStart(2, "0")}.mov`;
-// nível pseudo-aleatório estável para os medidores (dBFS normalizado 0–1)
-const level = (t, ch) => {
-  const speech = A1.some(([a, b]) => t >= a && t < b);
-  const base = 0.46 + (speech ? 0.22 : 0);
-  return Math.min(0.97, base + Math.abs(Math.sin(t * 7.3 + ch * 1.9) * Math.cos(t * 3.1 + ch)) * 0.26);
-};
+const clipName = (id) => `${id}.mp4`;
 
 function Ico({ d, size = 14, fill }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill ? "currentColor" : "none"} stroke={fill ? "none" : "currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
@@ -68,6 +68,12 @@ export default function Method() {
   const [rule, setRule] = useState(0);
   const [shot, setShot] = useState(V1[0][2]);
   const root = useRef(null);
+  useEffect(() => {
+    const meters = root.current.querySelectorAll(".js-meter");
+    const update = e => meters.forEach(n => n.style.setProperty("--lv", Math.max(0,Math.min(1,Number(e.detail)||0))));
+    window.addEventListener("method:level", update);
+    return () => window.removeEventListener("method:level", update);
+  }, [mobile]);
 
   useEffect(() => {
     if (mobile) return;
@@ -83,10 +89,9 @@ export default function Method() {
         q(".js-mtc").forEach((n) => (n.textContent = tc(t)));
         q(".js-mmss").forEach((n) => (n.textContent = mmss(t)));
         q(".js-cctrack").forEach((n) => (n.style.transform = `translate3d(${(-t * +n.dataset.pps).toFixed(1)}px,0,0)`));
-        q(".js-meter").forEach((n, i) => n.style.setProperty("--lv", level(t, i % 2).toFixed(3)));
         setRule(Math.max(0, RULES.findIndex(([a, b]) => t >= a && t < b)));
         const ci = V1.findIndex(([a, b]) => t >= a && t < b);
-        setShot(t >= 56 ? "end" : (V1[ci] || V1[V1.length - 1])[2]);
+        setShot(shotAt(t));
         if (ci !== clipIdx) { if (clipIdx !== -1) sfx.splice(innerWidth * (0.25 + (t / DUR) * 0.5)); q(".js-v1 > .is-sel").forEach((n) => n.classList.remove("is-sel")); q(".js-v1").forEach((n) => n.children[ci]?.classList.add("is-sel")); clipIdx = ci; }
         const g = FX.some((f) => Math.abs(t - f) < 0.25);
         if (g && !glitching) sfx.glitch(0.05, 4);
@@ -100,9 +105,7 @@ export default function Method() {
   }, [mobile]);
 
   const [, , title, text] = RULES[rule];
-  const frame = shot === "end"
-    ? <div className="monitor-end"><svg viewBox="0 0 262 151" aria-hidden="true"><use href="#aa-mark" /></svg><span>ALEX ASCENCIO</span></div>
-    : <img key={shot} src={`/media/${shot}.webp`} alt="" />;
+  const frame = <MethodVideo shot={shot}/>;
 
   return (
     <section id="metodo" className="method" ref={root}>
@@ -119,32 +122,28 @@ export default function Method() {
 
 function MobileMethod() {
   const [time, setTime] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(() => !reducedMotion());
+  const [visible, setVisible] = useState(false);
+  const host = useRef(null);
   useEffect(() => {
-    if (!playing) return;
+    let inView = false;
+    const update = () => setVisible(inView && !document.hidden);
+    const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; update(); }, { threshold: .25 });
+    io.observe(host.current); document.addEventListener("visibilitychange", update);
+    return () => { io.disconnect(); document.removeEventListener("visibilitychange", update); };
+  }, []);
+  useEffect(() => {
+    if (!playing || !visible) return;
     let last = performance.now();
     const timer = setInterval(() => {
       const now = performance.now(), delta = (now - last) / 1000; last = now;
-      if (!document.hidden) setTime(t => Math.min(60, t + delta));
+      if (!document.hidden) setTime(t => (t + Math.min(delta, .25)) % 60);
     }, 100);
-    const pause = () => { if (document.hidden) setPlaying(false); };
-    document.addEventListener("visibilitychange", pause);
-    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", pause); };
-  }, [playing]);
-  useEffect(() => { if (time >= 60) setPlaying(false); }, [time]);
+    return () => clearInterval(timer);
+  }, [playing, visible]);
   const active = time >= 60 ? RULES.length - 1 : Math.max(0, RULES.findIndex(([a,b]) => time >= a && time < b));
-  const clip = V1.find(([a,b]) => time >= a && time < b);
-  return <div className="mobile-method">
-    <div className="mobile-method-screen">
-      {clip ? <img src={`/media/${clip[2]}.webp`} alt="Exemplo visual da etapa de edição" /> : <svg viewBox="0 0 262 151" aria-label="Assinatura Alex Ascencio"><use href="#aa-mark"/></svg>}
-      <span className="mobile-method-badge">Anatomia de uma edição · demonstração</span>
-      <button aria-label={playing ? "Pausar demonstração" : "Reproduzir demonstração"} onClick={() => { if (time >= 60) setTime(0); setPlaying(!playing); }}>{playing ? "Pausar" : "Reproduzir"}<Ico d={G.play} size={14} fill/></button>
-    </div>
-    <div className="mobile-method-scrub"><span>{mmss(time)}</span><input type="range" min="0" max="60" step=".1" value={time} aria-label="Explorar os 60 segundos da edição" onChange={e => {setPlaying(false); setTime(+e.target.value);}}/><span>01:00</span></div>
-    <div className="mobile-method-tracks" aria-hidden="true"><span>IMAGEM</span><div>{V1.map(([a,b,id]) => <i key={a} style={{flex:b-a, backgroundImage:`url(/media/${id}.webp)`}}/>)}</div><span>ÁUDIO</span><div className="mobile-method-audio"/></div>
-    <div className="mobile-method-copy" aria-live="polite"><span className="mono">Etapa {active+1} / {RULES.length}</span><h3>{RULES[active][2]}</h3><p>{RULES[active][3]}</p></div>
-    <div className="mobile-method-chapters" role="group" aria-label="Etapas da edição">{RULES.map(([a,b,t],i) => <button key={a} aria-pressed={i===active} onClick={() => {setPlaying(false);setTime(a);}}><span>0{i+1}</span>{t}</button>)}</div>
-  </div>;
+  const frame = <MethodVideo shot={shotAt(time)} paused={!playing} hidePlaybackControl/>;
+  return <div className="mobile-method-host" ref={host}><CapCut frame={frame} rule={active} title={RULES[active][2]} text={RULES[active][3]} time={time} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={setTime}/></div>;
 }
 
 /* ───────── Premiere Pro ───────── */
@@ -153,11 +152,12 @@ function Premiere({ frame, rule, title, text }) {
   return (
     <div className="pr" aria-label="Simulação de uma timeline no Adobe Premiere Pro">
       <div className="pr-title">
-        <span className="pr-dots"><i /><i /><i /></span>
+        <span className="pr-app-icon" aria-hidden="true">Pr</span>
         <span className="pr-file">Alex_Ascencio_Portfolio.prproj</span>
         <nav className="pr-ws" aria-hidden="true"><span>Montagem</span><b>Edição</b><span>Cor</span><span>Efeitos</span><span>Áudio</span><span>Gráficos</span></nav>
         <span className="pr-av">AA</span>
       </div>
+      <div className="pr-menubar" aria-hidden="true">Arquivo <span>Editar</span><span>Clipe</span><span>Sequência</span><span>Marcadores</span><span>Gráficos</span><span>Janela</span><span>Ajuda</span></div>
       <div className="pr-grid">
         <section className="pr-panel pr-rules">
           <header className="pr-tabs"><span>Controles de efeito</span><b>Método</b><span>Metadados</span></header>
@@ -197,11 +197,11 @@ function Premiere({ frame, rule, title, text }) {
         <section className="pr-panel pr-project">
           <header className="pr-tabs"><b>Projeto: Alex_Ascencio</b><span>Navegador de mídia</span></header>
           <div className="pr-bins">
-            {V1.slice(4, 10).map(([, , id]) => (
-              <figure key={id}><img src={`/media/${id}.webp`} alt="" loading="lazy" /><figcaption>{clipName(id)}</figcaption></figure>
+            {METHOD_MEDIA_IDS.map((id) => (
+              <figure key={id}><img src={`/media/method/${id}.webp`} alt="" loading="lazy" /><figcaption>{clipName(id)}</figcaption></figure>
             ))}
           </div>
-          <footer className="pr-foot"><span>23 itens</span><span className="pr-slider"><i /></span></footer>
+          <footer className="pr-foot"><span>{METHOD_MEDIA_IDS.length} clipes</span><span className="pr-slider"><i /></span></footer>
         </section>
 
         <div className="pr-tools" aria-hidden="true">{tools.map((k) => <span key={k} className={k === "razor" ? "on" : ""}><Ico d={G[k]} size={13} /></span>)}</div>
@@ -219,9 +219,9 @@ function Premiere({ frame, rule, title, text }) {
             {[
               ["V3", "v", V3.map(([a, b, id]) => <i key={a} className="clip rose" style={{ left: pct(a), width: pct(b - a) }}><em>{clipName(id)} [130%]</em></i>)],
               ["V2", "v", [...V2.map(([a, b, id]) => <i key={a} className="clip iris" style={{ left: pct(a), width: pct(b - a) }}><em>{clipName(id)}</em></i>), ...FX.map((f) => <i key={`fx${f}`} className="clip mango" style={{ left: pct(f - 0.25), width: pct(0.5) }} />)]],
-              ["V1", "v", [...V1.map(([a, b, id]) => <i key={a} className="clip violet" style={{ left: pct(a), width: pct(b - a), "--th": `url(/media/${id}.webp)` }}><em>{clipName(id)}</em></i>), <i key="sig" className="clip sig" style={{ left: pct(56), width: pct(4) }}><em>Assinatura</em></i>]],
-              ["A1", "a", A1.map(([a, b]) => <i key={a} className="clip forest wav" style={{ left: pct(a), width: pct(b - a) }}><em>Fala.wav</em></i>)],
-              ["A2", "a", [<i key="m" className="clip carib wav" style={{ left: 0, width: "100%" }}><em>Trilha_Master.wav</em></i>]],
+              ["V1", "v", [...V1.map(([a, b, id]) => <i key={a} className="clip violet" style={{ left: pct(a), width: pct(b - a), "--th": `url(/media/method/${id}.webp)` }}><em>{clipName(id)}</em></i>), <i key="sig" className="clip sig" style={{ left: pct(56), width: pct(4) }}><em>Assinatura</em></i>]],
+              ["A1", "a", AUDIO_CUTS.map(([a,b,id]) => <i key={a} className="clip forest real-wave" style={{ left: pct(a), width: pct(b-a), "--wave": `url(/media/method/${id}-wave.webp)` }}><em>{id}.mp4 · áudio</em></i>)],
+              ["A2", "a", BOUNDARIES.slice(1,-1).map(a=><i key={a} className="clip carib" style={{left:pct(a-.2),width:pct(.4)}} title="Crossfade de áudio"/>)],
             ].map(([n, k, clips]) => (
               <div className={`pr-trk ${k}`} key={n}>
                 <div className="pr-th">
@@ -247,42 +247,44 @@ function Premiere({ frame, rule, title, text }) {
 
 /* ───────── CapCut (celular) ───────── */
 const PPS = 34; // px por segundo na timeline do CapCut
-function CapCut({ frame, rule, title, text }) {
+function CapCut({ frame, rule, title, text, time, playing, onToggle, onSeek }) {
   const bar = [["scissors", "Editar"], ["note", "Áudio"], ["txt", "Texto"], ["star", "Efeitos"], ["overlay", "Sobrepor"], ["cc", "Legendas"], ["filter", "Filtros"], ["adjust", "Ajustar"]];
   const w = (a, b) => ({ left: a * PPS, width: (b - a) * PPS - 2 });
   return (
     <div className="cc" aria-label="Simulação de uma timeline no CapCut">
       <div className="cc-top">
-        <span className="cc-ib"><Ico d={G.x} size={18} /></span>
+        <span className="cc-ib" aria-hidden="true"><Ico d={G.x} size={18} /></span>
+        <span className="cc-demo">Demonstração</span>
         <span className="cc-res">1080P · 30 ▾</span>
         <span className="cc-exp">Exportar</span>
       </div>
       <div className="cc-preview">
-        <div className="cc-frame">{frame}<span className="cc-cap" key={title}>{title}</span></div>
+        <div className="cc-frame">{frame}</div>
       </div>
       <div className="cc-ctrl">
-        <span className="cc-time"><b className="js-mmss">00:00</b> / 01:00</span>
-        <span className="cc-play"><Ico d={G.play} size={16} fill /></span>
+        <span className="cc-time"><b>{mmss(time)}</b> / 01:00</span>
+        <button className="cc-play" aria-label={playing ? "Pausar demonstração" : "Reproduzir demonstração"} onClick={onToggle}><Ico d={playing ? "M8 5v14M16 5v14" : G.play} size={18} fill={!playing} /></button>
         <span className="cc-ur"><Ico d={G.undo} size={16} /><Ico d={G.redo} size={16} /><Ico d={G.full} size={15} /></span>
       </div>
       <div className="cc-tl">
-        <div className="cc-track js-cctrack" data-pps={PPS}>
+        <div className="cc-track" style={{ width: 60 * PPS, transform: `translate3d(${-time * PPS}px,0,0)` }}>
           <div className="cc-ruler">{Array.from({ length: 31 }, (_, i) => <span key={i} style={{ left: i * 2 * PPS }}>{mmss(i * 2)}</span>)}</div>
           <div className="cc-row fx">{FX.map((f) => <i key={f} style={w(f - 0.3, f + 0.9)}>Glitch</i>)}</div>
           <div className="cc-row tx">{RULES.map(([a, b, t], i) => <i key={t} className={i === rule ? "on" : ""} style={w(a, Math.min(b, 60))}>T {t}</i>)}</div>
-          <div className="cc-row ov">{V2.concat(V3).map(([a, b, id]) => <i key={a} style={{ ...w(a, b), "--th": `url(/media/${id}.webp)` }} />)}</div>
+          <div className="cc-row ov">{V2.concat(V3).map(([a, b, id]) => <i key={a} style={{ ...w(a, b), "--th": `url(/media/method/${id}.webp)` }} />)}</div>
           <div className="cc-row main js-v1">
-            {V1.map(([a, b, id]) => <i key={a} style={{ ...w(a, b), "--th": `url(/media/${id}.webp)` }} />)}
+            {V1.map(([a, b, id]) => <i key={a} style={{ ...w(a, b), "--th": `url(/media/method/${id}.webp)` }} />)}
             <i className="sig" style={w(56, 60)}>AA</i>
           </div>
-          <div className="cc-row au">{A1.map(([a, b]) => <i key={a} style={w(a, b)}>Fala</i>)}</div>
-          <div className="cc-row mu"><i style={w(0, 60)}>Trilha</i></div>
+          <div className="cc-row au">{AUDIO_CUTS.map(([a,b,id]) => <i key={a} className="real-wave" style={{...w(a,b),"--wave":`url(/media/method/${id}-wave.webp)`}}>{id}.mp4</i>)}</div>
+          <div className="cc-row mu">{BOUNDARIES.slice(1,-1).map(a=><i key={a} style={w(a-.2,a+.2)}>Mix</i>)}</div>
         </div>
         <span className="cc-ph" aria-hidden="true" />
+        <input className="cc-seek" type="range" min="0" max="60" step=".1" value={time} aria-label="Explorar os 60 segundos da edição" onChange={e => onSeek(+e.target.value)} />
       </div>
       <div className="cc-rule" aria-live="polite">
         <span className="mono">Regra {String(rule + 1).padStart(2, "0")} / {String(RULES.length).padStart(2, "0")}</span>
-        <p key={text}>{text}</p>
+        <strong>{title}</strong><p key={text}>{text}</p>
       </div>
       <div className="cc-bar" aria-hidden="true">{bar.map(([k, l]) => <span key={k}><Ico d={G[k]} size={19} /><small>{l}</small></span>)}</div>
     </div>

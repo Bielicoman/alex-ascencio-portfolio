@@ -34,6 +34,7 @@ function generateLightning(x1, y1, x2, y2, displace = 80, detail = 5) {
 class LightningBolt {
   constructor(x1, y1, x2, y2, width, life, displace = 80, branchProb = 0.7) {
     this.pts = generateLightning(x1, y1, x2, y2, displace, 5);
+    this.path = null;
     this.width = width;
     this.life = rnd(life * 0.8, life * 1.2);
     this.age = 0;
@@ -70,9 +71,10 @@ class LightningBolt {
     const flicker = 0.5 + Math.random() * 0.5;
     const a = fade * flicker;
 
-    g.beginPath();
-    g.moveTo(this.pts[0].x, this.pts[0].y);
-    for (let i = 1; i < this.pts.length; i++) g.lineTo(this.pts[i].x, this.pts[i].y);
+    if (!this.path) {
+      this.path = new Path2D(); this.path.moveTo(this.pts[0].x, this.pts[0].y);
+      for (let i = 1; i < this.pts.length; i++) this.path.lineTo(this.pts[i].x, this.pts[i].y);
+    }
     
     g.lineCap = "round";
     g.lineJoin = "miter";
@@ -82,18 +84,18 @@ class LightningBolt {
     if (this.width > 1.2) {
       g.strokeStyle = `rgba(${ORANGE}, ${(a * 0.25).toFixed(3)})`;
       g.lineWidth = this.width * 8;
-      g.stroke();
+      g.stroke(this.path);
     }
 
     if (this.width > 0.6) {
       g.strokeStyle = `rgba(${GOLD}, ${(a * 0.6).toFixed(3)})`;
       g.lineWidth = this.width * 3.5;
-      g.stroke();
+      g.stroke(this.path);
     }
 
     g.strokeStyle = `rgba(${HOT}, ${a.toFixed(3)})`;
     g.lineWidth = this.width * 1.5;
-    g.stroke();
+    g.stroke(this.path);
 
     for (const b of this.branches) b.draw(g, dt);
   }
@@ -158,7 +160,7 @@ export default class Speedforce {
       const vx = isCenter ? rnd(-speed, speed) * 0.6 : Math.cos(a) * v + bx;
       const vy = isCenter ? rnd(-speed * 0.8, speed * 0.2) : Math.sin(a) * v + by;
       
-      this.sparks.push({ x: px, y: py, vx, vy, age: 0, life: rnd(0.5, 1.8) * life, hot: Math.random() < 0.3 });
+      this.sparks.push({ x: px, y: py, vx, vy, age: 0, life: rnd(0.5, 1.8) * life, color: Math.random() < .3 ? 0 : Math.random() < .5 ? 1 : 2 });
     }
     this.start();
   }
@@ -253,7 +255,8 @@ export default class Speedforce {
     }
     this.bolts = this.bolts.filter((B) => B.age < B.life);
 
-    // Sparks
+    // Agrupa as mesmas faíscas em 12 traços, em vez de centenas de chamadas ao canvas.
+    const paths = Array.from({ length: 12 }, () => new Path2D());
     for (const p of this.sparks) {
       p.age += dt; 
       p.vx *= 1 - 0.5 * dt; // less drag
@@ -265,16 +268,14 @@ export default class Speedforce {
       
       if (p.age >= p.life) continue;
       const k = Math.max(0, 1 - p.age / p.life);
-      // Sharp, crisp sparks (not blurry)
-      g.strokeStyle = `rgba(${p.hot ? HOT : (Math.random() < 0.5 ? GOLD : ORANGE)},${(k).toFixed(3)})`; 
-      g.lineWidth = p.hot ? 2 : 1;
-      
-      // Draw as a stretched line based on velocity (motion blur style)
-      g.beginPath(); 
-      g.moveTo(x0 - p.vx * dt * 0.8, y0 - p.vy * dt * 0.8); 
-      g.lineTo(p.x, p.y); 
-      g.stroke();
+      const path = paths[p.color * 4 + Math.min(3, Math.floor(k * 4))];
+      path.moveTo(x0 - p.vx * dt * 0.8, y0 - p.vy * dt * 0.8);
+      path.lineTo(p.x, p.y);
     }
+    paths.forEach((path, i) => {
+      g.strokeStyle = `rgba(${[HOT, GOLD, ORANGE][Math.floor(i / 4)]},${(i % 4 + .5) / 4})`;
+      g.lineWidth = i < 4 ? 2 : 1; g.stroke(path);
+    });
     this.sparks = this.sparks.filter((p) => p.age < p.life);
 
     // Embers removed

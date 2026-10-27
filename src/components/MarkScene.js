@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { renderPixelRatio } from "../util";
+import { FrameBudget } from "./FrameBudget";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { MARK_PATH, MARK_W, MARK_H } from "../brand";
 import { sfx } from "./Sound";
@@ -52,11 +53,14 @@ export default class MarkScene {
     this.rot = { x: 0, y: -0.35, vx: 0, vy: 0.0 };
     this.drag = null;
     this.running = false;
+    this.quality = 1;
+    this.budget = new FrameBudget(() => { if (this.quality > .55) { this.quality *= .8; this.resize(); } });
     this.t0 = performance.now();
     this.last = this.t0;
     this.h = MARK_H;
 
     this.onMove = (e) => {
+      if (!this.running || document.hidden) return;
       const r = canvas.getBoundingClientRect();
       this.aim.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
       if (this.drag) {
@@ -79,7 +83,7 @@ export default class MarkScene {
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (!w || !h) return;
-    this.renderer.setPixelRatio(renderPixelRatio(w, h, 2500000, 1.5));
+    this.renderer.setPixelRatio(renderPixelRatio(w, h, 2500000, 1.5) * this.quality);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // enquadra a largura da marca em telas estreitas
@@ -92,6 +96,8 @@ export default class MarkScene {
     this.last = performance.now();
     const loop = (now) => {
       if (!this.running) return;
+      this.raf = requestAnimationFrame(loop);
+      if (!this.budget.frame(now)) return;
       const dt = Math.min(0.033, (now - this.last) / 1000); this.last = now;
       const t = (now - this.t0) / 1000;
       if (!this.drag) {
@@ -107,7 +113,6 @@ export default class MarkScene {
       this.spot.position.x += (this.aim.x * 4.2 - this.spot.position.x) * 0.12;
       this.spot.position.y += (this.aim.y * 2.6 - this.spot.position.y) * 0.12;
       this.renderer.render(this.scene, this.camera);
-      this.raf = requestAnimationFrame(loop);
     };
     this.raf = requestAnimationFrame(loop);
   }

@@ -5,16 +5,18 @@ import Lenis from "lenis";
 import { PROJECTS } from "./projects";
 import ClipPlayer from "./components/ClipPlayer";
 import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
-import { tc, reducedMotion } from "./util";
+import { tc, reducedMotion, useMedia } from "./util";
 import Floaters from "./components/Floaters";
 import Cursor from "./components/Cursor";
 import Method from "./components/Method";
 import MotionControl from "./components/MotionControl";
+import MobileDock from "./components/MobileDock";
+import SiteFooter from "./components/SiteFooter";
 import "./mobile.css";
+import "./components/Loading.css";
 import runDemo from "./components/Demo";
 import { sfx } from "./components/Sound";
 import Speedforce from "./components/Speedforce";
-import { createWarpWave } from "./components/WarpWave";
 import * as I from "./components/Icons";
 import { LOGO_DR, LOGO_HF, LOGO_COMFY } from "./components/logos";
 
@@ -30,7 +32,7 @@ const ORG = { UNoB: "União Noroeste Brasileira" };
 const thumb = (p) => p.thumb || `/media/${p.id}.webp`;
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
-const FEATURED = [26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
+const FEATURED = [34, 35, 26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
 const CAT_ORDER = ["Clipes", "Filmes", "Document\u00e1rio", "Reportagem", "Institucional", "Reality Show", "Bastidores"];
 const CATS = ["Todos", ...[...new Set(PROJECTS.map((p) => p.cat))].sort((a, b) => (CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99))];
 const N4K = PROJECTS.filter((p) => p.q === "4K").length;
@@ -133,16 +135,10 @@ const Line = ({ children }) => <span className="line"><span>{children}</span></s
 /* ───────── preloader ───────── */
 function Preloader() {
   return (
-    <div className="preloader" aria-hidden="true">
-      <div className="pre-top" /><div className="pre-bot" />
-      <i className="pre-slit" />
-      <div className="pre-center">
-        <div className="pre-lockup"><Lockup h={44} /></div>
-        <div className="pre-meta">
-          <span className="pre-tc">00:00:00:00</span>
-          <span className="pre-bar"><i /></span>
-          <span className="pre-lab">SEQ_Portfolio_v05 · 24 fps</span>
-        </div>
+    <div className="preloader clean-loading" role="status" aria-label="Carregando portfólio">
+      <div className="loading-center">
+        <Lockup h={36} />
+        <span className="loading-track" aria-hidden="true"><i /></span>
       </div>
     </div>
   );
@@ -155,7 +151,7 @@ function SoundToggle() {
   return (
     <button className={`snd${on ? " on" : ""}`} onClick={() => sfx.set(!on)} aria-pressed={on} aria-label={on ? "Desligar o som" : "Ligar o som"}>
       <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
-      <span className="snd-l mono">Som</span>
+      <span className="snd-l mono">Efeitos</span>
     </button>
   );
 }
@@ -164,6 +160,7 @@ function SoundToggle() {
 function Nav() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(null);
+  const mobile = useMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)");
   const pillRef = useRef(null), hovRef = useRef(null), linksRef = useRef(null), navRef = useRef(null);
   useEffect(() => {
     const handleScroll = () => {
@@ -180,16 +177,18 @@ function Nav() {
   }, []);
   useEffect(() => { document.documentElement.classList.toggle("menu-open", open); }, [open]);
   useEffect(() => {
+    if (mobile) return;
     const sts = NAV.map(([h]) => ScrollTrigger.create({ trigger: h, start: "top 55%", end: "bottom 55%", onToggle: (s) => s.isActive && setActive(h), onLeaveBack: () => h === "#filmes" && setActive(null) }));
     return () => sts.forEach((s) => s.kill());
-  }, []);
+  }, [mobile]);
   useEffect(() => {
+    if (mobile) return;
     const pill = pillRef.current, wrap = linksRef.current;
     const a = active && wrap?.querySelector(`a[href="${active}"]`);
     if (!pill || !wrap) return;
     if (!a) { gsap.to(pill, { opacity: 0, duration: 0.3 }); return; }
     gsap.to(pill, { x: a.offsetLeft, width: a.offsetWidth, opacity: 1, duration: 0.6, ease: "expo.out" });
-  }, [active]);
+  }, [active, mobile]);
   const hover = (e) => {
     if (matchMedia("(max-width: 860px)").matches) return;
     const a = e.currentTarget;
@@ -281,15 +280,14 @@ function Player({ project, onClose, onHost, onNav }) {
 }
 
 /* ───────── hero ───────── */
-function Chip({ cls, icon: Icon, red, title, sub, depth, amp, speed, href }) { const Tag = href ? "a" : "div";
+function HeroWord({ cls, title, depth, amp, speed }) {
   return (
     <div className={`floater ${cls}`} data-float data-depth={depth} data-amp={amp} data-speed={speed}>
       <div className="fl-in">
-        <Tag href={href} className="chip">
-          <span className={`chip-icon ${red ? "red" : ""}`}><Icon size={20} loop /></span>
-          <span className="chip-text">{title}<small>{sub}</small></span>
+        <div className="chip hero-word-chip">
+          <span className="chip-text">{title}</span>
           <span className="fl-glare" aria-hidden="true" />
-        </Tag>
+        </div>
       </div>
     </div>
   );
@@ -393,15 +391,9 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
       </div>
 
       <div className="hero-floats" ref={floatRef}>
-        <Chip cls="fl-a" icon={I.Scissors} title="Editor & filmmaker" sub="Clipes · Cinema · Documentário" depth={1.3} amp={11} speed={0.55} />
-        <Chip cls="fl-c" icon={I.Wave} title="Cor & som medidos" sub="Look por cena · LUFS por clipe" depth={0.8} amp={9} speed={0.45} />
-        <Chip cls="fl-b" icon={I.Spark} red title="IA com critério" sub="Só entra se passar como filmado" depth={1.1} amp={12} speed={0.5} />
-        <Chip cls="fl-d" icon={I.Film} title={`${N4K} entregas em 4K`} sub="Da captação ao master" depth={0.7} amp={8} speed={0.62} />
-                  <Chip cls="fl-nav fl-nav-1" href="#filmes" icon={I.Film} title="Destaques" sub="01" depth={1.2} amp={10} speed={0.6} />
-          <Chip cls="fl-nav fl-nav-2" href="#lab" icon={I.Code} title="Serviços" sub="02" depth={0.9} amp={8} speed={0.5} />
-          <Chip cls="fl-nav fl-nav-3" href="#metodo" icon={I.Layers} title="Método" sub="03" depth={1.1} amp={11} speed={0.55} />
-          <Chip cls="fl-nav fl-nav-4" href="#arquivo" icon={I.Aperture} title="Projetos" sub="04" depth={1.3} amp={12} speed={0.65} />
-          <Chip cls="fl-nav fl-nav-5" href="#sobre" icon={I.Hand} title="Sobre" sub="05" depth={1.0} amp={9} speed={0.45} />
+        <HeroWord cls="fl-a" title="Criar." depth={1.3} amp={11} speed={0.55} />
+        <HeroWord cls="fl-c" title="Contar." depth={0.8} amp={9} speed={0.45} />
+        <HeroWord cls="fl-b" title="Impactar." depth={1.1} amp={12} speed={0.5} />
           <div className="floater fl-tour" data-float data-depth="0.5" data-amp="7" data-speed="0.6">
           <div className="fl-in">
             <button className="tour" onClick={onDemo} aria-pressed={demo} aria-label="Assistir o site: tour guiado automático">
@@ -427,7 +419,6 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
           <MotionControl />
           <div className="hero-modes">
             <Btn as="button" type="button" variant="glass" className="btn-tour-m" onClick={onDemo} aria-pressed={demo} icon={<I.Play size={13} />}>{demo ? "Parar tour" : "Assistir o site"}</Btn>
-            <Btn href="/playground/" variant="glass" className="btn-playground" icon={<I.Play size={15} />}>Playground</Btn>
             <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
@@ -841,7 +832,7 @@ function About() {
           });
         } else {
           tl.pause();
-          ScrollTrigger.create({ trigger: el, start: "top 70%", once: true, onEnter: () => { tl.__live = true; tl.timeScale(1.9).play(); } });
+          ScrollTrigger.create({ trigger: el, start: "top 70%", once: true, animation: tl, onEnter: () => { tl.__live = true; tl.timeScale(1.9).play(); } });
         }
         return () => { tl.kill(); stRef.current = null; };
       };
@@ -987,18 +978,9 @@ function DatePick({ value, onChange }) {
 // balão da EDITH no canto inferior direito (lugar clássico do botão de WhatsApp)
 function EdthBubble({ onOpen, hidden }) {
   const [tip, setTip] = useState(false);
-  // No celular, o balão aparece depois da hero para não cobrir o Playground.
-  const [inHero, setInHero] = useState(false);
-  // removed
-  useEffect(() => {
-    let seen = false; try { seen = sessionStorage.getItem("edth-tip") === "1"; } catch {}
-    if (seen || window.matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches) return;
-    const a = setTimeout(() => setTip(true), 7000), b = setTimeout(() => { setTip(false); try { sessionStorage.setItem("edth-tip", "1"); } catch {} }, 16000);
-    return () => { clearTimeout(a); clearTimeout(b); };
-  }, []);
   if (hidden) return null;
   return (
-    <div className="edth-bubble">
+    <div className="edth-bubble" onPointerEnter={(e) => { if (e.pointerType !== "touch") setTip(true); }} onPointerLeave={() => setTip(false)}>
       {tip && (
         <div className="edth-tip" role="status">
           <b>Oi, eu sou a EDITH.</b> Fale comigo: abro qualquer vídeo, conto sobre o Alex ou monto seu orçamento.
@@ -1139,64 +1121,13 @@ function Contact() {
 }
 
 /* ───────── rodapé ───────── */
-function Footer() {
-  const time = useBrasilia();
-  return (
-    <footer className="footer">
-      <Mark className="footer-watermark" />
-      <div className="footer-cta">
-        <div>
-          <span className="mono">Próximo projeto</span>
-          <p>Tem uma história <em>para contar?</em></p>
-        </div>
-        <div className="footer-cta-r">
-          <Btn href="#contato" size="lg">Vamos conversar</Btn>
-          <span className="mono footer-av"><i className="live" /> Agenda aberta · {time} em Brasília</span>
-        </div>
-      </div>
-      <div className="footer-cols">
-        <div className="footer-brand">
-          <Lockup h={30} />
-          <p>Editor de vídeo e filmmaker. Edição, cor, motion e IA generativa com acabamento de cinema.</p>
-          <div className="footer-social">
-            <a href={IG} target="_blank" rel="noreferrer" aria-label="Instagram"><I.Instagram size={18} /></a>
-            <a href={LI} target="_blank" rel="noreferrer" aria-label="LinkedIn"><I.Linkedin size={18} /></a>
-            <a href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><I.Whatsapp size={18} /></a>
-            <a href={`mailto:${EMAIL}`} aria-label="E-mail"><I.Mail size={18} /></a>
-          </div>
-        </div>
-        <nav aria-label="Rodapé"><span className="mono">Navegação</span>{NAV.map(([h, t]) => <RollLink key={h} href={h}>{t}</RollLink>)}<RollLink href="#contato">Contato</RollLink></nav>
-        <div><span className="mono">Serviços</span>{SERVICES.map(([, t]) => <RollLink key={t} href="#lab">{t}</RollLink>)}</div>
-        <div>
-          <span className="mono">Contato</span>
-          <RollLink href={`mailto:${EMAIL}`}>E-mail</RollLink>
-          <RollLink href={`https://wa.me/${WHATS}`} target="_blank" rel="noreferrer">{PHONE}</RollLink>
-          <RollLink href={IG} target="_blank" rel="noreferrer">Instagram</RollLink>
-          <RollLink href={LI} target="_blank" rel="noreferrer">LinkedIn</RollLink>
-          <RollLink href="/curriculo/">Currículo digital</RollLink>
-        </div>
-        <div className="footer-info">
-          <span className="mono">Atendimento</span>
-          <p><I.Pin size={15} /> Brasil · remoto e presencial</p>
-          <p><I.Clock size={15} /> Horário de Brasília (UTC−3)</p>
-        </div>
-      </div>
-      <div className="footer-row">
-        <span>© {new Date().getFullYear()} Alex Ascencio. Todos os direitos reservados.</span>
-        <span className="footer-made mono">Editor & Filmmaker · Criar. Contar. Impactar.</span>
-        <Magnetic><a href="#top" className="top-btn" aria-label="Voltar ao topo"><I.Arrow size={16} style={{ transform: "rotate(-45deg)" }} /></a></Magnetic>
-      </div>
-    </footer>
-  );
-}
+function Footer() { return <SiteFooter logo={<Lockup h={24} />} />; }
 
 /* ───────── app ───────── */
 export default function App() {
   const [project, setProject] = useState(null);
   const [host, setHost] = useState(null);
   const [demo, setDemo] = useState(false);
-  const [hint, setHint] = useState(false);
-  useEffect(() => { const f = (e) => setHint(e.detail); window.addEventListener("sfx:hint", f); return () => window.removeEventListener("sfx:hint", f); }, []);
   useEffect(() => { // o tour abre e fecha o player de verdade
     const o = (e) => setProject(PROJECTS.find((p) => p.id === e.detail.id) || null), c = () => setProject(null);
     window.addEventListener("demo:open", o); window.addEventListener("demo:close", c);
@@ -1232,15 +1163,17 @@ export default function App() {
   const [edthOn, setEdthOn] = useState(false);
   const openEdthNow = async () => {
     sfx.unlock(); setEdthOn(true);
-    const { default: openEdth } = await import("./edth/Edth");
-    openEdth({ onClose: () => setEdthOn(false), actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on), closePlayer: () => setProject(null) } });
+    try {
+      const { default: openEdth } = await import("./edth/Edth");
+      openEdth({ onClose: () => setEdthOn(false), actions: { tour: () => { if (!stopDemo.current) toggleDemo(); }, stopTour: () => stopDemo.current?.(), sound: (on) => sfx.set(on), closePlayer: () => setProject(null) } });
+    } catch (error) { setEdthOn(false); console.error("[EDITH]", error); }
   };
   const fieldCanvas = useRef(null);
   const root = useRef(null);
 
   useLayoutEffect(() => {
     const reduced = reducedMotion();
-    let lenis, tick;
+    let lenis, tick, loadTimeout;
     if (!reduced) {
       lenis = new Lenis({ lerp: 0.12, wheelMultiplier: 1 });
       window.__lenis = lenis;
@@ -1255,7 +1188,8 @@ export default function App() {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.stop();
     }
-    // Teleporte: a distorção RGB atua apenas no portal, mantendo o resto da tela composto pela GPU.
+    // Portal composto por camadas: anel, separação cromática, rasgos e raios.
+    // Não refiltrar a página inteira nem serializar um mapa PNG a cada quadro.
     let warping = false, warpTimeline;
     const isTouch = matchMedia("(pointer: coarse)").matches;
     const speed = new Speedforce(); // raios também no celular
@@ -1267,43 +1201,42 @@ export default function App() {
       const end = sp.getBoundingClientRect().top + lenis.scroll + sp.offsetHeight - innerHeight;
       lenis.scrollTo(end, { duration: 19, easing: (t) => t, force: true, lock: false });
     };
-        const chromium = /Chrome|Chromium|Edg\//.test(navigator.userAgent);
-    const lite = isTouch || matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches;
     const teleport = (el, x, y) => {
       if (!lenis || reduced) { el.scrollIntoView(); return; }
       if (warping) return;
       warping = true;
+      document.documentElement.classList.add("is-teleporting");
       sfx.teleport(x);
       speed?.burst(x, y, 0.28);
       const veil = document.querySelector(".warp"), ring = veil.querySelector(".warp-ring");
-      const maps = document.querySelectorAll("#warp feDisplacementMap");
-      const wave = createWarpWave(document.querySelector("#warp feImage"), x, y, innerWidth, innerHeight);
-      const o = { s: 0, t: 0, g: 0 };
-      const paint = () => {
-        wave(o.t, o.g);
-        maps[0].setAttribute("scale", (o.s * .55).toFixed(1));
-        maps[1].setAttribute("scale", (o.s).toFixed(1));
-        maps[2].setAttribute("scale", (o.s * 1.55).toFixed(1));
-        if (!chromium) veil.style.backdropFilter = `blur(${(o.s / 20).toFixed(1)}px)`;
-      };
-      paint();
       field?.stop();
       veil.style.setProperty("--x", `${x}px`); veil.style.setProperty("--y", `${y}px`);
-      veil.classList.add("on", chromium ? "is-svg" : "is-blur");
-      warpTimeline = gsap.timeline({ onComplete: () => { veil.classList.remove("on", "is-svg", "is-blur", "is-lite"); veil.style.backdropFilter = ""; warping = false; if (live && fade > 0.01) field?.start(); autoplay(el); } })
-        .to(o, { s: 170, t: 0.25, g: 1, duration: 0.28, ease: "power3.in", onUpdate: paint })
+      veil.classList.add("on");
+      const reach = Math.max(Math.hypot(x, y), Math.hypot(innerWidth - x, y), Math.hypot(x, innerHeight - y), Math.hypot(innerWidth - x, innerHeight - y));
+      warpTimeline = gsap.timeline({ onComplete: () => { veil.classList.remove("on"); document.documentElement.classList.remove("is-teleporting"); warping = false; if (live && fade > 0.01 && !document.hidden) field?.start(); autoplay(el); } })
         .add(() => sfx.glitch(0.07, 4), 0.26)
-        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: 1, opacity: 0, duration: 1, ease: "expo.out" }, 0)
+        .fromTo(ring, { scale: 0, opacity: 1 }, { scale: reach / 150, opacity: 0, duration: 1, ease: "expo.out" }, 0)
+        .fromTo(veil.querySelector(".warp-tears"), { opacity: 0, xPercent: -8, scaleX: 1.12 }, { opacity: .75, xPercent: 5, duration: .28, ease: "power3.in" }, 0)
+        .to(veil.querySelector(".warp-tears"), { opacity: 0, xPercent: 0, scaleX: 1, duration: .4, ease: "power3.out" }, .28)
         .fromTo(veil, { "--flash": 0 }, { "--flash": 1, duration: 0.28, ease: "power2.in" }, 0)
-        .add(() => { lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update(); }, 0.28)
-        .to(o, { s: 0, t: 1, duration: 0.55, ease: "expo.out", onUpdate: paint }, 0.28)
-        .to(o, { g: 0, duration: 0.6, ease: "steps(9)", onUpdate: paint }, 0.28)
+        .add(() => {
+          lenis.scrollTo(el, { immediate: true, force: true }); ScrollTrigger.update();
+          // Finaliza somente o que o salto deixou fora de quadro. A seção de destino
+          // conserva sua animação; as seções atravessadas não interpolam juntas.
+          const scroll = lenis.scroll;
+          for (const st of ScrollTrigger.getAll()) {
+            if (!st.isActive) st.getTween()?.progress?.(1);
+            if (st.vars.once && st.end < scroll && st.animation) st.animation.progress(1).pause();
+          }
+        }, 0.28)
         .to(veil, { "--flash": 0, duration: 0.55, ease: "power3.out" }, 0.28);
     };
     const onAnchor = (e) => {
       const a = e.target.closest('a[href^="#"]');
       if (!a) return;
-      const el = document.querySelector(a.getAttribute("href"));
+      const href = a.getAttribute("href");
+      if (!href || href === "#") return;
+      const el = document.getElementById(href.slice(1));
       if (!el) return;
       e.preventDefault();
       teleport(el, e.clientX || innerWidth / 2, e.clientY || innerHeight / 2);
@@ -1362,38 +1295,20 @@ export default function App() {
       gsap.set(".nav > *", { y: -26, opacity: 0 });
       gsap.set(".hero-intro .line > span", { yPercent: 115 });
       gsap.set(".hero-ctas .magnetic, .hero-modes .magnetic, .hero-scroll", { y: 24, opacity: 0 });
-      gsap.set(".pre-lockup", { clipPath: "inset(0 100% 0 0)" });
-      gsap.set(".pre-meta", { opacity: 0, y: 10 });
-
-      const o = { p: 0 };
-      const paint = () => {
-        const t = document.querySelector(".pre-tc"), b = document.querySelector(".pre-bar i");
-        if (t) t.textContent = tc(o.p * 2);
-        if (b) b.style.transform = `scaleX(${o.p})`;
-      };
-      sfx.tryAutoplay(); // com permissão de som no site, abertura e trilha tocam sem clique
-      const intro = gsap.timeline({ onStart: () => setTimeout(() => sfx.introPre(1.4), 60) });
-      intro.to(".pre-lockup", { clipPath: "inset(0 0% 0 0)", duration: 0.75, ease: "expo.inOut" })
-        .to(".pre-meta", { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, "-=0.35")
-        .to(o, { p: 0.82, duration: 0.8, ease: "power2.out", onUpdate: paint }, "<");
-
       const img = document.querySelector(".hero-person img");
-      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-      const loaded = Promise.all([
-        document.fonts?.ready,
+      // Aguarda os recursos reais da primeira tela, sem contador de progresso fictício.
+      // Uma fonte/imagem indisponível nunca pode prender a navegação.
+      const resources = Promise.allSettled([
+        document.fonts?.ready || Promise.resolve(),
         img?.decode ? img.decode().catch(() => {}) : null,
-        new Promise((r) => intro.eventCallback("onComplete", r)),
-        wait(700),
       ]);
+      const loaded = Promise.race([resources, new Promise((resolve) => { loadTimeout = setTimeout(resolve, 4200); })]);
       const reveal = () => {
         gsap.timeline()
-          .to(o, { p: 1, duration: 0.35, ease: "power1.inOut", onUpdate: paint })
-          .to(".pre-center", { opacity: 0, y: -14, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, "+=0.08")
-          .fromTo(".pre-slit", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.55, ease: "expo.inOut" }, "-=0.2")
-          .addLabel("open")
-          .to(".pre-top", { yPercent: -100, duration: 1.3, ease: "expo.inOut" }, "open")
-          .to(".pre-bot", { yPercent: 100, duration: 1.3, ease: "expo.inOut" }, "open")
-          .to(".pre-slit", { scaleY: 60, opacity: 0, duration: 0.9, ease: "expo.out" }, "open+=0.1")
+          .to(".loading-center", { opacity: 0, y: -8, duration: 0.3, ease: "power2.in" }, 0)
+          .to(".preloader", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 0.1)
+          .set(".preloader", { display: "none" }, 0.6)
+          .addLabel("open", 0.15)
           .add(() => { live = true; field?.start(); }, "open")
           .add(() => { window.__lenis?.start(); ScrollTrigger.sort(); ScrollTrigger.refresh(); }, "open+=0.6")
           .to(".hero-haze", { opacity: 1, duration: 2, ease: "power2.out" }, "open+=0.25")
@@ -1402,12 +1317,9 @@ export default function App() {
           .to(".nav > *", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=0.7")
           .to(".hero-intro .line > span", { yPercent: 0, duration: 1.3, ease: "expo.out", stagger: 0.08 }, "open+=0.75")
           .to(".fl-in", { opacity: 1, scale: 1, y: 0, duration: 1.6, ease: "elastic.out(1, 0.75)", stagger: 0.09, clearProps: "transform" }, "open+=0.85")
-          .to(".hero-ctas .magnetic, .hero-modes .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1")
-          .set(".preloader", { display: "none" });
+          .to(".hero-ctas .magnetic, .hero-modes .magnetic, .hero-scroll", { y: 0, opacity: 1, duration: 1.1, ease: "expo.out", stagger: 0.08, clearProps: "transform" }, "open+=1");
       };
-      // sem portão: a abertura roda sozinha. O navegador só libera áudio após um gesto,
-      // então a trilha da abertura só toca se o áudio já estiver liberado.
-      loaded.then(() => { if (!disposed) { sfx.introOpen(0.93); reveal(); if (matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches) intro.timeScale(2.4); } });
+      loaded.then(() => { clearTimeout(loadTimeout); if (!disposed) ctx.add(reveal); });
 
       /* ── hero: saída por scroll (só transform/opacity: nada de filter na foto) ── */
       const mm = gsap.matchMedia();
@@ -1425,6 +1337,7 @@ export default function App() {
       ScrollTrigger.create({
         trigger: ".stats", start: "top 85%", once: true,
         onEnter: () => document.querySelectorAll(".stats dd[data-count]").forEach((dd) => {
+          if (document.documentElement.classList.contains("is-teleporting")) { dd.textContent = dd.dataset.count; return; }
           const c = { v: 0 }, n = +dd.dataset.count;
           gsap.to(c, { v: n, duration: 1.6, ease: "power3.out", onUpdate: () => (dd.textContent = Math.round(c.v)) });
         }),
@@ -1433,11 +1346,12 @@ export default function App() {
       ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => { field?.setMorph(s.progress); morph = s.progress; sfx.padLevel(morph * fade); } });
       ScrollTrigger.create({
         trigger: "#manifesto", start: "bottom bottom", end: "bottom 35%", scrub: true,
-        onUpdate: (s) => { gsap.set(fieldCanvas.current, { opacity: 1 - s.progress }); fade = 1 - s.progress; sfx.padLevel(morph * fade); if (live) (s.progress >= 0.999 ? field?.stop() : field?.start()); },
+        onUpdate: (s) => { fieldCanvas.current.style.opacity = 1 - s.progress; fade = 1 - s.progress; sfx.padLevel(morph * fade); if (live && !warping) (s.progress >= 0.999 ? field?.stop() : field?.start()); },
       });
       // filmes: horizontal
       mm.add("(min-width: 900px)", () => {
         const track = document.querySelector(".featured-track");
+        const count = document.querySelector(".js-fcount"), bar = document.querySelector(".js-fbar");
         const dist = () => { const last = track.lastElementChild; return Math.max(0, last.offsetLeft + last.offsetWidth + parseFloat(getComputedStyle(track).paddingLeft) - innerWidth); };
         const tween = gsap.to(track, {
           x: () => -dist(), ease: "none",
@@ -1445,8 +1359,9 @@ export default function App() {
             trigger: "#filmes", start: "top top", end: () => `+=${dist()}`, scrub: 0.8, pin: ".featured-pin", invalidateOnRefresh: true,
             onUpdate: (s) => {
               const i = Math.min(FEATURED.length, Math.floor(s.progress * FEATURED.length) + 1);
-              const c = document.querySelector(".js-fcount"); if (c) c.textContent = `0${i} / 0${FEATURED.length}`;
-              gsap.set(".js-fbar", { scaleX: s.progress });
+              const label = `0${i} / 0${FEATURED.length}`;
+              if (count && count.textContent !== label) count.textContent = label;
+              if (bar) bar.style.transform = `scaleX(${s.progress})`;
             },
           },
         });
@@ -1478,26 +1393,34 @@ export default function App() {
       ScrollTrigger.batch(".grid .card", {
         start: "top 94%", once: true,
         onEnter: (els) => {
-          const m = els.map((e) => e.querySelector(".card-media")), im = els.map((e) => e.querySelector(".card-media img")), inf = els.map((e) => e.querySelector(".card-info"));
-          gsap.to(m, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.25, ease: "expo.inOut", stagger: 0.09, clearProps: "clipPath" });
+          // Um salto não deve disparar dezenas de reveals/decode fora da tela.
+          const visible = [], skipped = [];
+          for (const el of els) { const r = el.getBoundingClientRect(); (r.bottom > 0 && r.top < innerHeight ? visible : skipped).push(el); }
+          for (const el of skipped) {
+            el.querySelector(".card-media").style.clipPath = "";
+            el.querySelector(".card-media img").style.transform = "";
+            const info = el.querySelector(".card-info"); info.style.transform = ""; info.style.opacity = "1";
+          }
+          if (!visible.length) return;
+          const m = visible.map((e) => e.querySelector(".card-media")), im = visible.map((e) => e.querySelector(".card-media img")), inf = visible.map((e) => e.querySelector(".card-info"));
+          gsap.fromTo(m, { clipPath: "inset(100% 0% 0% 0% round 16px)" }, { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.25, ease: "expo.inOut", stagger: 0.09, clearProps: "clipPath" });
           gsap.to(im, { scale: 1, duration: 1.8, ease: "expo.out", stagger: 0.09, delay: 0.15, clearProps: "transform" });
           gsap.to(inf, { y: 0, opacity: 1, duration: 1, ease: "expo.out", stagger: 0.09, delay: 0.45, clearProps: "transform,opacity" });
           sfx.whoosh(0.9, true, 0.03);
         },
       });
-      // trilha: entra em "Filmes em destaque" e segue até o fim; some ao voltar para cima
-      ScrollTrigger.create({ trigger: "#filmes", start: "top 65%", end: "max", onEnter: () => sfx.music(true), onLeaveBack: () => sfx.music(false) });
       // contato: folha clara sobe e arredonda
       gsap.fromTo(".contact-sheet", { scale: 0.94, borderRadius: 64 }, { scale: 1, borderRadius: 40, ease: "none", scrollTrigger: { trigger: ".contact", start: "top bottom", end: "top 20%", scrub: true } });
       ScrollTrigger.create({ trigger: ".contact-sheet", start: "top 44px", end: "bottom 44px", toggleClass: { targets: document.documentElement, className: "nav-light" } });
       // rodapé
-      gsap.fromTo(".footer-watermark", { yPercent: 30, opacity: 0 }, { yPercent: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: ".footer", start: "top bottom", end: "bottom bottom", scrub: true } });
     }, root);
 
     return () => {
       disposed = true;
+      clearTimeout(loadTimeout);
       ctx.revert();
       warpTimeline?.kill();
+      document.documentElement.classList.remove("is-teleporting");
       const veil = document.querySelector(".warp");
       veil?.classList.remove("on", "is-svg", "is-blur", "is-lite");
       if (veil) veil.style.backdropFilter = "";
@@ -1518,19 +1441,8 @@ export default function App() {
     <div ref={root}>
       <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
         <symbol id="aa-mark" viewBox="0 0 262 151"><path d={MARK_PATH} fill="currentColor" /></symbol>
-        <filter id="warp" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
-          <feImage result="n" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="55" xChannelSelector="R" yChannelSelector="G" result="d1" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="95" xChannelSelector="R" yChannelSelector="G" result="d2" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G" result="d3" />
-          <feColorMatrix in="d1" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-          <feColorMatrix in="d2" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-          <feColorMatrix in="d3" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
-          <feBlend in="r" in2="g" mode="screen" result="rg" />
-          <feBlend in="rg" in2="b" mode="screen" />
-        </filter>
       </svg>
-      <div className="warp" aria-hidden="true"><i className="warp-ring" /></div>
+      <div className="warp" aria-hidden="true"><i className="warp-ring" /><i className="warp-tears" /></div>
       <Preloader />
       <Cursor host={host} />
       <canvas ref={fieldCanvas} className="field" aria-hidden="true" />
@@ -1549,11 +1461,8 @@ export default function App() {
         <Contact />
       </main>
       <Footer />
-      <button className={`snd-hint${hint ? " on" : ""}`} onClick={() => sfx.unlock()} aria-hidden={!hint} tabIndex={hint ? 0 : -1}>
-        <span className="snd-bars" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }} />)}</span>
-        Toque para ouvir a trilha
-      </button>
       <div className="snd-mobile-wrapper"><SoundToggle /></div>
+      <MobileDock onEdth={openEdthNow} edthOpen={edthOn} hidden={gest || !!project} />
         <EdthBubble onOpen={openEdthNow} hidden={edthOn || gest || !!project} />
       {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
       {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}

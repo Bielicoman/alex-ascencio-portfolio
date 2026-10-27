@@ -34,7 +34,17 @@ export const latest = () => PROJECTS[0];
 const CATS = { clipes: "Clipes", clipe: "Clipes", videoclipes: "Clipes", documentarios: "Documentário", documentario: "Documentário", cinema: "Cinema", curtas: "Cinema", curta: "Cinema", reality: "Reality Show", turne: "Turnê", turnes: "Turnê", bastidores: "Bastidores", "making": "Bastidores", institucional: "Institucional", institucionais: "Institucional" };
 const SECTIONS = [["top", ["inicio", "topo", "comeco", "home"]], ["filmes", ["filmes", "destaques", "filmes em destaque"]], ["lab", ["lab", "laboratorio", "servicos"]], ["metodo", ["metodo", "timeline", "processo"]], ["arquivo", ["selecao", "portfolio", "trabalhos", "projetos", "arquivo"]], ["sobre", ["sobre", "sobre ele", "sobre o alex", "sobre mim", "biografia"]], ["contato", ["contato", "falar com ele", "fale com ele"]]];
 const TOUR = ["assistir o site", "assistir site", "ver site", "ver o site", "ver demonstracao", "ver a demonstracao", "demonstracao", "demo", "modo assistir", "tour", "comecar tour", "comecar o tour", "iniciar tour", "iniciar o tour", "inicia o tour", "faz um tour", "fazer um tour", "tour guiado", "visita guiada", "passeio", "me mostra o site", "mostra o site", "mostrar o site", "apresenta o site", "apresentar o site", "apresentacao", "me mostra tudo", "mostra tudo", "navega sozinha", "piloto automatico", "modo automatico", "conhecer o site"];
-const GAMES = [["sabre", ["sabre", "beat saber", "sabres", "sabre de luz"]], ["particulas", ["particulas"]], ["objetos", ["objetos", "objetos 3d", "3d"]], ["corpo", ["corpo", "homem de ferro"]], ["piano", ["piano"]], ["bateria", ["bateria"]], ["teremim", ["teremim", "theremin"]], ["corte", ["corte", "jogo do corte", "cortar clipes"]]];
+// Reconhece pedidos antigos para explicar a remoção, sem manter rotas ou executores.
+export function retiredExperience(raw) {
+  const t = norm(raw), short = t.trim().split(" ").length <= 5;
+  const wants = any(t, ["abrir", "abre", "jogar", "joga", "quero jogar", "quero brincar", "brincar", "jogos do site", "jogo do site"]);
+  const retiredModes = ["sabre", "beat saber", "teremim", "theremin", "piano", "bateria", "jogo do corte", "objetos 3d", "particulas", "memoria", "foco", "camera", "corpo", "homem de ferro"];
+  const mode = any(t, retiredModes), direct = retiredModes.includes(t.trim());
+  if (any(t, ["playground"]) || (wants && any(t, ["jogo", "jogos", "jogar", "joga", "brincar"])) || (mode && (wants || direct)) || (short && any(t, ["jogos"]))) {
+    return { say: "O Playground e os jogos foram removidos do site. Posso mostrar os projetos audiovisuais do Alex.", actions: [], chips: ["Ver projetos", "Vídeo mais recente"] };
+  }
+  return null;
+}
 const KINDS = [["Videoclipe", ["clipe", "videoclipe", "musica", "clip"]], ["Documentário", ["documentario", "doc"]], ["Curta / cinema", ["curta", "filme", "cinema", "longa"]], ["Motion design", ["motion", "animacao", "vinheta"]], ["IA generativa", ["ia", "inteligencia artificial", "gerado", "ia generativa"]], ["Evento / ao vivo", ["evento", "ao vivo", "live", "transmissao", "casamento", "culto", "show"]]];
 
 // ── datas faladas → Date ──
@@ -199,6 +209,8 @@ export function createBrain() {
 
   function reply(raw) {
     const t = norm(raw), n = toks(raw).length, words = t.trim().split(" ").length;
+    const retired = retiredExperience(raw);
+    if (retired) return retired;
     // pergunta aberta ("que dia é hoje", "como está o tempo") não vira comando: vai para a IA
     const isQ = /^ (que|qual|quais|quando|como|onde|quem|por que|porque|pq|quanto|quantos|quantas|sera|voce sabe|me diz|me fala|o que|e se) /.test(t) || /\?\s*$/.test(raw);
     const cmd = words <= 7; // comandos de controle só em frases curtas (conversa longa não dispara ação por acaso)
@@ -206,7 +218,8 @@ export function createBrain() {
     else if (flow) { const r = budget(t, raw); if (r) return r; }
 
     // ajuda / lista de comandos
-    if (any(t, ["comandos", "lista de comandos", "o que eu posso falar", "o que posso falar", "o que eu posso pedir", "quem e voce", "o que voce faz", "o que voce pode", "como funciona", "ajuda", "tutorial", "seu nome"])) return say(K.me(), [], { chips: TUTORIAL, all: true });
+    const help = ["comandos", "lista de comandos", "o que eu posso falar", "o que posso falar", "o que eu posso pedir", "quem e voce", "o que voce faz", "o que voce pode fazer", "como funciona", "como funciona o site", "como voce funciona", "ajuda", "tutorial", "seu nome"];
+    if (help.includes(t.trim())) return say(K.me(), [], { chips: TUTORIAL, all: true });
     // microfone e vídeo
     if (cmd && any(t, ["desligar microfone", "desliga o microfone", "desligar o microfone", "desliga microfone", "para de ouvir", "parar de ouvir", "pode desligar", "desligar mic", "fecha o microfone", "sem microfone"])) return say("Microfone desligado.", [{ type: "micoff" }]);
     if (cmd && any(t, ["fechar video", "fecha o video", "fechar o video", "fecha video", "sair do video", "tira o video", "fecha o player", "voltar pro site", "volta pro site"])) return say("", [{ type: "close_video" }]);
@@ -218,7 +231,8 @@ export function createBrain() {
     // controle
     if (cmd && any(t, ["parar", "pare", "para", "para tudo", "chega", "stop", "silencio", "cala a boca", "parar tour", "para o tour", "sair do tour"])) return say("Parei.", [{ type: "stop" }]);
     if (cmd && any(t, TOUR)) return say("Começando. Mexa o mouse ou role pra assumir.", [{ type: "tour" }]);
-    if (cmd && any(t, ["ligar som", "ligar o som", "liga o som", "ligar musica", "liga a musica", "com som", "tocar musica", "som ligado"])) return say("Som ligado.", [{ type: "sound", on: true }]);
+    if (cmd && any(t, ["ligar musica", "liga a musica", "tocar musica", "toca musica", "trilha sonora", "musica de fundo", "musica do site"])) return say("A música de fundo foi removida. O controle Som ativa apenas efeitos opcionais; os clipes mantêm seu próprio áudio.");
+    if (cmd && any(t, ["ligar som", "ligar o som", "liga o som", "com som", "som ligado"])) return say("Efeitos sonoros ligados.", [{ type: "sound", on: true }]);
     if (cmd && any(t, ["desligar som", "desligar o som", "desliga o som", "desliga a musica", "desligar musica", "sem som", "mudo", "tirar o som"])) return say("Som desligado.", [{ type: "sound", on: false }]);
     if (cmd && any(t, ["descer", "desce", "rolar", "rola", "rolar para baixo", "pra baixo", "para baixo", "continua", "proxima secao"])) return say("", [{ type: "scroll", dir: 1 }]);
     if (cmd && any(t, ["subir", "sobe", "rolar para cima", "pra cima", "para cima", "secao anterior"])) return say("", [{ type: "scroll", dir: -1 }]);
@@ -231,11 +245,6 @@ export function createBrain() {
     // redes
     for (const [k, words, label] of [["instagram", ["instagram", "insta"], "Instagram"], ["linkedin", ["linkedin", "linked in"], "LinkedIn"], ["whatsapp", ["whatsapp", "zap", "whats"], "WhatsApp"], ["email", ["email", "e mail"], "e-mail"]]) {
       if (cmd && any(t, words) && !any(t, ["enviar", "manda", "mandar", "meu"])) return say(`Abrindo o ${label}.`, [{ type: "open", href: SOCIAL[k], label }]);
-    }
-    // jogos
-    if (cmd && !isQ && (any(t, ["jogos", "jogar", "playground", "brincar", "abre o jogo", "abrir o jogo", "abrir jogo", "quero jogar"]) || GAMES.some(([, ws]) => any(t, ws.filter((w) => w.length > 5))))) {
-      const g = GAMES.find(([, ws]) => any(t, ws));
-      return say(g ? `Abrindo o ${g[0] === "sabre" ? "Sabre" : g[0]}.` : "Abrindo o Playground.", [{ type: "go", href: `/playground/${g ? "#" + g[0] : ""}` }]);
     }
     // orçamento
     if (any(t, ["orcamento", "orcar", "contratar", "quanto custa", "quanto cobra", "preco", "valor", "proposta", "fazer um video", "fazer um clipe", "quero um video", "fechar um projeto"])) {
@@ -271,7 +280,8 @@ export function createBrain() {
       if (s) return say("", [{ type: "nav", id: s[0] }]);
     }
     // conhecimento: só quando a frase é curta ou fala do Alex (conversa pessoal longa vai para a IA)
-    const about = n <= 4 || any(t, ["alex", "ele", "dele", "o editor", "seu chefe", "voce"]);
+    const named = any(t, ["alex", "ele", "dele", "o editor", "seu chefe"]);
+    const about = named || (!isQ && n <= 4);
     if (!about) return null;
 
     if (any(t, ["quem e", "quem e ele", "resume", "resumir", "resumo", "sobre ele", "me fala do alex", "fale sobre", "conta sobre", "apresenta", "quem e o alex", "alex ascencio"])) return say(K.who(), [{ type: "nav", id: "sobre", silent: true }], { chips: ["Quais trabalhos ele fez?", "Com quem ele trabalhou?", "Quero um orçamento"] });
@@ -292,7 +302,7 @@ export function createBrain() {
   return { reply, get flow() { return flow; }, reset() { flow = null; } };
 }
 
-export const TUTORIAL = ["Assistir o site", "Assistir Tu És", "Vídeo mais recente", "Quem é o Alex?", "Quero um orçamento", "Mandar recado pro Alex", "Abrir o jogo Sabre", "Baixar currículo", "Instagram do Alex"];
+export const TUTORIAL = ["Assistir o site", "Assistir Tu És", "Vídeo mais recente", "Quem é o Alex?", "Quero um orçamento", "Mandar recado pro Alex", "Ver projetos", "Baixar currículo", "Instagram do Alex"];
 // resumo para a IA (api/edth.js envia no prompt de sistema)
 export const KNOWLEDGE = () => [SUMMARY,
   `Experiência: ${EXP.map(([r, org, y]) => `${r} em ${org.replace("·", "e")} (${y})`).join("; ")}.`, K.clients(),

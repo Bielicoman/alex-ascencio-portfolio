@@ -1,0 +1,9 @@
+.preloader.clean-loading { background: var(--bg, #060607); }
+.loading-center { display: grid; justify-items: center; gap: 28px; padding: 28px; }
+.loading-center .lockup { --h: 36px; }
+.loading-track { display: block; width: 84px; height: 2px; border-radius: 2px; overflow: hidden; background: #ffffff12; }
+.loading-track i { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--red-hi); animation: loading-drift 1.35s cubic-bezier(.65,0,.35,1) infinite; }
+@keyframes loading-drift { 0% { transform: translateX(-110%); opacity: .35; } 50% { opacity: 1; } 100% { transform: translateX(360%); opacity: .35; } }
+.hero-floats .hero-word-chip { min-width: 150px; justify-content: center; padding: 20px 32px; font-size: clamp(20px, 1.75vw, 30px); font-weight: 560; letter-spacing: -.04em; }
+@media (max-width: 760px) { .loading-center .lockup { --h: 28px !important; } }
+@media (prefers-reduced-motion: reduce) { .loading-track i { animation: none; width: 100%; opacity: .6; } }

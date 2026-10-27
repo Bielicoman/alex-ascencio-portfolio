@@ -34,6 +34,7 @@ export default function Cursor({ host }) {
       lx = x; ly = y; lt = t;
       clearTimeout(idle); idle = setTimeout(() => { s.tx = s.ty = s.tz = 0; }, 80);
       root.classList.add("cursor-live");
+      if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
     };
     // mola da inclinaÃ§Ã£o (rigidez 260, amortecimento 16)
     const loop = (now) => {
@@ -43,9 +44,9 @@ export default function Cursor({ host }) {
         s["vr" + k] += a * dt; s["r" + k] += s["vr" + k] * dt;
       }
       if (tilt.current) tilt.current.style.transform = `rotateX(${s.rx.toFixed(2)}deg) rotateY(${s.ry.toFixed(2)}deg) rotateZ(${s.rz.toFixed(2)}deg)`;
-      raf = requestAnimationFrame(loop);
+      const moving = ["x", "y", "z"].some((k) => Math.abs(s["t" + k] - s["r" + k]) > .02 || Math.abs(s["vr" + k]) > .02);
+      raf = moving && !document.hidden ? requestAnimationFrame(loop) : 0;
     };
-    raf = requestAnimationFrame(loop);
     const over = (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
