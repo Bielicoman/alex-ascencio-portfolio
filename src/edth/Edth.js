@@ -1,5 +1,5 @@
 import gsap from "gsap";
-import { createBrain, TUTORIAL, norm, retiredExperience } from "./brain";
+import { createBrain, norm, retiredExperience } from "./brain";
 import { FAITH_SOURCES, faithContext, faithFallback, studyInvite } from "./faith";
 import { PROJECTS } from "../projects";
 import { SOCIAL, PDF } from "../profile";
@@ -87,7 +87,7 @@ function create({ actions: app = {}, onClose = () => {} }) {
     if (extra.links?.length) el.insertAdjacentHTML("beforeend", `<div class="edth-links">${extra.links.map(([l, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener">${esc(l)} ${svg("link", 14)}</a>`).join("")}</div>`);
     if (extra.chips?.length) {
       const c = document.createElement("div"); c.className = "edth-chips";
-      extra.chips.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); c.appendChild(b); });
+      extra.chips.filter(t => !suggestions.includes(t)).forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); c.appendChild(b); });
       el.appendChild(c);
     }
     log.appendChild(el);
@@ -500,9 +500,9 @@ function create({ actions: app = {}, onClose = () => {} }) {
   try { first = !localStorage.getItem(SEEN); localStorage.setItem(SEEN, "1"); } catch {}
   // lista fixa de comandos no topo da conversa completa
   const cmds = $(".edth-cmds");
-  const suggestions = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? ["Ver projetos", "Serviços", "Estudar a Bíblia", "Sobre Ellen White", "Vídeo mais recente", "Quero um orçamento"] : TUTORIAL;
+  const suggestions = ["Ver projetos", "Vídeo mais recente", "Serviços", "Quero um orçamento"];
   suggestions.forEach((t) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.onclick = () => handle(t); cmds.appendChild(b); });
-  add("bot", "Olá! Sou a EDITH. Posso ajudar com os filmes e serviços do Alex, estudos bíblicos e temas adventistas. Como posso ajudar?", { chips: ["Ver projetos", "Estudar a Bíblia", "Sobre Ellen White"] });
+  add("bot", "Olá! Sou a EDITH. Posso mostrar os trabalhos do Alex, explicar os serviços ou ajudar com um orçamento. O que você procura?");
   show();
   setExp(true);
   const viewport = window.visualViewport;

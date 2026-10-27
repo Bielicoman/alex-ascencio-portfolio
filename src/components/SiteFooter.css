@@ -18,3 +18,4 @@ html body .site-footer { padding: 22px var(--pad) 16px; background: #0b0b0d; bor
   .site-footer-bottom nav { gap: 0 14px; }
   .site-footer-bottom a { min-height: 28px; }
 }
+html .edth-bubble { bottom: var(--footer-clearance, 20px); }

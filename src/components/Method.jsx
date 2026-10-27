@@ -1,32 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { tc, mmss, reducedMotion, useMedia } from "../util";
-import { sfx } from "./Sound";
 import MethodVideo, { METHOD_MEDIA_IDS } from "./MethodVideo";
 import "./Method.css";
+import REEL_CUTS from "./reel-data.json";
+import { PROJECTS } from "../projects";
 
 // Sequência de 60 s usada nas duas simulações (Premiere no desktop, CapCut no celular).
-const ORDER = [...METHOD_MEDIA_IDS];
-for (let i = ORDER.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ORDER[i], ORDER[j]] = [ORDER[j], ORDER[i]]; }
-const V1 = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 10], [10, 17], [17, 23], [23, 30], [30, 37], [37, 44], [44, 50], [50, 56]].map(([a,b],i)=>[a,b,ORDER[i%ORDER.length]]);
-const V2 = [[8, 12], [25, 29], [33, 37.5], [46, 50]].map(([a,b],i)=>[a,b,ORDER[(i+3)%ORDER.length]]);
-const V3 = [[18, 21], [40, 42.5]].map(([a,b],i)=>[a,b,ORDER[(i+2)%ORDER.length]]);
+const V1 = REEL_CUTS.map(({start,end,id}) => [start,end,id]);
+const V2 = V1.filter((_,i) => i > 3 && i % 5 === 0).map(([a,b,id]) => [a,b,id]);
+const V3 = V1.filter((_,i) => i % 9 === 4).map(([a,b,id]) => [a,b,id]);
 const shotAt = time => time >= 56 ? "end" : (V3.find(([a,b])=>time>=a&&time<b) || V2.find(([a,b])=>time>=a&&time<b) || V1.find(([a,b])=>time>=a&&time<b) || V1[0])[2];
 const BOUNDARIES = [...new Set([...V1,...V2,...V3].flatMap(([a,b])=>[a,b]))].sort((a,b)=>a-b);
 const AUDIO_CUTS = BOUNDARIES.slice(0,-1).map((a,i)=>[a,BOUNDARIES[i+1],shotAt(a+.01)]);
-const FX = [2, 23, 44];
+const FX = [];
 export const RULES = [
-  [0, 4, "Abertura em staccato", "3 a 4 planos de ~1 s, com flash de 2 a 3 frames no meio, antes de assentar em planos de 4 a 7 s."],
-  [4, 8, "A imagem vem primeiro", "O plano estabelece o lugar. A fala só entra em A1 aos 6 s, quando o espectador já sabe onde está."],
-  [8, 18, "Cobertura curta em V2", "Planos de 2 a 6 s sobre os planos longos. O que foi gravado fora do roteiro vira cobertura."],
-  [18, 23, "Insert em V3", "Detalhe com speed ramp a ~130% para marcar o tempo da música."],
-  [23, 30, "Transição de bloco", "Glitch/datamosh com RGB split, 2 a 3 frames, e whoosh casado no áudio."],
-  [30, 56, "Respiro de cinema", "Pausas acima de 0,6 s. Nunca um corte colado no texto. Áudio medido em LUFS por clipe."],
+  [0, 4, "Abertura em staccato", "Quatro planos de um segundo apresentam cinema, música e animação."],
+  [4, 8, "A imagem vem primeiro", "Do gesto ao lugar: imagens que apresentam cada história antes de explicar."],
+  [8, 18, "Cinema e performance", "Ficção, palco e videoclipe se encontram pelo movimento e pelo olhar."],
+  [18, 23, "Memória e detalhe", "Documentário e planos de cobertura ampliam o que cada cena conta."],
+  [23, 30, "Mudança de atmosfera", "Luz, cor e composição conectam produções de linguagens diferentes."],
+  [30, 56, "Ritmo de montagem", "Trechos de 12 trabalhos em 32 planos. Cortes diretos e áudio original com entradas e saídas suaves."],
   [56, 60.1, "Assinatura", "Marca parada por 3 a 4 s. O filme termina quando a imagem assenta."],
 ];
 const DUR = 60;
 const pct = (a) => `${(a / DUR) * 100}%`;
-const clipName = (id) => `${id}.mp4`;
+const clipName = (id) => PROJECTS.find(p => p.id === id)?.title.split(" | ")[0] || `${id}.mp4`;
 
 function Ico({ d, size = 14, fill }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill ? "currentColor" : "none"} stroke={fill ? "none" : "currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
@@ -66,7 +65,6 @@ const G = {
 export default function Method() {
   const mobile = useMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)");
   const [rule, setRule] = useState(0);
-  const [shot, setShot] = useState(V1[0][2]);
   const root = useRef(null);
   useEffect(() => {
     const meters = root.current.querySelectorAll(".js-meter");
@@ -80,32 +78,28 @@ export default function Method() {
     const reduced = reducedMotion();
     const el = root.current;
     const q = (s) => el.querySelectorAll(s);
-    let clipIdx = -1, glitching = false;
+    let clipIdx = -1;
     const st = ScrollTrigger.create({
       trigger: el, start: "top top", end: () => mobile ? "bottom 35%" : `+=${innerHeight * (reduced ? 1 : 2.6)}`, scrub: true, pin: (reduced || mobile) ? false : el.querySelector(".method-pin"), invalidateOnRefresh: true,
-      onUpdate: (s) => {
-        const t = s.progress * DUR;
+    });
+    const update = (event) => {
+        const t = Math.min(DUR, event.detail);
         q(".js-ph").forEach((n) => (n.style.left = `${(t / DUR) * 100}%`));
         q(".js-mtc").forEach((n) => (n.textContent = tc(t)));
         q(".js-mmss").forEach((n) => (n.textContent = mmss(t)));
         q(".js-cctrack").forEach((n) => (n.style.transform = `translate3d(${(-t * +n.dataset.pps).toFixed(1)}px,0,0)`));
         setRule(Math.max(0, RULES.findIndex(([a, b]) => t >= a && t < b)));
         const ci = V1.findIndex(([a, b]) => t >= a && t < b);
-        setShot(shotAt(t));
-        if (ci !== clipIdx) { if (clipIdx !== -1) sfx.splice(innerWidth * (0.25 + (t / DUR) * 0.5)); q(".js-v1 > .is-sel").forEach((n) => n.classList.remove("is-sel")); q(".js-v1").forEach((n) => n.children[ci]?.classList.add("is-sel")); clipIdx = ci; }
-        const g = FX.some((f) => Math.abs(t - f) < 0.25);
-        if (g && !glitching) sfx.glitch(0.05, 4);
-        glitching = g;
-        el.classList.toggle("is-glitch", g);
-      },
-    });
+        if (ci !== clipIdx) { q(".js-v1 > .is-sel").forEach((n) => n.classList.remove("is-sel")); q(".js-v1").forEach((n) => n.children[ci]?.classList.add("is-sel")); clipIdx = ci; }
+    };
+    window.addEventListener("method:time", update);
     ScrollTrigger.sort();
     ScrollTrigger.refresh();
-    return () => st.kill();
+    return () => { st.kill(); window.removeEventListener("method:time", update); };
   }, [mobile]);
 
   const [, , title, text] = RULES[rule];
-  const frame = <MethodVideo shot={shot}/>;
+  const frame = <MethodVideo/>;
 
   return (
     <section id="metodo" className="method" ref={root}>
@@ -123,27 +117,11 @@ export default function Method() {
 function MobileMethod() {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(() => !reducedMotion());
-  const [visible, setVisible] = useState(false);
+  const [seek, setSeek] = useState(null);
   const host = useRef(null);
-  useEffect(() => {
-    let inView = false;
-    const update = () => setVisible(inView && !document.hidden);
-    const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; update(); }, { threshold: .25 });
-    io.observe(host.current); document.addEventListener("visibilitychange", update);
-    return () => { io.disconnect(); document.removeEventListener("visibilitychange", update); };
-  }, []);
-  useEffect(() => {
-    if (!playing || !visible) return;
-    let last = performance.now();
-    const timer = setInterval(() => {
-      const now = performance.now(), delta = (now - last) / 1000; last = now;
-      if (!document.hidden) setTime(t => (t + Math.min(delta, .25)) % 60);
-    }, 100);
-    return () => clearInterval(timer);
-  }, [playing, visible]);
   const active = time >= 60 ? RULES.length - 1 : Math.max(0, RULES.findIndex(([a,b]) => time >= a && time < b));
-  const frame = <MethodVideo shot={shotAt(time)} paused={!playing} hidePlaybackControl/>;
-  return <div className="mobile-method-host" ref={host}><CapCut frame={frame} rule={active} title={RULES[active][2]} text={RULES[active][3]} time={time} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={setTime}/></div>;
+  const frame = <MethodVideo paused={!playing} hidePlaybackControl seek={seek} onTime={t => { setTime(t); if (t >= 60) setPlaying(false); }}/>;
+  return <div className="mobile-method-host" ref={host}><CapCut frame={frame} rule={active} title={RULES[active][2]} text={RULES[active][3]} time={time} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={t => { setTime(t); setSeek({time:t}); }}/></div>;
 }
 
 /* ───────── Premiere Pro ───────── */
@@ -153,7 +131,7 @@ function Premiere({ frame, rule, title, text }) {
     <div className="pr" aria-label="Simulação de uma timeline no Adobe Premiere Pro">
       <div className="pr-title">
         <span className="pr-app-icon" aria-hidden="true">Pr</span>
-        <span className="pr-file">Alex_Ascencio_Portfolio.prproj</span>
+        <span className="pr-file">Alex_Ascencio_DemoReel_v01.prproj</span>
         <nav className="pr-ws" aria-hidden="true"><span>Montagem</span><b>Edição</b><span>Cor</span><span>Efeitos</span><span>Áudio</span><span>Gráficos</span></nav>
         <span className="pr-av">AA</span>
       </div>
@@ -180,7 +158,7 @@ function Premiere({ frame, rule, title, text }) {
         </section>
 
         <section className="pr-panel pr-program">
-          <header className="pr-tabs"><b>Programa: SEQ_Portfolio_v05</b><span className="pr-menu">≡</span></header>
+          <header className="pr-tabs"><b>Programa: SEQ_DemoReel_v01</b><span className="pr-menu">≡</span></header>
           <div className="pr-screen">{frame}</div>
           <div className="pr-pbar">
             <span className="pr-tc js-mtc">00:00:00:00</span>
@@ -207,7 +185,7 @@ function Premiere({ frame, rule, title, text }) {
         <div className="pr-tools" aria-hidden="true">{tools.map((k) => <span key={k} className={k === "razor" ? "on" : ""}><Ico d={G[k]} size={13} /></span>)}</div>
 
         <section className="pr-panel pr-tl">
-          <header className="pr-tabs"><b><span className="pr-x">×</span> SEQ_Portfolio_v05</b><span className="pr-menu">≡</span></header>
+          <header className="pr-tabs"><b><span className="pr-x">×</span> SEQ_DemoReel_v01</b><span className="pr-menu">≡</span></header>
           <div className="pr-tl-head">
             <span className="pr-tc big js-mtc">00:00:00:00</span>
             <div className="pr-ruler">
@@ -217,11 +195,11 @@ function Premiere({ frame, rule, title, text }) {
           </div>
           <div className="pr-tracks">
             {[
-              ["V3", "v", V3.map(([a, b, id]) => <i key={a} className="clip rose" style={{ left: pct(a), width: pct(b - a) }}><em>{clipName(id)} [130%]</em></i>)],
+              ["V3", "v", V3.map(([a, b, id]) => <i key={a} className="clip rose" style={{ left: pct(a), width: pct(b - a) }}><em>{clipName(id)}</em></i>)],
               ["V2", "v", [...V2.map(([a, b, id]) => <i key={a} className="clip iris" style={{ left: pct(a), width: pct(b - a) }}><em>{clipName(id)}</em></i>), ...FX.map((f) => <i key={`fx${f}`} className="clip mango" style={{ left: pct(f - 0.25), width: pct(0.5) }} />)]],
               ["V1", "v", [...V1.map(([a, b, id]) => <i key={a} className="clip violet" style={{ left: pct(a), width: pct(b - a), "--th": `url(/media/method/${id}.webp)` }}><em>{clipName(id)}</em></i>), <i key="sig" className="clip sig" style={{ left: pct(56), width: pct(4) }}><em>Assinatura</em></i>]],
               ["A1", "a", AUDIO_CUTS.map(([a,b,id]) => <i key={a} className="clip forest real-wave" style={{ left: pct(a), width: pct(b-a), "--wave": `url(/media/method/${id}-wave.webp)` }}><em>{id}.mp4 · áudio</em></i>)],
-              ["A2", "a", BOUNDARIES.slice(1,-1).map(a=><i key={a} className="clip carib" style={{left:pct(a-.2),width:pct(.4)}} title="Crossfade de áudio"/>)],
+              ["A2", "a", BOUNDARIES.slice(1,-1).map(a=><i key={a} className="clip carib" style={{left:pct(a-.2),width:pct(.4)}} title="Fades de áudio"/>)],
             ].map(([n, k, clips]) => (
               <div className={`pr-trk ${k}`} key={n}>
                 <div className="pr-th">
@@ -255,8 +233,8 @@ function CapCut({ frame, rule, title, text, time, playing, onToggle, onSeek }) {
       <div className="cc-top">
         <span className="cc-ib" aria-hidden="true"><Ico d={G.x} size={18} /></span>
         <span className="cc-demo">Demonstração</span>
-        <span className="cc-res">1080P · 30 ▾</span>
-        <span className="cc-exp">Exportar</span>
+        <span className="cc-res">540p · 24 fps</span>
+        <a className="cc-exp" href="/media/method/2026-10-27_alex-ascencio_demo-reel_v01.mp4" download="Alex_Ascencio_DemoReel.v1.mp4">Baixar reel</a>
       </div>
       <div className="cc-preview">
         <div className="cc-frame">{frame}</div>

@@ -5,7 +5,7 @@ const base=process.env.TEST_URL||'http://127.0.0.1:5180';
 const artifacts=process.env.TEST_ARTIFACTS||'work/qa';
 fs.mkdirSync(artifacts,{recursive:true});
 let browser;
-async function open(context){const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>getComputedStyle(document.querySelector('.preloader')).display==='none',{timeout:20000});return {page,errors};}
+async function open(context){const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.querySelector('.preloader') && getComputedStyle(document.querySelector('.preloader')).display==='none',{timeout:20000});return {page,errors};}
 async function jump(page,id){await page.evaluate(id=>{const a=document.createElement('a');a.href='#'+id;document.body.append(a);a.click();a.remove()},id);await page.waitForTimeout(2000);}
 (async()=>{
  browser=await chromium.launch({headless:true,channel:'chrome'});

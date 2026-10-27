@@ -3,8 +3,9 @@ import { Play, Pause } from "./Icons";
 import "./MethodVideo.css";
 
 // Intervalos reais dos trabalhos de Alex; estes IDs também alimentam a timeline.
-export const METHOD_MEDIA_IDS = [34, 35, 1, 7];
+export const METHOD_MEDIA_IDS = [18, 14, 16, 27, 28, 29, 30, 21, 12, 26, 34, 35];
 export const METHOD_MEDIA = {
+  reel: { src: "/media/method/2026-10-27_alex-ascencio_demo-reel_v01.mp4", title: "Demo reel · Alex Ascencio" },
   34: { src: "/media/method/34.mp4", title: "Ele É · Gabriella Stehling e Benjamin Montecinos" },
   35: { src: "/media/method/35.mp4", title: "Voltemos ao Início · Gabriella Stehling" },
   1: { src: "/media/method/1.mp4", title: "Meu Respirar · Gabriella Stehling" },
@@ -15,10 +16,11 @@ function AudioIcon({ muted }) {
   return <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z" />{muted ? <path d="m16 9 5 6m0-6-5 6" /> : <path d="M16 9a4 4 0 0 1 0 6m2.5-9a8 8 0 0 1 0 12" />}</svg>;
 }
 
-export default function MethodVideo({ shot, onLevel, paused = false, hidePlaybackControl = false }) {
+export default function MethodVideo({ shot = "reel", onLevel, onTime, seek, paused = false, hidePlaybackControl = false }) {
   const host = useRef(null), videos = useRef([]), engine = useRef(null);
   const desired = useRef(shot), report = useRef(onLevel);
   desired.current = shot; report.current = onLevel;
+  const timeReport = useRef(onTime); timeReport.current = onTime;
   const [muted, setMuted] = useState(true), [playing, setPlaying] = useState(false), [error, setError] = useState(false);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function MethodVideo({ shot, onLevel, paused = false, hidePlaybac
     });
     const choose = async () => {
       if (!alive || !visible || document.hidden || !wanted || desired.current === "end") return;
-      const id = METHOD_MEDIA[desired.current] ? Number(desired.current) : METHOD_MEDIA_IDS[0];
+      const id = METHOD_MEDIA[desired.current] ? desired.current : "reel";
       if (id === current && nodes[active].readyState >= 2) {
         try { await nodes[active].play(); if (alive) { setPlaying(true); startMeter(); } }
         catch { if (alive) { setPlaying(false); setError(true); } }
@@ -138,7 +140,7 @@ export default function MethodVideo({ shot, onLevel, paused = false, hidePlaybac
     const motion = () => { if (media.matches) wanted = false; sync(); };
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; sync(); }, { threshold: .01 });
     observer.observe(host.current); document.addEventListener("visibilitychange", visibility); media.addEventListener("change", motion);
-    engine.current = { update: sync, setPaused: value => { wanted = !value; sync(); }, toggleAudio, togglePlayback: () => { wanted = nodes[active].paused; sync(); } };
+    engine.current = { update: sync, seek: value => { if (nodes[active].readyState >= 1) nodes[active].currentTime = Math.max(0, Math.min(value, nodes[active].duration)); }, setPaused: value => { wanted = !value; sync(); }, toggleAudio, togglePlayback: () => { wanted = nodes[active].paused; sync(); } };
     level(0);
     return () => {
       observer.disconnect(); document.removeEventListener("visibilitychange", visibility); media.removeEventListener("change", motion);
@@ -148,6 +150,7 @@ export default function MethodVideo({ shot, onLevel, paused = false, hidePlaybac
     };
   }, []);
   useEffect(() => { engine.current?.update(); }, [shot]);
+  useEffect(() => { if (seek) engine.current?.seek(seek.time); }, [seek]);
   const lastPaused = useRef(paused);
   useEffect(() => {
     if (lastPaused.current !== paused) engine.current?.setPaused(paused);
@@ -156,7 +159,7 @@ export default function MethodVideo({ shot, onLevel, paused = false, hidePlaybac
 
   const ending = shot === "end";
   return <div ref={host} className={`method-video${ending ? " is-end" : ""}`} aria-label={ending ? "Assinatura Alex Ascencio" : `Trecho real: ${METHOD_MEDIA[shot]?.title || "trabalho de Alex Ascencio"}`}>
-    {[0, 1].map(index => <video key={index} ref={node => { videos.current[index] = node; }} className="method-video-layer" muted playsInline loop preload="none" aria-hidden="true" disablePictureInPicture />)}
+    {[0, 1].map(index => <video key={index} ref={node => { videos.current[index] = node; }} className="method-video-layer" muted playsInline preload="none" aria-hidden="true" disablePictureInPicture onTimeUpdate={e => { if (!e.currentTarget.paused) { timeReport.current?.(e.currentTarget.currentTime); window.dispatchEvent(new CustomEvent("method:time", { detail: e.currentTarget.currentTime })); } }} onEnded={e => { timeReport.current?.(e.currentTarget.currentTime); engine.current?.setPaused(true); setPlaying(false); }} />)}
     <div className="method-video-signature" aria-hidden={!ending}><svg viewBox="0 0 262 151" aria-hidden="true"><use href="#aa-mark" /></svg><span>ALEX ASCENCIO</span></div>
     {!ending && <div className="method-video-controls">
       {!hidePlaybackControl && <button type="button" onClick={() => engine.current?.togglePlayback()} aria-label={playing ? "Pausar trecho" : "Reproduzir trecho"}>{playing ? <Pause size={15} /> : <Play size={15} />}</button>}
