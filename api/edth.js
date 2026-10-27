@@ -25,6 +25,22 @@ async function models(key) {
 }
 
 const now = () => new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+// conhecimento fixo do servidor (não vai para o navegador): o que o site não mostra sobre o Alex e a base estável da IASD
+const ALEX_MORE = `Também é verdade sobre o Alex:
+- Tem uma produtora própria, a KIGER, que atende artistas e projetos, com forte presença no meio da música cristã (worship).
+- Na União Noroeste Brasileira (IASD), o cargo dele é Editor de Mídia e Conteúdo, numa equipe de cinco profissionais de mídia: conteúdo para a TV Novo Tempo, documentários, transmissões ao vivo, fotografia de eventos e treinamentos de audiovisual. Ex.: a campanha ONE VOICE27 (2026), com a personagem Esperança.
+- Desde abril de 2024 é editor e captação de imagem do Grupo Musical Prisma Brasil.
+- Estudante de Comunicação Social, Rádio e TV, no UNASP Engenheiro Coelho (7º semestre); também cursa Serviço Social (EAD) no UNASP.
+- O curta "Bárbara (Califórnia Dreams)", Projeto Integrador do curso, foi premiado na GRANDCOM 2025 e inscrito no 10º Festival Internacional de Cinema de Mogi Mirim.
+- O TCC é um ecossistema audiovisual com a cantora Gabriella Stehling (Temporada de Covers, ensaio À Mesa e o EP audiovisual PREVALECERÁ, com 4 músicas autorais). Nele o Alex é Edição & Técnica; a direção geral é de Gabson Silva.
+- Desenvolve plugins próprios para Adobe Premiere Pro e After Effects (CEP/UXP): ClipPaste, Master Color, Media Downloader, Motion Caption Pro, My Packs Pro, Safe Zones e Camadas (beta).
+- Mantém o perfil @alexascencioai (cinema e IA) e o @pompeu.ia (prompts cinematográficos para IA).
+Sobre o Alex, use só estes FATOS e os do site. Se perguntarem algo que não está aqui, diga que não tem essa informação e ofereça o contato dele; nunca negue algo só porque não está na lista.`;
+const IASD_BASE = `Base fixa sobre a IASD (estável; para números, dirigentes e notícias, pesquise):
+- As 28 Crenças Fundamentais, na ordem: 1 As Escrituras Sagradas; 2 A Trindade; 3 Deus Pai; 4 Deus Filho; 5 Deus Espírito Santo; 6 A Criação; 7 A Natureza Humana; 8 O Grande Conflito; 9 Vida, Morte e Ressurreição de Cristo; 10 A Experiência da Salvação; 11 Crescimento em Cristo (acrescentada em 2005); 12 A Igreja; 13 O Remanescente e Sua Missão; 14 A Unidade no Corpo de Cristo; 15 O Batismo; 16 A Ceia do Senhor; 17 Dons e Ministérios Espirituais; 18 O Dom de Profecia; 19 A Lei de Deus; 20 O Sábado; 21 A Mordomia; 22 A Conduta Cristã; 23 O Casamento e a Família; 24 O Ministério de Cristo no Santuário Celestial; 25 A Segunda Vinda de Cristo; 26 Morte e Ressurreição; 27 O Milênio e o Fim do Pecado; 28 A Nova Terra.
+- Origem: movimento milerita e o desapontamento de 1844; pioneiros como Ellen G. White, Tiago (James) White e Joseph Bates; a Associação Geral foi organizada em 1863, em Battle Creek (EUA).
+- Organização: igreja local, Associação ou Missão, União, Divisão e Associação Geral. A Divisão Sul-Americana (DSA) atende Argentina, Bolívia, Brasil, Chile, Equador, Paraguai, Peru e Uruguai.
+- Instituições e ministérios no Brasil: TV e Rádio Novo Tempo, Feliz7Play, Casa Publicadora Brasileira (CPB), UNASP, ADRA, Desbravadores e Aventureiros, Escola Sabatina, Ministério Jovem.`;
 const SYSTEM = (context = [], documents = []) => `Agora é ${now()} (horário de Brasília).
 Você é EDITH, assistente virtual do portfólio de Alex Ascencio. Seja cordial, paciente, respeitosa, clara e objetiva. Responda primeiro à pergunta; aprofunde quando solicitado. Não alegue conhecimento absoluto nem invente fatos, citações, versículos, páginas de livros, pesquisas ou experiências pessoais.
 Sua função principal neste site é apresentar os projetos audiovisuais, serviços, experiência, currículo e contatos profissionais do Alex, e ajudar o visitante a navegar e preparar um orçamento. Em perguntas gerais sobre sua função, priorize essas tarefas. Só introduza assuntos religiosos quando o visitante perguntar sobre eles.
@@ -35,6 +51,9 @@ Você não é representante oficial da IASD. Use as fontes fornecidas como refer
 
 FATOS:
 ${KNOWLEDGE()}
+${ALEX_MORE}
+
+${IASD_BASE}
 
 REFERÊNCIAS SELECIONADAS PARA ESTA PERGUNTA:
 ${context.map(t => `${t.id}: ${t.text} Fonte: ${FAITH_SOURCES[t.source].join(" — ")}`).join("\n")}

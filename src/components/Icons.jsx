@@ -31,7 +31,7 @@ const d = { pathLength: 1 };
 
 export const Arrow = make("arrow", <g className="p-mv"><path {...d} d="M7 17 17 7M8 7h9v9" /></g>);
 export const ArrowDown = make("down", <g className="p-mv"><path {...d} d="M12 5v14M6 13l6 6 6-6" /></g>);
-export const Play = make("play", <><circle className="p-ring" cx="12" cy="12" r="10" strokeOpacity=".0" /><path className="p-tri" d="M8.5 5.8v12.4L19 12z" fill="currentColor" stroke="none" /></>);
+export const Play = make("play", <><circle className="p-ring" cx="12" cy="12" r="10" strokeOpacity=".0" /><path className="p-tri" d="M7.3 6.4c0-.9 1-1.5 1.8-1l8.3 5.1c.75.46.75 1.54 0 2l-8.3 5.1c-.8.5-1.8-.1-1.8-1z" fill="currentColor" stroke="none" /></>);
 export const Close = make("close", <g className="p-x"><path {...d} d="M6 6l12 12M18 6 6 18" /></g>);
 export const Mail = make("mail", <><rect {...d} x="3" y="5" width="18" height="14" rx="3" /><path className="p-flap" {...d} d="m4 7 8 6 8-6" /></>);
 export const Copy = make("copy", <><rect className="p-front" {...d} x="8" y="8" width="12" height="12" rx="3" /><path className="p-back" {...d} d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></>);
@@ -57,7 +57,7 @@ export const Phone = make("phone", <g className="p-ring2"><path {...d} d="M5 4h3
 export const Palette = make("palette", <><circle {...d} cx="12" cy="12" r="9" /><g className="p-spin"><circle cx="12" cy="7" r="1.6" fill="currentColor" stroke="none" /><circle cx="16.3" cy="14.5" r="1.6" fill="currentColor" stroke="none" opacity=".7" /><circle cx="7.7" cy="14.5" r="1.6" fill="currentColor" stroke="none" opacity=".45" /></g></>);
 export const Mic = make("mic", <><rect className="p-cap" {...d} x="9" y="3" width="6" height="11" rx="3" /><path {...d} d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></>);
 export const Film = make("film", <><rect {...d} x="3" y="4" width="18" height="16" rx="2.5" /><g className="p-strip"><path {...d} d="M7 4v16M17 4v16M3 8.5h4M3 15.5h4M17 8.5h4M17 15.5h4" /></g></>);
-export const Pause = make("pause", <path d="M8 5.5v13M16 5.5v13" strokeWidth="3" />);
+export const Pause = make("pause", <><rect x="7" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /><rect x="13.4" y="5.3" width="3.6" height="13.4" rx="1.3" fill="currentColor" stroke="none" /></>);
 export const Prev = make("prev", <g className="p-mv"><path {...d} d="M15 5 8 12l7 7" /></g>);
 export const Next = make("next", <g className="p-mv"><path {...d} d="m9 5 7 7-7 7" /></g>);
 export const Expand = make("expand", <g className="p-mv"><path {...d} d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></g>);

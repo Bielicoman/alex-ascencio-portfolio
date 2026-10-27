@@ -160,18 +160,34 @@ function create({ actions: app = {}, onClose = () => {} }) {
   const ttsCache = new Map();
   let ttsFails = 0;
   const spoken = (t) => t.replace(/\bEDITH\b|\bEdith\b/g, "Edíte").replace(/UNoB/g, "U-N-O-B").replace(/@/g, " arroba ").replace(/\n+/g, ". ");
+  // uma falha isolada não troca a voz: tenta de novo antes de desistir
   const neural = async (text) => {
     if (serverTTS === false) return null;
     if (ttsCache.has(text)) return ttsCache.get(text);
-    try {
-      const r = await request("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }, 10000);
-      if (!r.ok) { if (r.status === 501 || r.status === 404 || ++ttsFails >= 2) serverTTS = false; return null; }
-      const url = URL.createObjectURL(await r.blob());
-      if (dead) { URL.revokeObjectURL(url); return null; }
-      if (ttsCache.size >= 20) { const [oldText, oldUrl] = ttsCache.entries().next().value; URL.revokeObjectURL(oldUrl); ttsCache.delete(oldText); }
-      serverTTS = true; ttsCache.set(text, url); renderVoices();
-      return url;
-    } catch { return null; }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await request("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }, 12000);
+        if (r.ok) {
+          const url = URL.createObjectURL(await r.blob());
+          if (dead) { URL.revokeObjectURL(url); return null; }
+          if (ttsCache.size >= 40) { const [oldText, oldUrl] = ttsCache.entries().next().value; URL.revokeObjectURL(oldUrl); ttsCache.delete(oldText); }
+          serverTTS = true; ttsFails = 0; ttsCache.set(text, url); renderVoices();
+          return url;
+        }
+        if (r.status === 501 || r.status === 404) { serverTTS = false; return null; }
+      } catch {}
+      if (dead) return null;
+      await new Promise((res) => setTimeout(res, 500));
+    }
+    if (serverTTS !== true && ++ttsFails >= 2) serverTTS = false;
+    return null;
+  };
+  // fala em trechos de até ~220 caracteres, cortados no fim da frase: o 1º toca logo e nenhum estoura o tempo do servidor
+  const pieces = (t) => {
+    const out = []; let cur = "";
+    for (const s of t.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [t]) { if (cur && (cur + s).length > 220) { out.push(cur.trim()); cur = ""; } cur += s; }
+    if (cur.trim()) out.push(cur.trim());
+    return out.length ? out : [t];
   };
   const stopSpeech = () => {
     speakId++; finishSpeech?.(); finishSpeech = null;
@@ -188,18 +204,27 @@ function create({ actions: app = {}, onClose = () => {} }) {
     const end = () => { if (ended || id !== speakId || dead) return; ended = true; speaking = false; sfx.musicHold?.(false, "edth"); setState("idle"); afterSpeak?.(); afterSpeak = null; if (micOn) setTimeout(listen, 250); };
     speaking = true; abortRec();
     setState("thinking");
-    const url = await neural(t);
+    const parts = pieces(t);
+    let url = await neural(parts[0]);
     if (id !== speakId || dead) return;
     if (url) {
-      await new Promise((res) => {
-        finishSpeech = res;
-        audio = new Audio(url); audio.volume = 1;
-        audio.onplay = begin;
-        audio.onended = audio.onerror = () => { end(); res(); };
-        audio.play().catch(() => { end(); res(); });
-      });
+      for (let i = 0; i < parts.length; i++) {
+        const after = i + 1 < parts.length ? neural(parts[i + 1]) : null; // busca o próximo trecho enquanto este toca
+        const ok = await new Promise((res) => {
+          finishSpeech = () => res(false);
+          audio = new Audio(url); audio.volume = 1;
+          audio.onplay = begin;
+          audio.onended = audio.onerror = () => res(true);
+          audio.play().catch(() => res(false));
+        });
+        if (!ok || !after || id !== speakId || dead) break;
+        url = await after;
+        if (!url || id !== speakId || dead) break; // trecho falhou: o resto fica só no texto, sem trocar de voz
+      }
+      end();
       return;
     }
+    if (serverTTS === true) { end(); return; } // a voz neural já tocou nesta sessão: nunca mistura com a voz do aparelho
     await voicesReady;
     if (!window.speechSynthesis || id !== speakId) { end(); return; }
     if (!voices.length) { add("bot", "A voz está indisponível neste navegador agora. Você pode continuar a conversa por texto."); end(); return; }

@@ -1331,16 +1331,15 @@ export default function App() {
         .to(".hero-bottom", { y: isTouch ? 0 : -50, opacity: isTouch ? 1 : 0, ease: "none", duration: 0.5 }, 0);
       ScrollTrigger.create({ trigger: ".hero", start: "top top", end: "bottom top", onUpdate: (s) => { const el = document.querySelector(".js-tc"); if (el) el.textContent = tc(s.progress * 12); } });
       // manifesto (pin primeiro para as posições seguintes considerarem o espaçador)
-      gsap.timeline({ scrollTrigger: { trigger: "#manifesto", start: "top top", end: () => matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? "bottom 75%" : `+=${innerHeight * 1.6}`, scrub: true, pin: matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? false : ".manifesto-pin" } })
+      const manifestoTl = gsap.timeline({ scrollTrigger: { trigger: "#manifesto", start: "top top", end: () => matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? "bottom 75%" : `+=${innerHeight * 1.6}`, scrub: true, pin: matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches ? false : ".manifesto-pin" } })
         .fromTo(".manifesto .w", { opacity: 0.1 }, { opacity: 1, stagger: 0.08, ease: "none" })
-        .from(".stats > div", { y: 30, opacity: 0, stagger: 0.1 }, ">-0.3");
-      ScrollTrigger.create({
-        trigger: ".stats", start: "top 85%", once: true,
-        onEnter: () => document.querySelectorAll(".stats dd[data-count]").forEach((dd) => {
-          if (document.documentElement.classList.contains("is-teleporting")) { dd.textContent = dd.dataset.count; return; }
-          const c = { v: 0 }, n = +dd.dataset.count;
-          gsap.to(c, { v: n, duration: 1.6, ease: "power3.out", onUpdate: () => (dd.textContent = Math.round(c.v)) });
-        }),
+        .from(".stats > div", { y: 30, opacity: 0, stagger: 0.1 }, ">-0.3")
+        .addLabel("stats", "<");
+      // contagem presa ao mesmo scroll da revelação: o número sobe enquanto aparece (e volta ao rolar para cima)
+      document.querySelectorAll(".stats dd[data-count]").forEach((dd, i) => {
+        const c = { v: 0 }, n = +dd.dataset.count;
+        dd.textContent = "0";
+        manifestoTl.to(c, { v: n, duration: 0.9, ease: "power2.out", onUpdate: () => (dd.textContent = Math.round(c.v)) }, `stats+=${0.1 * i}`);
       });
       // partículas → marca → somem
       ScrollTrigger.create({ trigger: "#manifesto", start: "top 90%", end: "top top", scrub: true, onUpdate: (s) => { field?.setMorph(s.progress); morph = s.progress; sfx.padLevel(morph * fade); } });

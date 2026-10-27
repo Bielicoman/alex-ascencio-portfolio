@@ -74,9 +74,10 @@ async function synth(text) {
     if (r.ok) return { buf: Buffer.from((await r.json()).audioContent, "base64"), via: "google" };
     errs.push("google " + r.status); console.error("[tts] google", r.status, (await r.text()).slice(0, 200));
   }
-  const deadline = Date.now() + 8500;
-  for (const v of [...new Set([process.env.EDGE_TTS_VOICE, "pt-BR-FranciscaNeural"].filter(Boolean))]) {
-    try { return { buf: await edge(text, v, Math.max(1, Math.min(5000, deadline - Date.now()))), via: "edge:" + v }; }
+  // uma voz só: se a 1ª tentativa falhar, repete a MESMA voz (trocar de voz no meio da conversa é o que soa errado)
+  const v = process.env.EDGE_TTS_VOICE || "pt-BR-FranciscaNeural", deadline = Date.now() + 9000;
+  for (let i = 0; i < 2 && deadline - Date.now() > 800; i++) {
+    try { return { buf: await edge(text, v, Math.min(7000, deadline - Date.now())), via: "edge:" + v }; }
     catch (e) { errs.push(`edge ${v}: ${e.message}`); console.error("[tts] edge", v, e.message); }
   }
   return { errs };
