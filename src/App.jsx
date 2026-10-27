@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { PROJECTS } from "./projects";
+import { THUMB_DIR, THUMB_IDS } from "./thumbs.js";
 import ClipPlayer from "./components/ClipPlayer";
 import { MARK_PATH, WM_PATH, WM_W, WM_H } from "./brand";
 import { tc, reducedMotion, useMedia } from "./util";
@@ -29,7 +30,7 @@ const IG = "https://instagram.com/alexascencioai";
 const LI = "https://www.linkedin.com/in/ascencioalexgabriel/";
 const ORG = { UNoB: "União Noroeste Brasileira" };
 // miniatura local otimizada (/media/<id>.webp); vídeo novo sem arquivo local usa a do YouTube (campo thumb)
-const thumb = (p) => p.thumb || `/media/${p.id}.webp`;
+const thumb = (p) => THUMB_IDS.has(p.id) ? `${THUMB_DIR}/${p.id}.webp` : p.thumb || `/media/${p.id}.webp`; // 1280x720 padronizadas (src/thumbs.js)
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
 const FEATURED = [34, 35, 26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
@@ -352,9 +353,7 @@ function NowPlaying({ open }) {
     </div>
   );
 }
-// passar o mouse no botão de gestos já começa a baixar modelo e WASM (≈19 MB) antes do clique
-const preloadGest = () => import("./gesture/hands").then((m) => m.preloadHands().catch(() => {}));
-function Hero({ open, onDemo, demo, onGest, gest }) {
+function Hero({ open, onDemo, demo }) {
   const personRef = useRef(null), wordRef = useRef(null), floatRef = useRef(null);
   useEffect(() => {
     if (matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1024px)").matches) return;
@@ -419,7 +418,6 @@ function Hero({ open, onDemo, demo, onGest, gest }) {
           <MotionControl />
           <div className="hero-modes">
             <Btn as="button" type="button" variant="glass" className="btn-tour-m" onClick={onDemo} aria-pressed={demo} icon={<I.Play size={13} />}>{demo ? "Parar tour" : "Assistir o site"}</Btn>
-            <Btn as="button" type="button" variant="glass" className="btn-gest" onClick={onGest} onPointerEnter={preloadGest} onFocus={preloadGest} aria-pressed={gest} icon={<I.Hand size={15} />}>{gest ? "Desligar gestos" : "Controlar com as mãos"}</Btn>
           </div>
         </div>
         <div className="hero-scroll" aria-hidden="true">
@@ -1140,26 +1138,7 @@ export default function App() {
     sfx.unlock(); sfx.riser(1.1);
     stopDemo.current = runDemo({ onEnd: () => { stopDemo.current = null; setDemo(false); } });
   };
-  // controle por gestos: MediaPipe só carrega no clique (chunk separado)
-  const [gest, setGest] = useState(false);
-  const stopGest = useRef(null);
-  const toggleGest = async () => {
-    if (stopGest.current) { stopGest.current(); return; }
-    setGest(true); sfx.unlock();
-    stopGest.current = () => {};
-    const { default: start } = await import("./gesture/GestureControl");
-    stopGest.current = start({
-      onEnd: () => { stopGest.current = null; setGest(false); },
-      // o que os gestos e a voz podem acionar no site
-      actions: {
-        tour: () => { if (!stopDemo.current) toggleDemo(); },
-        stopTour: () => stopDemo.current?.(),
-        sound: (on) => sfx.set(on),
-        closePlayer: () => setProject(null),
-      },
-    });
-  };
-  // EDITH (assistente por voz): carrega sob demanda; mesmas ações que os gestos
+  // EDITH (assistente por voz): carrega sob demanda
   const [edthOn, setEdthOn] = useState(false);
   const openEdthNow = async () => {
     sfx.unlock(); setEdthOn(true);
@@ -1449,7 +1428,7 @@ export default function App() {
       <a className="skip" href="#filmes">Pular para os filmes</a>
       <Nav />
       <main>
-        <Hero open={setProject} onDemo={toggleDemo} demo={demo} onGest={toggleGest} gest={gest} />
+        <Hero open={setProject} onDemo={toggleDemo} demo={demo} />
         <Manifesto />
         <Featured open={setProject} />
         <Lab />
@@ -1461,8 +1440,8 @@ export default function App() {
       </main>
       <Footer />
       <div className="snd-mobile-wrapper"><SoundToggle /></div>
-      <MobileDock onEdth={openEdthNow} edthOpen={edthOn} hidden={gest || !!project} />
-        <EdthBubble onOpen={openEdthNow} hidden={edthOn || gest || !!project} />
+      <MobileDock onEdth={openEdthNow} edthOpen={edthOn} hidden={!!project} />
+        <EdthBubble onOpen={openEdthNow} hidden={edthOn || !!project} />
       {demo && <div className="demo-hud" role="status"><span className="rec" /> Tour do site · mexa o mouse ou role para assumir</div>}
       {project && <Player project={project} onClose={() => setProject(null)} onHost={setHost} onNav={(d) => setProject((c) => PROJECTS[(PROJECTS.indexOf(c) + d + PROJECTS.length) % PROJECTS.length])} />}
     </div>
