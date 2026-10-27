@@ -1,84 +1,76 @@
-# Alex Ascencio — Portfólio v05
+<p align="center">
+  <img src="public/brand/mark.svg" width="96" alt="Marca AA">
+</p>
 
-Reconstrução completa do site. React 19 + Vite 7, three.js (partículas e lente em shader), GSAP ScrollTrigger + Lenis (scroll suave), fontes Geist / Geist Mono hospedadas localmente.
+<h1 align="center">Alex Ascencio — Portfólio</h1>
+
+<p align="center">
+  Editor de vídeo e filmmaker. Edição, cor e motion com acabamento de cinema.<br>
+  <a href="https://alex-ascencio-portfolio.vercel.app">alex-ascencio-portfolio.vercel.app</a>
+</p>
+
+---
+
+## O site
+
+Escuro, tipográfico e com um único vermelho. A imagem é a protagonista; a interface é vidro fosco por cima dela.
+
+| | |
+|---|---|
+| Base | React 19 + Vite 7 |
+| Movimento | GSAP ScrollTrigger + Lenis (scroll suave) |
+| 3D | three.js: campo de partículas, lente em shader, marca AA extrudada |
+| Tipo | Geist e Geist Mono, hospedadas no próprio site |
+| EDITH | assistente de voz: Groq (`api/edth.js`) + voz neural pt-BR (`api/tts.js`) |
+| Deploy | Vercel, automático a cada push na `main` |
 
 ## Rodar
-    npm ci
-    npm run dev       # desenvolvimento
-    npm run build     # gera dist/
-    npm run preview   # serve dist/ em http://localhost:4173
 
-## Estrutura
-- `src/App.jsx` — seções (hero, manifesto, filmes, lab, arquivo, sobre, contato, rodapé) e a abertura.
-- `src/components/Method.jsx` — seção Método: simulação do Premiere Pro (desktop) e do CapCut (≤ 760 px), dirigida pelo scroll.
-- `src/components/Floaters.js` — elementos da hero em gravidade zero (flutuação, tilt 3D, arrasto com inércia, retorno por mola).
-- `src/components/Cursor.jsx` — seta 3D + luz sem interpolação; entra no `<dialog>` do player via portal (top layer).
-- `src/components/MarkScene.js` — marca AA extrudada em three.js no contato (tema claro).
-- `src/components/Icons.jsx` — ícones animados (hover e loop).
-- `src/components/Demo.js` — tour "Assistir o site": rola o site, guia o cursor por eventos sintéticos, toca o preview do último lançamento e dos 4 primeiros projetos e para no contato. Qualquer entrada real (`isTrusted`) devolve o controle.
-- `src/projects.js` — trabalhos (mesmo arquivo da v01; miniaturas em `public/media/{id}.webp`).
-- `src/components/ParticleField.js` — campo de partículas que reage ao cursor e vira a marca AA no scroll.
-- `src/components/LensField.js` — vídeo da lente como fundo reativo (bulge, aberração cromática, spot).
-- `src/brand.js` — marca AA vetorizada a partir do PNG oficial (3000 px).
-- `public/favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` — marca no círculo vermelho.
+```bash
+npm ci
+npm run dev       # desenvolvimento em http://localhost:5173
+npm run build     # gera dist/
+npm run preview   # serve dist/ em http://localhost:4173
+npm test          # testes da EDITH e da busca bíblica
+```
 
-## Removido da v01
-Retratos gerados por IA (`portrait-v2`, `studio-v2`) e a cena 3D da lente do rodapé. A foto do hero é o recorte oficial; a do Sobre é o retrato de estúdio oficial.
+Variáveis em `.env.example` (copie para `.env.local`).
+
+## Pastas
+
+```
+api/            funções do Vercel: contato, EDITH (cérebro e voz), busca bíblica
+curriculo/      página do currículo digital
+dev/            plugin que roda as funções de api/ no npm run dev
+docs/capturas/  capturas de tela de referência
+marca/          originais da identidade visual (não vão para o site)
+  manual/         manual da marca e versões
+  logos/          marca e logos em alta (inclui o .af editável, fora do git)
+  fotos/          retratos oficiais
+  identidade-visual/  peças da identidade atualizada (idv-01 a idv-44)
+public/         o que o site publica
+  brand/          marca e ícone usados pelo site
+  media/          fotos, vídeos, logos de clientes, método e thumbs
+    thumbs/2026-10-27_thumbs_v01/  as 31 miniaturas (1280×720, ~110 KB)
+src/            código do site
+  components/     seções e peças (Método, player, rodapé, ícones, 3D)
+  edth/           interface e cérebro local da EDITH
+  curriculo/      código do currículo
+tests/          testes automatizados
+```
+
+Fora do git, só na máquina: `_versoes/` (versões antigas v02–v05 e zips), `_backup/` (cópias antes de cada alteração), `work/` (fontes de thumbs e rascunhos).
+
+## Regras da casa
+
+- Nunca sobrescrever: nova versão sai como `_v02`, `_v03` ao lado. Entregas: `AAAA-MM-DD_projeto_peca_v01`.
+- Thumb nova: 1280×720 WebP, alvo 110 KB, qualidade mínima 72, registrada em `src/thumbs.js`.
+- Ícones só de `src/components/Icons.jsx` (grade 24, traço 1,7 px). Sem emoji, sem biblioteca de terceiros.
+- Marca nunca redesenhada: vetores oficiais em `src/brand.js`.
+- `prefers-reduced-motion` respeitado: sem pins, sem scroll suave, sem abertura.
 
 ## Contato
-WhatsApp +55 15 99756-9880, e-mail ascencioalexgabriel@gmail.com, Instagram @alexascencioai, LinkedIn /in/ascencioalexgabriel — constantes no topo de `src/App.jsx`.
 
-Movimento reduzido respeitado (sem pins, sem Lenis, sem abertura, poster estático no Lab).
+WhatsApp +55 15 99756-9880 · ascencioalexgabriel@gmail.com · Instagram [@alexascencioai](https://instagram.com/alexascencioai) · LinkedIn [/in/ascencioalexgabriel](https://linkedin.com/in/ascencioalexgabriel)
 
-## Abertura
-Letterbox que abre a partir de uma fenda de luz. A hero recebe o estado inicial antes do primeiro paint e só anima uma vez. A cortina espera fontes + decode do recorte + 0,9 s mínimo. `gsap.ticker.lagSmoothing(500, 33)`: com `0`, uma travada no carregamento pulava a abertura inteira.
-
-## Logos de clientes
-`public/media/logos/*.png` — silhuetas brancas sem fundo geradas a partir dos arquivos oficiais. Altura de exibição por área óptica equivalente: `h = 58 / sqrt(aspecto) × (0,45 / densidade)^0,35`, limitada a 54 px (valores em `CLIENTS`, `src/App.jsx`).
-
-## Build
-`public/` guarda originais pesados de identidade (não publicados). `vite.config.js` copia para `dist/` só: media, brand, favicons, currículo, robots e sitemap.
-
-## Vídeos hospedados no site
-Projetos sem YouTube usam `video: "/media/videos/arquivo.mp4"` em `src/projects.js` e a miniatura em `public/media/{id}.webp`. Encode: H.264 High, CRF 22, maxrate 3 Mb/s, AAC 160k, `-movflags +faststart` (~20 MB por minuto de 1080p).
-
-## Logotipo
-`Lockup` e `Wordmark` em `src/App.jsx` usam `WM_PATH` (src/brand.js): "Alex Ascencio" em Geist 640 com os dois A substituídos pelo A triangular da marca (86% de largura). Arquivos finais em `G:\Meu Drive\01 PESSOAL\IDENTIDADE VISUAL\LOGOTIPO`.
-
-## Desempenho
-Partículas: 6000 pontos (2600 no celular), DPR máx. 1,25. Lente: DPR 1. Marca 3D: DPR 1,5, só renderiza visível.
-Grão estático; flutuantes com `backdrop-filter` de 10 px; nenhum `filter` animado por scroll.
-Medido no Chromium sem GPU (8 s de scroll + mouse): 2,8–4,1 → 4,8 fps em relação à primeira v05.
-
-## Previews de hover
-`preview` em `src/projects.js` é o caminho sem extensão de um loop curto em `public/media/previews/` (.webm VP9 para Chrome/Firefox, .mp4 H.264 para Safari), tocado no hover (grade, Filmes, card da hero) e no tour.
-Sem `preview`, o tour cai no embed do YouTube (lento: carrega o player inteiro).
-Encode: 6 s, 960×540, 24 fps, sem áudio — `ffmpeg -ss <in> -t 6 -i master.mp4 -an -vf "scale=960:540:flags=lanczos,fps=24" -c:v libx264 -profile:v high -preset slow -crf 27 -pix_fmt yuv420p -movflags +faststart AAAA-MM-DD_projeto_preview_v01.mp4` (~300 KB). WebM: `-c:v libvpx-vp9 -b:v 0 -crf 38 -row-mt 1` (~250 KB).
-
-## Currículo digital
-`/curriculo/` (`curriculo/index.html` + `src/curriculo/`): página na identidade do site, abre instantânea (sem depender de visualizador de PDF).
-O PDF A4 de 2 páginas é gerado da própria página: com `npm run build && npm run preview`, abrir `/curriculo/` no Chromium e imprimir com
-`page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })`. Salvar como `public/media/cv/AAAA-MM-DD_alexascencio_curriculo_vNN.pdf`
-(nunca sobrescrever) e atualizar `PDF` em `src/curriculo/main.jsx`. Imagens do currículo em `public/media/cv/img/` (foto 520 px, miniaturas 400 px).
-
-## Controle por gestos
-- **Hero → "Controlar com as mãos"** (só desktop): liga a webcam e controla a página. Apontar move o cursor; pinça rápida = clique; pinça + arrasto no vazio = rolar (soltar em movimento arremessa); pinça num flutuante = pegar e jogar; duas pinças = zoom na seção. Esc desliga. Tutorial com checagem ao vivo de cada gesto.
-- Rastreamento: MediaPipe HandLandmarker (21 pontos, 2 mãos) + filtro One Euro, tudo no navegador. O WASM é copiado de `node_modules/@mediapipe/tasks-vision/wasm` para `dist/media/hand/wasm` no build; o modelo (7,8 MB) vem do CDN oficial do MediaPipe e só baixa quando a câmera é ligada.
-- Gestos avançados (5 dedos classificados por ângulo das falanges, pose estável por 4 quadros): punho + arrasto rola; palma aberta deslizando ← → troca de seção; V segurado 0,7 s = tour; joinha = contato; joinha para baixo = topo; chifre = som; duas palmas paradas = pausar/retomar.
-- Voz (Web Speech API, pt-BR; Chrome/Edge/Safari): "ver demonstração", "ir para filmes", "descer", "subir", "parar", "contato", "desligar"… Liga sozinha se o microfone já foi autorizado; senão, botão "Voz" no HUD.
-- Rosto (FaceLandmarker com blendshapes): paralaxe da hero pela posição da cabeça; piscada longa (0,45–1,8 s) = pausar. Olhar via webcam comum não tem precisão para apontar (erro de 3–5 cm), então não controla o cursor.
-- Cada modelo roda no seu Web Worker (em paralelo); mãos começam na GPU e caem para CPU se a média passar de 40 ms.
-- Código: `src/gesture/` (rastreador, worker, voz e controle da home).
-
-## EDITH · assistente por voz (fala-se "Edíte")
-- Barra compacta no canto inferior direito: orbe = microfone, campo de texto, conversa completa sob demanda (▲) e fechar. Última resposta aparece numa bolha curta que some sozinha.
-- Microfone opcional: o visitante liga pelo orbe e desliga quando pede ("desliga o microfone") ou fecha. Com vídeo aberto, só reage depois de ouvir "Edith" ("Edith, fecha o vídeo", "Edith, próximo").
-- Comandos locais (`src/edth/brain.js`): tour ("assistir o site", "ver site", "começar tour"…), vídeos por nome, seções, orçamento por voz, recado por e-mail, currículo, redes e efeitos sonoros opcionais. Pedidos pelos jogos antigos recebem uma explicação de que o recurso foi removido e sugestões para explorar os projetos. Conversa livre e perguntas → `api/edth.js` (Groq; `GROQ_API_KEY`, `EDTH_MODEL` opcional), respostas curtas. Perguntas abertas ("que dia é hoje", "quem ganhou o jogo") nunca viram comando: vão para a IA, que sabe a data/hora de Brasília e pesquisa na web quando precisa (ferramenta `browser_search` da Groq; diagnóstico `GET /api/edth?probe=1`).
-- Voz: `api/tts.js` → ElevenLabs (`ELEVENLABS_API_KEY`) › Google (`GOOGLE_TTS_API_KEY`) › voz neural do Edge (Francisca pt-BR, grátis, não oficial; `EDGE_TTS_VOICE`) › voz do navegador. Diagnóstico: `GET /api/tts?probe=1`.
-
-O método apresenta um demo reel de 60 segundos em H.264/AAC: 32 planos de 12 trabalhos, com assinatura oficial nos quatro segundos finais. O vídeo é carregado ao entrar na tela; a timeline acompanha seu tempo real. O áudio original tem entradas e saídas suavizadas, depende de ativação explícita e alimenta o medidor real. A reprodução para fora da tela ou com a aba oculta. O plano de montagem está em `src/components/reel-data.json`.
-- Recados: `api/contact.js` envia com Resend (`RESEND_API_KEY`, `CONTACT_TO`); sem chave, o navegador envia pelo FormSubmit para o e-mail do Alex (o primeiro envio pede ativação por e-mail).
-- Dados do Alex (currículo e EDITH): `src/profile.js`.
-
-## Efeitos sonoros
-O controle Som começa desligado na primeira visita e guarda a escolha no navegador. Ele ativa somente efeitos pontuais de interface. Não há trilha musical, pad ou outros geradores contínuos de fundo. Vídeos e a demonstração dos clipes usam seus próprios controles de áudio.
+© Alex Ascencio. Código sob a licença em `LICENSE`; imagens, vídeos e marca: ver `LICENSING.md`.
