@@ -32,7 +32,7 @@ const ORG = { UNoB: "União Noroeste Brasileira" };
 const thumb = (p) => THUMB_IDS.has(p.id) ? `${THUMB_DIR}/${p.id}.webp` : p.thumb || `/media/${p.id}.webp`; // 1280x720 padronizadas (src/thumbs.js)
 const short = (p) => p.title.split(/\||—/)[0].trim();
 const artistOf = (p) => { const a = (p.title.split(/\||—/)[1] || p.cat).trim(); return ORG[a] || a; };
-const FEATURED = [34, 35, 26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
+const FEATURED = [37, 34, 35, 26, 24, 28, 14, 16, 7, 21].map((id) => PROJECTS.find((p) => p.id === id)).filter(Boolean);
 const CAT_ORDER = ["Clipes", "Filmes", "Document\u00e1rio", "Reportagem", "Institucional", "Reality Show", "Bastidores"];
 const CATS = ["Todos", ...[...new Set(PROJECTS.map((p) => p.cat))].sort((a, b) => (CAT_ORDER.indexOf(a) + 1 || 99) - (CAT_ORDER.indexOf(b) + 1 || 99))];
 const N4K = PROJECTS.filter((p) => p.q === "4K").length;
@@ -463,7 +463,7 @@ function Featured({ open }) {
             <Eyebrow n="02">Filmes em destaque</Eyebrow>
             <Title>Cada corte, <em>uma decisão.</em></Title>
           </div>
-          <div className="featured-progress" aria-hidden="true"><span className="mono js-fcount">01 / 0{FEATURED.length}</span><i><b className="js-fbar" /></i></div>
+          <div className="featured-progress" aria-hidden="true"><span className="mono js-fcount">01 / {String(FEATURED.length).padStart(2, "0")}</span><i><b className="js-fbar" /></i></div>
         </div>
         <div className="mobile-rail-tools"><span>Histórias para ver de perto</span><div><button aria-label="Destaques anteriores" onClick={() => rail.current?.scrollBy({ left: -rail.current.clientWidth * .88, behavior: "smooth" })}><I.Prev size={18}/></button><button aria-label="Próximos destaques" onClick={() => rail.current?.scrollBy({ left: rail.current.clientWidth * .88, behavior: "smooth" })}><I.Next size={18}/></button></div></div>
         <div className="featured-track" ref={rail}>
@@ -1315,7 +1315,7 @@ export default function App() {
             trigger: "#filmes", start: "top top", end: () => `+=${dist()}`, scrub: 0.8, pin: ".featured-pin", invalidateOnRefresh: true,
             onUpdate: (s) => {
               const i = Math.min(FEATURED.length, Math.floor(s.progress * FEATURED.length) + 1);
-              const label = `0${i} / 0${FEATURED.length}`;
+              const label = `${String(i).padStart(2, "0")} / ${String(FEATURED.length).padStart(2, "0")}`;
               if (count && count.textContent !== label) count.textContent = label;
               if (bar) bar.style.transform = `scaleX(${s.progress})`;
             },
